@@ -221,8 +221,8 @@ function get_initial_T_n_from_tabulated_data(x::TabulatedData{A,B}, y::Tabulated
     rmax = grid_params.rmax
     gridpoints = grid_params.gridpoints
     tau0 = initial_params.tau0
-
-    temperature_profile, nhard_profile = Profiles(x,y,cent1,cent2; radius = range(0, rmax, gridpoints), norm_x = initial_params.norm/tau0,xmax_temp = 8, xmax_ncoll = 5, norm_y =2/tau0*dσ_QQdy, exp_tail)
+initial_params.rdrop
+    temperature_profile, nhard_profile = Profiles(x,y,cent1,cent2; radius = range(0, rmax, gridpoints), norm_x = initial_params.norm/tau0,xmax_temp = initial_params.rdrop, xmax_ncoll = initial_params.rdrop, norm_y =2/tau0*dσ_QQdy, exp_tail)
 
     #@show temperature_profile(8.1)
     #@show nhard_profile(5.1)

@@ -279,7 +279,7 @@ function thermodynamic(T,μ,x::HadronResonaceGas_ccbar{L,M})  where {L,M}
         reducemass=m/T
         degeneracy=x[i].Degeneracy
         
-        if reducemass<500*one(T)
+        if reducemass<1000*one(T)
            
                 b1 = besselk1x(reducemass)
                 b2 = besselkx(2,reducemass)

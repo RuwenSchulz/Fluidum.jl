@@ -97,6 +97,10 @@ function Profiles(x::TabulatedData{A,B}, y::TabulatedData{A,B}, cent1::Integer, 
     #entropy profile
     r, entropy_profile = get_profile(x, cent1, cent2; norm = norm_x)
     
+    imax = findlast(≤(xmax_temp), r)   # last index where r[i] ≤ xmax_temp
+    r = isnothing(imax) ? r[0:0] : r[1:imax]
+
+    entropy_profile = entropy_profile[1:length(r)]
     #@show offset_temp 
     #@show xmax_temp
     #@show offset_ncoll
@@ -110,6 +114,12 @@ function Profiles(x::TabulatedData{A,B}, y::TabulatedData{A,B}, cent1::Integer, 
     temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat()) 
     #ncoll profile
     r, ncoll_profile = get_profile(y, cent1, cent2; norm = norm_y)  
+
+    imax = findlast(≤(xmax_temp), r)   # last index where r[i] ≤ xmax_temp
+    r = isnothing(imax) ? r[0:0] : r[1:imax]
+
+    ncoll_profile = ncoll_profile[1:length(r)]
+
     ncoll_funct = linear_interpolation(r, ncoll_profile; extrapolation_bc=Flat()) 
    
     ncoll_exp = exponential_tail_pointlike.(Ref(ncoll_funct), radius;xmax = xmax_ncoll, offset= offset_ncoll)

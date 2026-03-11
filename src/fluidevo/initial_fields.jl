@@ -16,6 +16,14 @@ end
     )
 end
 
+@inline function HQ_const_BG_init()
+    return Fields(
+    NDField((:ghost,),(:ghost,),:α), 
+    NDField((:odd,),(:ghost,),:nur)
+    )
+end
+
+
 @inline function HQ_viscous_gamma_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -277,9 +285,16 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
     oned_visc_hydro = field_initializer
     disc = Fluidum.CartesianDiscretization(OriginInterval(gridpoints, rmax))
     disc_fields = Fluidum.DiscreteFields(oned_visc_hydro(), disc, Float64)
-
-    phi = Fluidum.set_array((x) -> init_fun_dict[:temperature](x), :temperature, disc_fields) #temperature initialization
-
+    phi = nothing
+    try 
+        phi = Fluidum.set_array((x) -> init_fun_dict[:temperature](x), :temperature, disc_fields) #temperature initialization
+    catch
+        phi = Fluidum.set_array((x) -> init_fun_dict[:α](x), :α, disc_fields) #temperature initialization
+    end
+    try
+        Fluidum.set_array!(phi, x -> init_fun_dict[:nu](x), :nur, disc_fields) #diffusion current initialization
+    catch 
+    end 
     try
         Fluidum.set_array!(phi, x -> init_fun_dict[:α](x), :α, disc_fields) #fugacity initialization
     catch

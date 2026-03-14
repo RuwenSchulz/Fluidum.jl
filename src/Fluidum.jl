@@ -100,6 +100,8 @@ include("Matrix/1d_ideal_HQ_cilindrical_fugacity.jl")
 include("Matrix/1d_ideal_HQ_cilindrical_p_br_density.jl")
 include("Matrix/1d_ideal_HQ_cilindrical_p_br_fugacity.jl")
 include("Matrix/HQ_const_BG.jl")
+include("Matrix/HQ_const_BG_2nd_moment.jl")
+
 include("Matrix/1d_viscous_cilindrical.jl")
 
 include("Matrix/2d_viscous.jl")

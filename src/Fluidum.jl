@@ -17,7 +17,6 @@ using Artifacts
 
 #pkg used by the fluid evolution. 
 using Interpolations
-#using DifferentialEquations
 using OrdinaryDiffEq
 using Statistics
 using JLD2
@@ -32,7 +31,6 @@ using FastChebInterp
 
 
 using TensorCast
-using NumericalIntegration
 using SimpleNonlinearSolve
 
 using QuadGK
@@ -40,13 +38,12 @@ using QuadGK
 using HCubature
 using UnPack
 
-#using PyPlot
 
 
 const root_particle_lists=artifact"particle_lists"
 
 
-#const root_kernel_particles=artifact"kernel"
+const root_kernels=artifact"kernels"
 
 const fmGeV= 1/0.1973261 
 const invfmGeV= 1/fmGeV

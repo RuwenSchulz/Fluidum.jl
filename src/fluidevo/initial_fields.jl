@@ -23,6 +23,13 @@ end
     )
 end
 
+@inline function HQ_const_BG_second_moment_init()
+    return Fields(
+    NDField((:ghost,),(:ghost,),:α), 
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:phi)
+    )
+end
 
 @inline function HQ_viscous_gamma_1d() 
     return Fields(

@@ -301,6 +301,7 @@ export SimpleBulkViscosity,SimpleShearViscosity,SimpleDiffusionCoefficient , Zer
 export Analytic, Gluing,Thermodynamic, EquationOfState, readresonancelist
 export Heavy_Quark, HQdiffusion, free_charm, QGPViscosity,ZeroDiffusion
 export InverseFuction 
+export local_qnm_spectrum_BG_second_moment
 # type piracy 
 
 Bessels.besselk0(d::Dual{T,V,N}) where {T,V,N} = Dual{T}(Bessels.besselk0(value(d)), -Bessels.besselk1(value(d)) * partials(d))

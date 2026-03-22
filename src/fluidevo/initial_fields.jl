@@ -27,7 +27,9 @@ end
     return Fields(
     NDField((:ghost,),(:ghost,),:α), 
     NDField((:odd,),(:ghost,),:nur),
-    NDField((:even,),(:ghost,),:phi)
+    NDField((:even,),(:ghost,),:Mr),
+    NDField((:even,),(:ghost,),:Mperp),
+    NDField((:even,),(:ghost,),:Meta)
     )
 end
 
@@ -313,6 +315,18 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
     try
         Fluidum.set_array!(phi, x -> init_fun_dict[:n](x), :n, disc_fields) #density initialization
     catch
+    end
+    try
+        Fluidum.set_array!(phi, x -> init_fun_dict[:Mr](x), :Mr, disc_fields) #density initialization
+    catch 
+    end
+        try
+        Fluidum.set_array!(phi, x -> init_fun_dict[:Mperp](x), :Mperp, disc_fields) #density initialization
+    catch 
+    end
+        try
+        Fluidum.set_array!(phi, x -> init_fun_dict[:Meta](x), :Meta, disc_fields) #density initialization
+    catch 
     end
     return Fluidum.DiscreteInitialFields(disc, disc_fields, phi)
 end

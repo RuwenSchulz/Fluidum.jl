@@ -29,7 +29,7 @@ end
     NDField((:odd,),(:ghost,),:nur),
     NDField((:even,),(:ghost,),:Mr),
     NDField((:even,),(:ghost,),:Mperp),
-    NDField((:even,),(:ghost,),:Meta)
+    NDField((:odd,),(:ghost,),:Meta)
     )
 end
 

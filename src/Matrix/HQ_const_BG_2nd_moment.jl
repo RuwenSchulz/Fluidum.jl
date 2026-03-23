@@ -19,7 +19,7 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     #tau_phi = tauDiffusion/2
 
     tauM = tauDiffusion/2
-    etaM = T * tauM
+    etaM = mq * T * tauM
 
     #etaPhi  = T * tau_phi
     #actually our equations don t depend on p: we can just put as entry dpt instead, in any case it will not be used (but in the future maybe it will be )

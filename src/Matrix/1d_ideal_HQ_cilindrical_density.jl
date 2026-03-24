@@ -4,6 +4,11 @@
 # The fields are stored in the order : T, ur, n 
 #
 
+function matrix1d_ideal_HQ_density!(;dmn_eps=1e-6)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_density!(A_i, Source, ϕ, tau, X, params;free=true)
+end
+
+
 function matrix1d_ideal_HQ_density!(A_i, Source, ϕ, t, X, params;free=true)
 
     #@show t, ϕ

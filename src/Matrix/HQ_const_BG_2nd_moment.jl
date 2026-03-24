@@ -19,7 +19,7 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     #tau_phi = tauDiffusion/2
 
     tauM = tauDiffusion/2
-    etaM = mq * T * tauM
+    etaM = T * tauM
 
     #etaPhi  = T * tau_phi
     #actually our equations don t depend on p: we can just put as entry dpt instead, in any case it will not be used (but in the future maybe it will be )
@@ -158,7 +158,7 @@ ur .*tauM .*tau .^2)
 (r .*( .-3 .*n .*T .*r  .+ (2 .*etaM .*ur .*(dtur .*ur  .+ drur .*sqrt.(1  .+ ur .^2)) .*r .*X[2]) ./(1  .+ ur .^2) .^1.5  .+ 3 .*( .-2 .*ur .*tauM  .+ r) .*X[4])) ./3.,
 
 (tau .*(2 .*etaM .*ur .*(dtur .*ur  .+ drur .*sqrt.(1  .+ ur .^2)) .*X[2] .*tau  .- 3 .*(1  .+ ur .^2) .*(2 .*(1  .+ ur .^2) .*tauM .*X[5]  .+ n .*T .*sqrt.(1  .+ ur .^2) .*tau  .- sqrt.(1  .+ ur .^2) .*X[5] .*tau))) ./(3. .*(1  .+ ur .^2) .^1.5))
-    )
+    ) 
     return (At,Ax, source)
 end
 

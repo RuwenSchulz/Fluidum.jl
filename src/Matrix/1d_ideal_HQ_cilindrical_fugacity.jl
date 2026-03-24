@@ -4,6 +4,12 @@
 # The fields are stored in the order : T, ur, alpha
 #
 
+function matrix1d_ideal_HQ_fugacity!(;dmn_eps=1e-6)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_fugacity!(A_i, Source, ϕ, tau, X, params)
+end
+
+
+
 function matrix1d_ideal_HQ_fugacity!(A_i, Source, ϕ, t, X, params)
 
     #@show t, ϕ
@@ -11,8 +17,8 @@ function matrix1d_ideal_HQ_fugacity!(A_i, Source, ϕ, t, X, params)
     dP_dTdT = pressure_derivative(ϕ[1], Val(2), params.eos)
 
         thermo = thermodynamic(ϕ[1], ϕ[3], params.eos.hadron_list)
-        n = thermo.value
-        dn_dT, dn_dalpha = thermo.gradient
+        n = thermo.pressure
+        dn_dT, dn_dalpha = thermo.pressure_derivative
 
     (At, Ax, source) = one_d_ideal_matrix_ruwen5(ϕ, t, X[1],dP_dT, dP_dTdT,n,dn_dT,dn_dalpha)
 

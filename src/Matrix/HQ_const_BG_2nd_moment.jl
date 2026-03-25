@@ -65,7 +65,7 @@ sqrt.(1  .+ ur .^2) .*tauDiffusion,
 
 0,
 
-(ur .*sqrt.(1  .+ ur .^2) .*tauDiffusion) ./mq .^2,
+(ur .*sqrt.(1  .+ ur .^2) .*tauDiffusion) ./mq,
 
 (1  .+ ur .^2) .^1.5 .*tauM,
 
@@ -118,7 +118,7 @@ ur .*tauDiffusion,
 
 0,
 
-((1  .+ ur .^2) .*tauDiffusion) ./mq .^2,
+((1  .+ ur .^2) .*tauDiffusion) ./mq,
 
 ur .*(1  .+ ur .^2) .*tauM,
 
@@ -151,7 +151,7 @@ ur .*tauM .*tau .^2)
     source=SVector{5}(
 (n .*(drur  .+ (dtur .*ur) ./sqrt.(1  .+ ur .^2)  .+ ur ./r  .+ sqrt.(1  .+ ur .^2) ./tau)  .+ X[2] .*(1 ./r  .+ (ur  .+ ur .^3  .+ dtur .*tau) ./((1  .+ ur .^2) .^1.5 .*tau))  .+ (drT .*ur  .+ dtT .*sqrt.(1  .+ ur .^2)) .*dn_dT,
 
-(1  .- (dtur .*ur .*tauDiffusion) ./sqrt.(1  .+ ur .^2)  .+ drur .*( .-1  .+ 1 ./(1  .+ ur .^2)) .*tauDiffusion) .*X[2]  .+ ((drur .*ur  .+ dtur .*sqrt.(1  .+ ur .^2)) .*tauDiffusion .*X[3]) ./mq .^2,
+(1  .- (dtur .*ur .*tauDiffusion) ./sqrt.(1  .+ ur .^2)  .+ drur .*( .-1  .+ 1 ./(1  .+ ur .^2)) .*tauDiffusion) .*X[2]  .+ ((drur .*ur  .+ dtur .*sqrt.(1  .+ ur .^2)) .*tauDiffusion .*X[3]) ./mq,
 
 (4 .*etaM .*ur .*( .-drur  .- (dtur .*ur) ./sqrt.(1  .+ ur .^2)) .*X[2]) ./3.  .+ (1  .+ ur .^2) .*( .-(n .*T)  .+ X[3]),
 

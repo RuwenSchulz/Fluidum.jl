@@ -12,14 +12,13 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     n=thermo.pressure
     dn_dT, dn_dalpha = thermo.pressure_derivative
     dn_dalpha+= dmn_eps
-
+   
     kappa = diffusion_hadron(T,ϕ[1],params.eos,params.diffusion) #diffusion coefficient for hadrons
     tauDiffusion=τ_diffusion_hadron(T,ϕ[1],params.eos,params.diffusion) #tau diffusion for hadrons
     mq = 1.5
-    #tau_phi = tauDiffusion/2
-
     tauM = tauDiffusion/2
-    etaM = T * tauM
+
+    etaM = tauM * T 
 
     #etaPhi  = T * tau_phi
     #actually our equations don t depend on p: we can just put as entry dpt instead, in any case it will not be used (but in the future maybe it will be )
@@ -47,25 +46,25 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
 
 kappa .*ur .*sqrt.(1  .+ ur .^2),
 
-0,
+ .-(T .*(1  .+ ur .^2) .^1.5 .*tauM .*dn_dalpha),
 
-0,
+ .-(T .*sqrt.(1  .+ ur .^2) .*tauM .*r .^2 .*dn_dalpha),
 
-0,
+ .-(T .*sqrt.(1  .+ ur .^2) .*tauM .*tau .^2 .*dn_dalpha),
 
 ur ./sqrt.(1  .+ ur .^2),
 
 sqrt.(1  .+ ur .^2) .*tauDiffusion,
 
-(4 .*etaM .*ur .*sqrt.(1  .+ ur .^2)) ./3.,
+ .-3 .*etaM .*ur .*sqrt.(1  .+ ur .^2),
 
-( .-2 .*etaM .*ur .*r .^2) ./(3. .*sqrt.(1  .+ ur .^2)),
+ .-((etaM .*ur .*r .^2) ./sqrt.(1  .+ ur .^2)),
 
-( .-2 .*etaM .*ur .*tau .^2) ./(3. .*sqrt.(1  .+ ur .^2)),
+ .-((etaM .*ur .*tau .^2) ./sqrt.(1  .+ ur .^2)),
 
 0,
 
-(ur .*sqrt.(1  .+ ur .^2) .*tauDiffusion) ./mq,
+(ur .*sqrt.(1  .+ ur .^2) .*tauDiffusion) ./mq ,
 
 (1  .+ ur .^2) .^1.5 .*tauM,
 
@@ -100,25 +99,25 @@ sqrt.(1  .+ ur .^2) .*tauM .*tau .^2)
 
 kappa .*(1  .+ ur .^2),
 
-0,
+ .-(T .*ur .*(1  .+ ur .^2) .*tauM .*dn_dalpha),
 
-0,
+ .-(T .*ur .*tauM .*r .^2 .*dn_dalpha),
 
-0,
+ .-(T .*ur .*tauM .*tau .^2 .*dn_dalpha),
 
 1,
 
 ur .*tauDiffusion,
 
-(4 .*etaM .*(1  .+ ur .^2)) ./3.,
+ .-3 .*etaM .*(1  .+ ur .^2),
 
-( .-2 .*etaM .*r .^2) ./3.,
+ .-(etaM .*r .^2),
 
-( .-2 .*etaM .*tau .^2) ./3.,
+ .-(etaM .*tau .^2),
 
 0,
 
-((1  .+ ur .^2) .*tauDiffusion) ./mq,
+((1  .+ ur .^2) .*tauDiffusion) ./mq ,
 
 ur .*(1  .+ ur .^2) .*tauM,
 
@@ -153,12 +152,12 @@ ur .*tauM .*tau .^2)
 
 (1  .- (dtur .*ur .*tauDiffusion) ./sqrt.(1  .+ ur .^2)  .+ drur .*( .-1  .+ 1 ./(1  .+ ur .^2)) .*tauDiffusion) .*X[2]  .+ ((drur .*ur  .+ dtur .*sqrt.(1  .+ ur .^2)) .*tauDiffusion .*X[3]) ./mq,
 
-(4 .*etaM .*ur .*( .-drur  .- (dtur .*ur) ./sqrt.(1  .+ ur .^2)) .*X[2]) ./3.  .+ (1  .+ ur .^2) .*( .-(n .*T)  .+ X[3]),
+( .-3 .*(1  .+ ur .^2) .*(dtT .*(1  .+ ur .^2) .*tauM  .+ sqrt.(1  .+ ur .^2) .*(T  .+ drT .*ur .*tauM)) .*n  .- 5 .*dtur .*etaM .*X[2]  .+ 4 .*etaM .*ur .*(dtur .*ur  .+ drur .*sqrt.(1  .+ ur .^2)) .*X[2]  .+ 3 .*(1  .+ ur .^2) .^1.5 .*X[3]  .- 3 .*T .*(1  .+ ur .^2) .*(dtT  .+ dtT .*ur .^2  .+ drT .*ur .*sqrt.(1  .+ ur .^2)) .*tauM .*dn_dT) ./(3. .*sqrt.(1  .+ ur .^2)),
 
-(r .*( .-3 .*n .*T .*r  .+ (2 .*etaM .*ur .*(dtur .*ur  .+ drur .*sqrt.(1  .+ ur .^2)) .*r .*X[2]) ./(1  .+ ur .^2) .^1.5  .+ 3 .*( .-2 .*ur .*tauM  .+ r) .*X[4])) ./3.,
+ .-0.3333333333333333 .*(r .*(3 .*(1  .+ ur .^2) .*n .*((dtT  .+ dtT .*ur .^2  .+ drT .*ur .*sqrt.(1  .+ ur .^2)) .*tauM .*r  .+ T .*sqrt.(1  .+ ur .^2) .*( .-2 .*ur .*tauM  .+ r))  .+ etaM .*(5 .*dtur  .+ 2 .*dtur .*ur .^2  .+ 2 .*drur .*ur .*sqrt.(1  .+ ur .^2)) .*r .*X[2]  .+ 3 .*(1  .+ ur .^2) .*(sqrt.(1  .+ ur .^2) .*(2 .*ur .*tauM  .- r) .*X[4]  .+ T .*(dtT  .+ dtT .*ur .^2  .+ drT .*ur .*sqrt.(1  .+ ur .^2)) .*tauM .*r .*dn_dT))) ./(1  .+ ur .^2) .^1.5,
 
-(tau .*(2 .*etaM .*ur .*(dtur .*ur  .+ drur .*sqrt.(1  .+ ur .^2)) .*X[2] .*tau  .- 3 .*(1  .+ ur .^2) .*(2 .*(1  .+ ur .^2) .*tauM .*X[5]  .+ n .*T .*sqrt.(1  .+ ur .^2) .*tau  .- sqrt.(1  .+ ur .^2) .*X[5] .*tau))) ./(3. .*(1  .+ ur .^2) .^1.5))
-    ) 
+ .-0.3333333333333333 .*(tau .*(etaM .*(5 .*dtur  .+ 2 .*dtur .*ur .^2  .+ 2 .*drur .*ur .*sqrt.(1  .+ ur .^2)) .*X[2] .*tau  .- 3 .*(1  .+ ur .^2) .*n .*( .-(T .*sqrt.(1  .+ ur .^2) .*tau)  .- drT .*ur .*sqrt.(1  .+ ur .^2) .*tauM .*tau  .+ (1  .+ ur .^2) .*tauM .*(2 .*T  .- dtT .*tau))  .+ 3 .*(1  .+ ur .^2) .*(2 .*(1  .+ ur .^2) .*tauM .*X[5]  .- sqrt.(1  .+ ur .^2) .*X[5] .*tau  .+ T .*(dtT  .+ dtT .*ur .^2  .+ drT .*ur .*sqrt.(1  .+ ur .^2)) .*tauM .*tau .*dn_dT))) ./(1  .+ ur .^2) .^1.5)
+    )
     return (At,Ax, source)
 end
 

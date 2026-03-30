@@ -1,22 +1,27 @@
 # the convention here are T, ur,  \[Pi]phiphi, \[Pi]etaeta, \[Pi]B, mu, nur
 
-function matrix1d_visc_HQ_BG!(;dmn_eps=1e-6, background_fields)
-    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields)
+
+
+
+function matrix1d_visc_HQ_BG!(;dmn_eps=1e-6, background_fields, α_max=200.0)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields, α_max=α_max)
 end
 
 
 #THIS IS THE MATRIX THAT DID NOT CREATE PROBLEMS WITH THE BUMP (GUBSER)
-function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-10,background_fields= nothing)
+function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-10,background_fields= nothing, α_max=200.0)
 
     T,ur,dtT,drT,drur,dtur = background_fields(tau,X[1])
+
+    α_safe = clamp(ϕ[1], -α_max, α_max)
     
-    thermo = thermodynamic(T,ϕ[1],params.eos.hadron_list)
+    thermo = thermodynamic(T,α_safe,params.eos.hadron_list)
     n=thermo.pressure
     dn_dT, dn_dmu = thermo.pressure_derivative
     dn_dmu+= dmn_eps
 
-    κ = diffusion_hadron(T,ϕ[1],params.eos,params.diffusion) #diffusion coefficient for hadrons
-    tauDiffusion=τ_diffusion_hadron(T,ϕ[1],params.eos,params.diffusion) #tau diffusion for hadrons
+    κ = diffusion_hadron(T,α_safe,params.eos,params.diffusion) #diffusion coefficient for hadrons
+    tauDiffusion=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
 
     #actually our equations don t depend on p: we can just put as entry dpt instead, in any case it will not be used (but in the future maybe it will be )
     #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)

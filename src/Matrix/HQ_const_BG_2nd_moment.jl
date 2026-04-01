@@ -20,23 +20,16 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     mq = params.diffusion.mass
 
     taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
-
+    #@show tau
     z = mq / T
-    #taun = Ds * z * besselkx(3, z) / besselkx(2, z)
-    #kappa = Ds * n
-    #tauM = Ds * z / 2 * (besselkx(4, z) / besselkx(3, z))
-    #etaM = Ds * z / 2 * (besselkx(3, z) / besselkx(2, z))
-    cM = 0.0#Ds / T
+  
+    tauM = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
+    etaM = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
 
-    #z    = mq / T
-    #taun = Ds * z                # τ_n  → D_s z = M/(AT)
-    #kappa = Ds * n               # κ_n  = D_s n₀  (exact, no NR change)
-    #tauM = Ds * z / 2            # τ_M  → D_s z/2 = 1/(2A)
-    #etaM = Ds * z / 2            # η_M  → D_s z/2  (= τ_M in NR limit)
-    #cM   = Ds / T                # c_M  = D_s/T    (exact, no NR change)
-
-    tauM = taun/2
-    etaM = taun/2 #T * tauM
+    cM   = 0 #Ds / T                # c_M  = D_s/T    (exact, no NR change)
+    #cM = 0 
+    #tauM = taun/2
+    #etaM = taun/2 #T * tauM
 
     #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only_second_moment(ϕ,tau,X[1],ur,T,dtT,drT,drur,dtur,n,dn_dalpha,dn_dT,taun,kappa,tauM,etaM,mq,cM)

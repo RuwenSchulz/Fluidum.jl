@@ -106,12 +106,15 @@ function Profiles(x::TabulatedData{A,B}, y::TabulatedData{A,B}, cent1::Integer, 
     #@show offset_ncoll
     #@show xmax_ncoll
 
-    temperature_profile = InverseFunction(x->pressure_derivative(x,Val(1),FluiduMEoS())).(entropy_profile)  
+    temperature_profile = InverseFunction(x->pressure_derivative(x,Val(1),FluiduMEoS())).(entropy_profile)
     temperature_funct = linear_interpolation(r, temperature_profile; extrapolation_bc=Flat())
-    #temperature_funct = Dierckx.Spline1D(r, temperature_profile, k=1)  
-    temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax = xmax_temp, offset = offset_temp)
-   # temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax = 8, offset = 0.01)
-    temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat()) 
+    #temperature_funct = Dierckx.Spline1D(r, temperature_profile, k=1)
+    temp_exp_funct = nothing
+    if exp_tail == true
+        temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax = xmax_temp, offset = offset_temp)
+        # temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax = 8, offset = 0.01)
+        temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat())
+    end
     #ncoll profile
     r, ncoll_profile = get_profile(y, cent1, cent2; norm = norm_y)  
 
@@ -120,17 +123,19 @@ function Profiles(x::TabulatedData{A,B}, y::TabulatedData{A,B}, cent1::Integer, 
 
     ncoll_profile = ncoll_profile[1:length(r)]
 
-    ncoll_funct = linear_interpolation(r, ncoll_profile; extrapolation_bc=Flat()) 
-   
-    ncoll_exp = exponential_tail_pointlike.(Ref(ncoll_funct), radius;xmax = xmax_ncoll, offset= offset_ncoll)
-        
-    ncoll_exp_funct = linear_interpolation(radius, ncoll_exp; extrapolation_bc=Flat()) 
+    ncoll_funct = linear_interpolation(r, ncoll_profile; extrapolation_bc=Flat())
+
+    ncoll_exp_funct = nothing
+    if exp_tail == true
+        ncoll_exp = exponential_tail_pointlike.(Ref(ncoll_funct), radius; xmax = xmax_ncoll, offset= offset_ncoll)
+        ncoll_exp_funct = linear_interpolation(radius, ncoll_exp; extrapolation_bc=Flat())
+    end
     
     if exp_tail == true
         return temp_exp_funct, ncoll_exp_funct
     else
         return temperature_funct, ncoll_funct
-    end    
+    end
 end
 
 
@@ -147,14 +152,13 @@ function Profiles(x::TabulatedData{A,B}, cent1::Integer, cent2::Integer; radius,
         temperature_funct = linear_interpolation(r, entropy_profile; extrapolation_bc=Flat())
     end
 
-    temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax, offset)
-    temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat()) 
-        
     if exp_tail == true
+        temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax, offset)
+        temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat())
         return temp_exp_funct
     else
         return temperature_funct
-    end    
+    end
 end
 
 """
@@ -165,13 +169,12 @@ function Profiles(x::TabulatedData{A,B};radius = range(0,30,100), norm = 1, xmax
     temperature_funct = linear_interpolation(r, temperature_profile; extrapolation_bc=Flat())
         
     if exp_tail == true
-    
         temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax)
-        temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat()) 
+        temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat())
         return temp_exp_funct
     else
         return temperature_funct
-    end   
+    end
 end
 
 

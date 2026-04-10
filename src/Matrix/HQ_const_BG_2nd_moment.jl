@@ -16,7 +16,7 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     dn_dalpha+= dmn_eps
     #dn_dT += dmn_eps
     kappa = diffusion_hadron(T,α_safe,params.eos,params.diffusion) #diffusion coefficient for hadrons
-    Ds = params.diffusion.DsT / T / fmGeV
+    Ds = DsT(params.diffusion, T) / T / fmGeV
     mq = params.diffusion.mass
 
     taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons

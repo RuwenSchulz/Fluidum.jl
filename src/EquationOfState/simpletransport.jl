@@ -113,6 +113,10 @@ end
 
 ConstDiffusion(DsT::T, mass::T) where {T<:Real} = ConstDiffusion{T}(DsT,mass)
 
+# Legacy compatibility constructor retained because older driver scripts still
+# call HQdiffusion while the concrete implementation now lives in ConstDiffusion.
+HQdiffusion(DsT::T, mass::T) where {T<:Real} = ConstDiffusion(DsT, mass)
+
 struct LinearDiffusion{T} <:Diffusion
     slope::T
     offset::T
@@ -120,6 +124,7 @@ struct LinearDiffusion{T} <:Diffusion
 end
 
 LinearDiffusion(slope::T, offset::T, mass::T) where {T<:Real} = LinearDiffusion{T}(slope, offset, mass)
+HQdiffusion(slope::T, offset::T, mass::T) where {T<:Real} = LinearDiffusion(slope, offset, mass)
 
 
 @inline function diffusion(T,x::Thermodynamic{N,1,1},y::SimpleDiffusionCoefficient{N}) where{N}

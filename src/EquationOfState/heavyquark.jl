@@ -185,6 +185,27 @@ function normalization(T,μ,x::Heavy_Quark)
 end
 
 
+function normalization_without_degeneracy(T,μ,x::Heavy_Quark)
+    norm = 0
+    for i in x.hadron_list.particle_list
+        m = i.Mass
+        q = i.Nc + i.Nac
+        n = free_hadron(T,μ,1,q; m = m)[1]
+        norm += q^2*n
+    end
+    return norm;
+end
+
+
+second_moment_transport_normalization(T,μ,x) = one(promote_type(typeof(T), typeof(μ)))
+
+function second_moment_transport_normalization(T,μ,x::Heavy_Quark)
+    bare_norm = normalization_without_degeneracy(T,μ,x)
+    bare_norm == 0 && return one(promote_type(typeof(T), typeof(μ)))
+    return normalization(T,μ,x) / bare_norm
+end
+
+
 
 
 function τ_diffusion(T,x::ZeroDiffusion) 

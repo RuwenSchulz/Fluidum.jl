@@ -1,10 +1,10 @@
-function matrix1d_visc_HQ_BG_second_moment!(;dmn_eps=1e-6, background_fields, α_max=200.0)
-    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG_second_moment!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields, α_max=α_max)
+function matrix1d_visc_HQ_BG_second_moment!(;dmn_eps=1e-6, background_fields, α_max=200.0, use_NR_tauM::Bool=false)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG_second_moment!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields, α_max=α_max, use_NR_tauM=use_NR_tauM)
 end
 
 
 #THIS IS THE MATRIX THAT DID NOT CREATE PROBLEMS WITH THE BUMP (GUBSER)
-function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background_fields= nothing, α_max=200.0)
+function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background_fields= nothing, α_max=200.0, use_NR_tauM::Bool=false)
 
     T,ur,dtT,drT,drur,dtur = background_fields(tau,X[1])
 
@@ -22,14 +22,15 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
     #@show tau
     z = mq / T
-  
-    tauM = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
-    etaM = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
+    transport_norm = second_moment_transport_normalization(T, α_safe, params.eos)
+
+    tauM_rel = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
+    etaM_rel = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
+
+    tauM = use_NR_tauM ? taun / 2 : tauM_rel / transport_norm
+    etaM = use_NR_tauM ? T * taun / 2 : etaM_rel / transport_norm
 
     cM   = 0 #Ds / T                # c_M  = D_s/T    (exact, no NR change)
-    #cM = 0 
-    #tauM = taun/2
-    #etaM = taun/2 #T * tauM
 
     #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only_second_moment(ϕ,tau,X[1],ur,T,dtT,drT,drur,dtur,n,dn_dalpha,dn_dT,taun,kappa,tauM,etaM,mq,cM)

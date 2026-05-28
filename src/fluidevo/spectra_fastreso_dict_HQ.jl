@@ -153,7 +153,8 @@ function internal_thermal_spectra(pt,m,r,t,dra,dta,ur,T,μ,ν;deg=1)
     rcc = 1/4*(k2min+2*k0+k2)
     acc = 1/4*(i2min+2*i0+i2)
     #ν=-ν   #the correction has a minus sign in front of the 1/P_hq
-    ν = 0 #commented on 23.10
+    # ν is now supplied by the caller as ν^r/n (dimensionless ratio),
+    # so n=1 is correct here.  To disable: pass 0.0 as the ν component of phi.
     #n = thermodynamic(T,μ,eos.hadron_list).pressure
     n=1
 

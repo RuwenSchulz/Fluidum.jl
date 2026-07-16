@@ -745,7 +745,10 @@ end
 
 function oneshoot(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan,args...;kwargs...)
     prob=problem(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan)
-    solve(prob,Tsit5(),args...;kwargs..., dtmax = 0.01)
+    # Max internal time step. Default 0.01 (unchanged); override via FLUIDUM_DTMAX to better resolve
+    # rapid transients such as the near-instantaneous central freeze-out collapse.
+    dtmax = parse(Float64, get(ENV, "FLUIDUM_DTMAX", "0.01"))
+    solve(prob,Tsit5(),args...;kwargs..., dtmax = dtmax)
 end
 
 

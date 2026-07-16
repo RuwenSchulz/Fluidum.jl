@@ -22,15 +22,32 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
     #@show tau
     z = mq / T
-    transport_norm = second_moment_transport_normalization(T, α_safe, params.eos)
 
+    # Rigorous FP→hydro matching (Tex/HydroFPderivation/FP_Hydro_matching.tex, Eq. eq:tauM_etaM_expanded):
+    #   τ_M = (D_s/2)·[6z K1 + (z²+24) K2]/[z K1 + 4 K2] = (D_s z/2) K4/K3
+    #   η_M = (D_s z/2) K3/K2 = (D_s/2)(4 + z K1/K2)   (the code carries an extra T by its σ/η convention,
+    #         consistent across both branches: etaM_rel → T·D_s z/2 = T·taun/2 in the NR limit z→∞).
+    # The derivation defines τ_n AND τ_M in the SAME (bare) convention, so τ_M/τ_n = ½·K4K2/K3² ≈ 0.55.
+    # But `taun` here is τ_diffusion_hadron, which is degeneracy-weighted (÷g_hq, audit_coefficients.jl).
+    # τ_M/η_M must therefore carry the SAME ÷g_hq, else the kinetic ratio breaks (τ_M/taun ≈ 3.3, 6× too
+    # slow ⇒ the 2nd moment fails to relax, over-produces shear, and inflates c_M — verified against the
+    # Langevin 2nd moment). Tie them to `taun` directly so the convention is automatically consistent:
+    #   τ_M = taun·½·K4K2/K3²  (exact),   η_M = T·taun/2  (exact; = bare η_M / g_hq).
+    # (A 2026-07 change removed the ÷g_hq as "spurious" — but that only holds if taun is ALSO bare, which
+    # it is not.)  Env FIVO_IS2_TAUM_BARE=1 restores the inconsistent bare forms for comparison.
     tauM_rel = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
     etaM_rel = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
+    tauM_deg = taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
+    etaM_deg = T * taun / 2
+    _tauM_bare = get(ENV, "FIVO_IS2_TAUM_BARE", "0") == "1"
 
-    tauM = use_NR_tauM ? taun / 2 : tauM_rel / transport_norm
-    etaM = use_NR_tauM ? T * taun / 2 : etaM_rel / transport_norm
+    tauM = use_NR_tauM ? taun / 2     : (_tauM_bare ? tauM_rel : tauM_deg)
+    etaM = use_NR_tauM ? T * taun / 2 : (_tauM_bare ? etaM_rel : etaM_deg)
 
-    cM   = 0 #Ds / T                # c_M  = D_s/T    (exact, no NR change)
+    # c_M = D_s/T is the rigorous 1st↔2nd-moment back-coupling (was hard-set to 0). Env-selectable so both
+    # the no-backreaction (c_M=0) and the physical (c_M=D_s/T) cases can be compared:
+    #   HQ_CM_BACKREACTION=0 → c_M=0 ;  otherwise (default) → c_M=D_s/T.
+    cM   = get(ENV, "HQ_CM_BACKREACTION", "1") == "0" ? zero(Ds) : Ds / T
 
     #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only_second_moment(ϕ,tau,X[1],ur,T,dtT,drT,drur,dtur,n,dn_dalpha,dn_dT,taun,kappa,tauM,etaM,mq,cM)

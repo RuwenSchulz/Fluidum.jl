@@ -45,7 +45,25 @@ const root_particle_lists=artifact"particle_lists"
 
 const root_kernels=artifact"kernels"
 
-const fmGeV= 1/0.1973261 
+# Diagnostic multiplier on the heavy-quark diffusion relaxation time τ_n in the second-moment
+# solver (src/Matrix/HQ_const_BG_2nd_moment.jl). Default 1.0 = BARE = production (since 2026-07-21
+# τ_diffusion_hadron itself is bare, Eq. (30) of 2205.07692). Set HQ_TAUN_SCALE=1/6 ONLY to
+# reproduce the historical ÷g_hq value for the convention study (diag_taun_hydro_vs_langevin.jl).
+# No production path sets it; it exists so the evidence scripts can regenerate the old convention.
+#
+# MUST be a Ref populated in __init__, NOT `const X = parse(..., ENV[...])`. A plain const is
+# evaluated at PRECOMPILE time and baked into the .ji, so later processes silently reuse whatever
+# value was current when the image was built and the env var has no effect whatsoever — verified
+# the hard way: two solves at scale 1 and 6 came out bit-identical (max|Δν^r| = 0.0).
+# __init__ runs on every module load, so this actually tracks the environment.
+const HQ_TAUN_SCALE = Ref(1.0)
+
+function __init__()
+    HQ_TAUN_SCALE[] = parse(Float64, get(ENV, "HQ_TAUN_SCALE", "1.0"))
+    HQ_TAUN_SCALE[] == 1.0 || @warn "Fluidum: τ_n scaled by HQ_TAUN_SCALE — DIAGNOSTIC MODE, not production" scale=HQ_TAUN_SCALE[]
+end
+
+const fmGeV= 1/0.1973261
 const invfmGeV= 1/fmGeV
 const invfmGeV3=(1/fmGeV)^3
 const fmGeV3=fmGeV^3

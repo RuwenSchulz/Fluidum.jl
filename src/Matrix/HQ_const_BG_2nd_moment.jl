@@ -19,7 +19,14 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     Ds = DsT(params.diffusion, T) / T / fmGeV
     mq = params.diffusion.mass
 
-    taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
+    # τ_diffusion_hadron is BARE as of 2026-07-21 (its numerator now carries `Degeneracy`, which
+    # cancels the one in `normalization`) — i.e. τ_n = D_s·I₃₁/(T·P₀), Eq. (30) of Capellino et al.
+    # 2205.07692, degeneracy-free and equal to LangevInMedium.tau_n_main3. τ_M and η_M are tied to
+    # `taun` below, so they follow automatically.
+    # HQ_TAUN_SCALE is a diagnostic multiplier, DEFAULT 1.0 = bare (production). Set it to 1/6 only to
+    # reproduce the historical ÷g_hq value for the convention study (diag_taun_hydro_vs_langevin.jl);
+    # no production path sets it.
+    taun=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) * HQ_TAUN_SCALE[] #bare τ_n (Eq.30)
     #@show tau
     z = mq / T
 

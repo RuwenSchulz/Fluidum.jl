@@ -95,19 +95,27 @@ function τ_diffusion(T,y::Diffusion)
 end
 
 
-function τ_diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion) 
+function τ_diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion)
     tauq = 0
     for i in x.hadron_list.particle_list
         m = i.Mass
         q = i.Nc + i.Nac
+        deg = i.Degeneracy
         b2 = besselkx(2,m/T)*exp(-m/T)
         b1 = besselk1x(m/T)*exp(-m/T)
-        b3 = b1+4/(m/T)*b2  
-        b4 = b2 + 6/(m/T)*b3  
+        b3 = b1+4/(m/T)*b2
+        b4 = b2 + 6/(m/T)*b3
         b5 = b3+8/(m/T)*b4
         ex = exp(q*μ)
-        tauq += ((2*π*DsT(y,T))/(192*π^3*T^3)*q^2*m^5*ex*(2*b1 - 3*b3 +b5)); 
-    end   
+        # 2026-07-21 FIX: the numerator carries `deg` so it cancels the `deg` in `normalization`
+        # (= Σ q²·free_hadron ∝ deg). τ_n is a ratio of moments of the SAME distribution ⇒ the
+        # degeneracy MUST cancel — this is Eq. (30) of Capellino et al. 2205.07692, τ_n = D_s·I₃₁/(T·P₀),
+        # and I₃₁, P₀ both ∝ g. WITHOUT `deg` here the single-species charm quark (g=6) came out
+        # τ_n = τ_n^bare/6 (superluminal above T≈0.48; contradicts the reference, the FP derivation,
+        # LangevInMedium.tau_n_main3, and Fluidum's own first-moment τ_diffusion). Harmless for the
+        # original pseudoscalar-D-meson list (deg=1); a genuine 6× error only for the charm quark.
+        tauq += (deg*(2*π*DsT(y,T))/(192*π^3*T^3)*q^2*m^5*ex*(2*b1 - 3*b3 +b5));
+    end
   return tauq/normalization(T,μ,x)*(fmGeV^2); #
 end
 

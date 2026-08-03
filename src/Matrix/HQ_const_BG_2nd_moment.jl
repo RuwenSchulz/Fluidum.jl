@@ -34,14 +34,18 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     #   τ_M = (D_s/2)·[6z K1 + (z²+24) K2]/[z K1 + 4 K2] = (D_s z/2) K4/K3
     #   η_M = (D_s z/2) K3/K2 = (D_s/2)(4 + z K1/K2)   (the code carries an extra T by its σ/η convention,
     #         consistent across both branches: etaM_rel → T·D_s z/2 = T·taun/2 in the NR limit z→∞).
-    # The derivation defines τ_n AND τ_M in the SAME (bare) convention, so τ_M/τ_n = ½·K4K2/K3² ≈ 0.55.
-    # But `taun` here is τ_diffusion_hadron, which is degeneracy-weighted (÷g_hq, audit_coefficients.jl).
-    # τ_M/η_M must therefore carry the SAME ÷g_hq, else the kinetic ratio breaks (τ_M/taun ≈ 3.3, 6× too
-    # slow ⇒ the 2nd moment fails to relax, over-produces shear, and inflates c_M — verified against the
-    # Langevin 2nd moment). Tie them to `taun` directly so the convention is automatically consistent:
-    #   τ_M = taun·½·K4K2/K3²  (exact),   η_M = T·taun/2  (exact; = bare η_M / g_hq).
-    # (A 2026-07 change removed the ÷g_hq as "spurious" — but that only holds if taun is ALSO bare, which
-    # it is not.)  Env FIVO_IS2_TAUM_BARE=1 restores the inconsistent bare forms for comparison.
+    # The derivation defines τ_n AND τ_M in the SAME convention, so the RATIO is what is physical:
+    #   τ_M/τ_n = ½·K4K2/K3² (≈ 0.550 at z = m_c/T_fo = 9.615).
+    # PRODUCTION therefore ties both to `taun` — the bare Eq.(30) τ_n of line 29 — so the convention is
+    # automatic and cannot drift when τ_n's normalisation is audited again:
+    #   τ_M = taun·½·K4K2/K3²  (exact),   η_M = T·taun/2  (exact NR limit of the same tie).
+    # The `_rel` forms below rebuild τ_M from the STANDALONE `Ds` of line 19 instead, which is only
+    # consistent with a τ_n built from that same `Ds`; against the actual bare τ_n they give
+    # τ_M/τ_n ≈ 14.1 rather than 0.550, i.e. 25.7× the tied value (4.28× after the historical ÷g_hq).
+    # They are a diagnostic branch, NOT an alternative convention. Env FIVO_IS2_TAUM_BARE=1 selects them.
+    # (An earlier version of this comment claimed τ_diffusion_hadron is degeneracy-weighted and that
+    # τ_M/η_M must carry a matching ÷g_hq. That is false since 2026-07-21 — see line 22 — and the ÷g_hq
+    # form is not what either branch computes. Do not reinstate it.)
     tauM_rel = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
     etaM_rel = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
     tauM_deg = taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)

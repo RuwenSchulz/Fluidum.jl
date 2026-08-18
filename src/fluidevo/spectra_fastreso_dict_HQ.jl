@@ -29,7 +29,16 @@ end
         @warn string("Radial velocity out of fastreso limits")       
     end 
     
-    fact = besseli(1, eos.hadron_list.ccbar/2)/besseli(0, eos.hadron_list.ccbar/2)
+    # CANONICAL FACTOR REMOVED (2026-08-18), together with the one in the transport EOS
+    # (charm_HRG.jl). The two were a matched pair: alpha was fixed by f_can*n_GC(alpha) = n_hard and
+    # the yield then multiplied by f_can again, so for OPEN CHARM (q=1) they cancelled. With the EOS
+    # now grand-canonical, alpha_gc = alpha_can + ln(f_can), and dropping this factor reproduces the
+    # SAME yield exactly: f_can*exp(alpha_can) == exp(alpha_gc).
+    # WARNING for q=2 (hidden charm, J/psi): that channel had fact = 1 and yield ~ exp(2*alpha), so it
+    # is NOT invariant under the convention change -- it shifts by f_can^2. J/psi is not produced by
+    # any current pipeline (it appears only as a plot label), but a hidden-charm yield computed here
+    # needs its own canonical treatment in the grand-canonical convention before being trusted.
+    fact = 1
     q = 1
     if part.name == "Dc2007zer" || part.name == "Dc2010plu" #D* has degeneracy 3 since total angular momentum = 3.  
         deg = 3

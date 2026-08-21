@@ -57,9 +57,15 @@ const root_kernels=artifact"kernels"
 # the hard way: two solves at scale 1 and 6 came out bit-identical (max|Δν^r| = 0.0).
 # __init__ runs on every module load, so this actually tracks the environment.
 const HQ_TAUN_SCALE = Ref(1.0)
+# FLUIDUM_HQ_MOMENTUM_DIMS: 3 (production) or 2 = charm τ_n/τ_M matched in the 2-D momentum measure of
+# a transverse-only Langevin ensemble — see the note in Matrix/HQ_const_BG_2nd_moment.jl. Diagnostic.
+const HQ_MOMENTUM_DIMS = Ref(3)
 
 function __init__()
     HQ_TAUN_SCALE[] = parse(Float64, get(ENV, "HQ_TAUN_SCALE", "1.0"))
+    HQ_MOMENTUM_DIMS[] = parse(Int, get(ENV, "FLUIDUM_HQ_MOMENTUM_DIMS", "3"))
+    HQ_MOMENTUM_DIMS[] in (2, 3) || error("FLUIDUM_HQ_MOMENTUM_DIMS must be 2 or 3")
+    HQ_MOMENTUM_DIMS[] == 3 || @warn "Fluidum: charm τ_n/τ_M matched in the 2-D momentum measure — DIAGNOSTIC MODE, not production"
     HQ_TAUN_SCALE[] == 1.0 || @warn "Fluidum: τ_n scaled by HQ_TAUN_SCALE — DIAGNOSTIC MODE, not production" scale=HQ_TAUN_SCALE[]
 end
 

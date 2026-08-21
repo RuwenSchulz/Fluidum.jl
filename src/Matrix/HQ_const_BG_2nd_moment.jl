@@ -55,6 +55,26 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     tauM = use_NR_tauM ? taun / 2     : (_tauM_bare ? tauM_rel : tauM_deg)
     etaM = use_NR_tauM ? T * taun / 2 : (_tauM_bare ? etaM_rel : etaM_deg)
 
+    # ── FLUIDUM_HQ_MOMENTUM_DIMS=2 (2026-08-21): match the charm sector in the TWO-dimensional momentum
+    # measure. The Langevin ensembles of LangevinPaper1 evolve transverse momenta only, so their
+    # equilibrium is the 2-D Jüttner p dp e^{-E/T} and their ℓ-th moment relaxes at λ_ℓ(2D)·η_D, not at
+    # the 3-D λ_ℓ = K_{ℓ+1}/K_{ℓ+2} that τ_n = D_s z K₃/K₂ and τ_M = D_s z K₄/(2K₃) encode. In that
+    # measure every moment ∫_M^∞ E^n e^{-E/T} dE is an incomplete Gamma of integer order, so the ratios
+    # are closed forms (checked against quadrature to 1e-9 at z = 2…20):
+    #     λ₁(2D) = z(z+1)/(z²+3z+3),      λ₂(2D) = z(z²+3z+3)/(z³+6z²+15z+15),
+    # and τ_n^{2D} = τ_n·(K₂/K₃)/λ₁(2D)  (5–12 % shorter over z = 3.5–10),  τ_M^{2D} = τ_M·(K₃/K₄)/λ₂(2D).
+    # η_M stays tied to τ_n (η_M = T τ_n/2); κ = D_s n is dimension-independent. The 5/3 shear/bulk
+    # tie and the tensor structure of the matrix are NOT switched (they are the 3-spatial-dimension
+    # projection the solver is written in). Default "3" ⇒ production, bit-identical. DIAGNOSTIC knob:
+    # it is a process-wide env read per call, so set it before the solve, never mid-run.
+    if HQ_MOMENTUM_DIMS[] == 2
+        λ1_2d = z * (z + 1) / (z^2 + 3z + 3)
+        λ2_2d = z * (z^2 + 3z + 3) / (z^3 + 6z^2 + 15z + 15)
+        taun *= (besselk(2, z) / besselk(3, z)) / λ1_2d
+        tauM *= (besselk(3, z) / besselk(4, z)) / λ2_2d
+        etaM  = T * taun / 2
+    end
+
     # c_M = D_s/T is the rigorous 1st↔2nd-moment back-coupling (was hard-set to 0). Env-selectable so both
     # the no-backreaction (c_M=0) and the physical (c_M=D_s/T) cases can be compared:
     #   HQ_CM_BACKREACTION=0 → c_M=0 ;  otherwise (default) → c_M=D_s/T.

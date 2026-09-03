@@ -73,8 +73,20 @@ end
         # the Israel-Stewart front, at rest
         vf = sqrt(_cs2(T,_EOS) + (4/3)*eta/(w*taupi) + zeta/(w*tauPi))
         @test maximum(abs, _spec(_sys(T,0,0,0,0,0,0,2.0)[1])) ≈ vf rtol=1e-12
-        # the transverse shear channel: sqrt(2 eta/(w tau_pi)) = sqrt(2 C_s), T- and EoS-independent
-        @test minimum(abs.(_spec(_sys(T,0,0,0,0,0,0,2.0)[1]) .- sqrt(0.4))) < 1e-12
+        # The transverse shear channel.  Israel-Stewart gives sqrt(eta/(w tau_pi)) = sqrt(C_s),
+        # T- and EoS-independent.  This assertion used to demand sqrt(2 C_s) -- the closed form of
+        # the WRONG equation: the legacy matrix's one-sided sigma^{xy} makes that channel a factor
+        # sqrt(2) too fast along x and absent along y.  Corrected when the derived matrix became
+        # the default on 2026-09-03; the legacy value is asserted below so the defect stays covered.
+        @test minimum(abs.(_spec(_sys(T,0,0,0,0,0,0,2.0)[1]) .- sqrt(0.2))) < 1e-12
+        let had = Fluidum.VISC_2D_DERIVED[]
+            try
+                Fluidum.VISC_2D_DERIVED[] = false
+                @test minimum(abs.(_spec(_sys(T,0,0,0,0,0,0,2.0)[1]) .- sqrt(0.4))) < 1e-12
+            finally
+                Fluidum.VISC_2D_DERIVED[] = had
+            end
+        end
         # with viscosity off, the extreme characteristics are the relativistic sound cone
         for U in (0.0, 1.2)
             c = sqrt(_cs2(T,_EOS)); v = U/sqrt(1+U^2)

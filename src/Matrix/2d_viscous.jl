@@ -36,21 +36,31 @@
 # Neither defect can be seen in 1-D: the transverse vorticity of a purely radial flow vanishes
 # identically, so gate G4 passes either way.
 #
-# THE REPAIR IS OPT-IN AND DEFAULT OFF.  `FLUIDUM_2D_DERIVED=1`, or `Fluidum.VISC_2D_DERIVED[] =
-# true`, routes `matrix2d_visc!` (and, through it, the 10-field `matrix2d_visc_HQ_BG!`, whose
-# hydro block is this one) to `two_d_viscous_matrix_derived`.  With the flag off the path is
-# bit-identical to every result produced before today.  Turning it on is RECOMMENDED for any new
-# 2+1D work; it is left off so that nothing already on disk silently changes meaning.
-# Gates: Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl §G, §R.
+# HOW WRONG, ON A REAL FIREBALL.  The error this matrix makes in its own equations,
+# ||(A_shipped - A_derived).grad(phi)|| / ||equation||, over the cells of a 96^2 elliptic fireball
+# above 0.12 GeV:  median 0.06 % / p90 0.5 % / max 1.3 % at tau = 2, and 0.32 % / 1.3 % / **19.8 %**
+# at tau = 6.  The typical cell is fine -- which is why nothing ever looked wrong -- but the tail is
+# not, and it grows with the transverse vorticity (21 % of the strain at tau = 2, 24 % at tau = 4).
+#
+# THE REPAIR IS THE DEFAULT SINCE 2026-09-03.  `Fluidum.VISC_2D_DERIVED[]` is true unless
+# `FLUIDUM_2D_DERIVED=0`, and it routes `matrix2d_visc!` (and, through it, the 10-field
+# `matrix2d_visc_HQ_BG!`, whose hydro block is this one) to `two_d_viscous_matrix_derived`.
+# `two_d_viscous_matrix` below is kept, unchanged and dated, because this repo keeps its wrong
+# turns -- set the flag to 0 to reproduce anything made before that date.  The repair is free:
+# 163 ns against 186, i.e. the correct matrix is the faster one.
+# Gates: Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl §I (the matrix IS the PDE,
+# 1.99e-12 derived vs 1.68e-02 shipped), §G, §R.
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 
 """
     VISC_2D_DERIVED
 
-`true` when the 2+1D viscous kernels use `two_d_viscous_matrix_derived` — the matrix re-derived
-from scratch by `Julia/tools/derive_2p1d_viscous.wls` — instead of the shipped
-`two_d_viscous_matrix`, ten of whose entries are wrong (see the note at the top of this file).
-Set from `FLUIDUM_2D_DERIVED` in `__init__` (NOT here: a `Ref(get(ENV, ...))` at module top level
+`true` (the DEFAULT since 2026-09-03) when the 2+1D viscous kernels use
+`two_d_viscous_matrix_derived` — the matrix re-derived from scratch by
+`Julia/tools/derive_2p1d_viscous.wls` — instead of the legacy `two_d_viscous_matrix`, ten of whose
+entries are wrong (see the note at the top of this file).  Set `FLUIDUM_2D_DERIVED=0` to get the
+legacy matrix back, which is what anything produced before that date used.
+Read in `__init__` (NOT here: a `Ref(get(ENV, ...))` at module top level
 is evaluated when the precompile image is BUILT, so the environment variable would have no effect
 whatsoever — the trap already documented at src/Fluidum.jl:60 for `HQ_TAUN_SCALE`, and walked into
 again here on 2026-09-03: a shipped-vs-derived A/B of the FiVo comparison came back bit-identical in

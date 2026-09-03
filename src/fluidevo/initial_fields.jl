@@ -33,6 +33,42 @@ end
     )
 end
 
+"""
+    HQ_2p1d_BG_init()
+
+Field layout for the 2+1D charm sector on a prescribed background: (alpha, nu^x, nu^y).
+Cartesian transverse grid, so every boundary is a plain ghost — there is no symmetry
+axis to impose a parity on, unlike the 1-D cylindrical layouts above where `nur` is odd.
+"""
+@inline function HQ_2p1d_BG_init()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy)
+    )
+end
+
+"""
+    HQ_viscous_2d()
+
+Field layout for the 10-field 2+1D viscous hydro + passive charm system
+(`matrix2d_visc_HQ_BG!`): (T, u^x, u^y, pi^yy, pi^zz, pi^xy, Pi_B, alpha, nu^x, nu^y).
+"""
+@inline function HQ_viscous_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy)
+    )
+end
+
 @inline function HQ_viscous_gamma_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -104,6 +140,32 @@ end
     NDField((:even,),(:ghost,),:piB)
     )
 end 
+
+"""
+    viscous_2d()
+
+Field layout for the 7-field 2+1D viscous hydro system (`matrix2d_visc!`):
+`(T, u^x, u^y, pi^{yy}, pi^{zz}, pi^{xy}, Pi)` on a transverse-Cartesian, boost-invariant
+Milne slice.  The Cartesian sibling of [`viscous_1d`](@ref).
+
+`pi^{yy}` is the Cartesian `pi^y_y` and `pi^{zz}` the MIXED Milne `pi^eta_eta = tau^2 pi^{eta eta}`
+-- the same mixed convention `viscous_1d` uses for `piphiphi`/`pietaeta`, pinned to 1e-13 against
+the 0+1D Israel-Stewart equations by gate B1 of `bench/bench_2p1d_viscous.jl`.
+
+Every boundary is a plain ghost: the transverse grid is Cartesian, so there is no symmetry axis to
+impose a parity on, unlike the 1-D cylindrical layouts where `ur` is odd.
+"""
+@inline function viscous_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB)
+    )
+end
 
 function fug(T, nhard_profile, r, eos; rdrop = 20, m = 1.5)       
     if r<=rdrop

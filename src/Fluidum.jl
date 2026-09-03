@@ -34,6 +34,10 @@ using TensorCast
 using SimpleNonlinearSolve
 
 using QuadGK
+# NumericalIntegration is declared in Project.toml and referenced by `multiplicity_analytic`
+# (fluidevo/spectra.jl) as `NumericalIntegration.integrate`, but was never imported — that call
+# was an undefined GlobalRef. (2026-09-02)
+using NumericalIntegration
 
 using HCubature
 using UnPack
@@ -122,8 +126,16 @@ include("Matrix/1d_ideal_HQ_cilindrical_p_br_density.jl")
 include("Matrix/1d_ideal_HQ_cilindrical_p_br_fugacity.jl")
 include("Matrix/HQ_const_BG.jl")
 include("Matrix/HQ_const_BG_2nd_moment.jl")
+# 2+1D charm on a prescribed background.  The matrices are GENERATED — regenerate with
+#   wolframscript -file Julia/tools/derive_hq_2p1d.wls
+include("Matrix/HQ_2p1d_BG_generated.jl")
+include("Matrix/HQ_2p1d_BG.jl")
 
 include("Matrix/1d_viscous_cilindrical.jl")
+# 2026-09-03: the from-scratch Israel-Stewart derivation (Julia/tools/derive_2p1d_viscous.wls).
+# It reproduces `one_d_viscous_matrix` entry by entry, which is what licenses it to be used as the
+# reference for the 2-D matrix in Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl.
+include("Matrix/viscous_generated.jl")
 
 include("Matrix/2d_viscous.jl")
 include("Matrix/2d_viscous_fugacity.jl")
@@ -147,9 +159,18 @@ const detector_dict=Dict(
 export detector_collection,detector_dict
 
 export NDField, Fields, OriginInterval, CartesianDiscretization, DiscreteFields
-export set_array, set_array!, freeze_out_routine, fo_integral, jgemvavx!, oneshoot, test_integral_cauchy, SplineInterp, spectra_analitic
-export spectra, spectra_lf, multiplicity, multiplicity_lf, DiscreteFields, TabulatedData, initialize_fields, FreezeOutResult, initialize_fields_free_HQ, FreezeOutResultPerturbation
-export get_profile, map_initial_profile, Profiles, Profiles2 #RunFluidum_hf, RunFluidum_array, save_to_h5, RunFluidum_lf, SetFluidProperties, FluidParameters
+# 2026-09-02: seven names were exported that are defined NOWHERE in the package —
+#   spectra_analitic (typo for spectra_analytic), initialize_fields_free_HQ, map_initial_profile,
+#   Profiles2, free_charm (renamed to free_hadron in 471c28c, Apr 2026), InverseFuction,
+#   local_qnm_spectrum_BG_second_moment (deleted with 218 lines of HQ_const_BG_2nd_moment.jl in
+#   030fcc9, Mar 2026).
+# `using Fluidum` bound all seven to nothing, and `free_charm` is what aborted test/runtests.jl at
+# the FIRST testset — testsets 2-7 ("fluid_properties", "Cheb", "initialconditions", "2d viscous",
+# "causality check", "artifacts") had therefore never run on this branch.  Removed; the real
+# `spectra_analytic` / `multiplicity_analytic` are exported in their place.
+export set_array, set_array!, freeze_out_routine, fo_integral, jgemvavx!, oneshoot, oneshoot_debug, test_integral_cauchy, SplineInterp, spectra_analytic, multiplicity_analytic
+export spectra, spectra_lf, multiplicity, multiplicity_lf, DiscreteFields, TabulatedData, initialize_fields, FreezeOutResult, FreezeOutResultPerturbation
+export get_profile, Profiles #RunFluidum_hf, RunFluidum_array, save_to_h5, RunFluidum_lf, SetFluidProperties, FluidParameters
 
 """
 
@@ -323,9 +344,9 @@ export FluidProperties, viscosity, τ_shear,bulk_viscosity,τ_bulk,diffusion,τ_
 export IdealQCD, FluiduMEoS, HadronResonaceGas,waleckacondition,LatticeQCD, HadronResonaceGasNew, HadronResonaceGas_ccbar
 export SimpleBulkViscosity,SimpleShearViscosity,SimpleDiffusionCoefficient , ZeroViscosity, ZeroBulkViscosity
 export Analytic, Gluing,Thermodynamic, EquationOfState, readresonancelist
-export Heavy_Quark, HQdiffusion, free_charm, QGPViscosity,ZeroDiffusion
-export InverseFuction 
-export local_qnm_spectrum_BG_second_moment
+export Heavy_Quark, HQdiffusion, free_hadron, QGPViscosity,ZeroDiffusion
+export matrix2d_HQ_BG!, HQ_2p1d_BG_init, hq2d_matrices, axisymmetric_bg_2d
+export matrix2d_visc_HQ_BG!, HQ_viscous_2d, hq2d_live_rows
 # type piracy 
 
 Bessels.besselk0(d::Dual{T,V,N}) where {T,V,N} = Dual{T}(Bessels.besselk0(value(d)), -Bessels.besselk1(value(d)) * partials(d))

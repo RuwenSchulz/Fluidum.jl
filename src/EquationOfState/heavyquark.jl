@@ -70,9 +70,15 @@ end
 end 
 
 
+# 2026-09-02 FIX: the body referenced an undefined `x` (`x.DsT(y,T)`), so ANY call with a
+# ConstDiffusion / LinearDiffusion threw `UndefVarError: x not defined in Fluidum`. This is the
+# error `Projects/NumericBackendAudit/AUDIT_REPORT.md` recorded against `oneshoot_debug`: the
+# causality checker calls `diffusion(T,n,params.diffusion)` and `τ_diffusion(T,params.diffusion)`,
+# and both were dead. `DsT` is a plain function, never a field of the coefficient struct — cf.
+# `diffusion_hadron` just below, the same expression with `normalization(T,μ,x)` in place of `n`.
 function diffusion(T,n,y::Diffusion)
     density = n #fm-^3
-    κ = x.DsT(y,T)/T*density/fmGeV #fm^-2
+    κ = DsT(y,T)/T*density/fmGeV #fm^-2
 end
 
 function diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion)
@@ -80,8 +86,13 @@ function diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion)
 end
 
 
+# 2026-09-02 FIX: the same undefined-`x` defect (`x.mass`, `x.DsT(y,T)`). The mass lives on the
+# diffusion coefficient itself (ConstDiffusion.mass / LinearDiffusion.mass). With `y` substituted
+# this method is ALGEBRAICALLY IDENTICAL to `τ_diffusion_hadron` on a single unit-charge species of
+# mass `y.mass`: both reduce to  τ_n = D_sT·m³(2b₁-3b₃+b₅)/(48 T⁴ b₂)/fmGeV, the degeneracy
+# cancelling against `normalization`. Gated as D1 in Projects/FluidumValidation/bench_fluidum_attractor.jl.
 function τ_diffusion(T,y::Diffusion) 
-    m = x.mass
+    m = y.mass
   
     b2 = besselkx(2,m/T)*exp(-m/T)
     b1 = besselkx(1,m/T)*exp(-m/T)
@@ -90,7 +101,7 @@ function τ_diffusion(T,y::Diffusion)
     b4 = b2 + 6/(m/T)*b3  
     b5 = b3+8/(m/T)*b4
 
-  return ((2*π*x.DsT(y,T)) *m^3/T^3/(96*π*T)*(2*b1 - 3*b3 +b5)/b2)/fmGeV; #
+  return ((2*π*DsT(y,T)) *m^3/T^3/(96*π*T)*(2*b1 - 3*b3 +b5)/b2)/fmGeV; #
   
 end
 
@@ -160,6 +171,26 @@ end
 @inline function viscosity(T,entropy,y::QGPViscosity{N}) where {N}
     y.ηs*entropy*invfmGeV
  end
+
+# 2026-09-02: the two shear models carried DISJOINT method sets — SimpleShearViscosity only took a
+# `Thermodynamic`, QGPViscosity only a scalar entropy — so `matrix2d_visc!` (which passes the whole
+# Thermodynamic) MethodError'd with QGPViscosity, the model every 1-D production run uses, while
+# `matrix1d_visc_HQ!` and the new 2+1D solvers (which pass the scalar) MethodError'd with
+# SimpleShearViscosity, the one Fluidum's own `2d viscous` testset uses.  Each entry point worked
+# with exactly the model the other could not take.  The formulas are IDENTICAL — η = ηs·s/ħc and
+# τ_s = η/(T s C_s) = ηs/(ħc T C_s) — so the fix is the four missing dispatches, not new physics.
+@inline function viscosity(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*entropy*invfmGeV
+end
+@inline function τ_shear(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*invfmGeV/(T*y.Cs)
+end
+@inline function viscosity(T,x::Thermodynamic{N,1,1},y::QGPViscosity{N}) where {N}
+    y.ηs*(@inbounds x.pressure_derivative[1])*invfmGeV
+end
+@inline function τ_shear(T,x::Thermodynamic{N,1,1},y::QGPViscosity{N}) where {N}
+    y.ηs*invfmGeV/(T*y.Cs)
+end
 
 
  

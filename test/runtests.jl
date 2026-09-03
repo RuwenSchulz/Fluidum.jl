@@ -16,7 +16,11 @@ using DifferentiationInterface
     @test length(thermodynamic(10,IdealQCD(1,0)).pressure_derivative)==1
     @test length(thermodynamic(10,IdealQCD(1,0)).pressure_hessian)==1
 
-    @test isfinite(free_charm(1,0,Heavy_Quark(readresonancelist(), ccbar))[1])
+    # `free_charm` was renamed `free_hadron(T,μ,deg,q; m)` in 471c28c (Apr 2026) and the old name
+    # stayed in the export list only.  This @test therefore threw UndefVarError and, because a
+    # failing testset rethrows at its end, aborted runtests.jl before testsets 2-7 ever ran.
+    @test isfinite(free_hadron(1,0,1,1; m=1.5)[1])
+    @test all(isfinite, free_hadron(0.3,0.0,6,1; m=1.5))
     @test round(pressure(1,Heavy_Quark(readresonancelist(), ccbar)), sigdigits=10)==round(pressure(1,FluiduMEoS()), sigdigits=10)
     @test round(pressure(1,Heavy_Quark(readresonancelist(), ccbar)), sigdigits=10)==round(thermodynamic(1,FluiduMEoS()).pressure[1], sigdigits=10)
     @test pressure(1,Heavy_Quark(readresonancelist(), ccbar)) ≈ pressure(1,FluiduMEoS()) atol=0.01
@@ -182,8 +186,14 @@ end
 
     tspan = (0.4,10);
     field_results_Ds = Fluidum.oneshoot_debug(disc_fields, Fluidum.matrix1d_visc_HQ!, params_Ds, phi, tspan; reltol = 1e-8);
- 
-    iszero(field_results_Ds)
+
+    # 2026-09-02: this line was a bare expression — the testset ran the (expensive) solve and then
+    # ASSERTED NOTHING, so "causality check | 0 total".  `oneshoot_debug` returns 0 when no
+    # eigenvalue of the characteristic pencil is complex or superluminal.
+    # NOTE it diagnoses `one_d_viscous_matrix_fugacity` REGARDLESS of the matrix it is handed, so it
+    # cannot check the HQ_const_BG* charm systems this branch exists for — those are covered by
+    # Projects/FluidumValidation/bench_fluidum_attractor.jl §H.
+    @test iszero(field_results_Ds)
 
 end
 
@@ -192,3 +202,7 @@ end
     @test isfile(joinpath(Fluidum.root_particle_lists, "./particles.data"))
 end
 
+
+# the 2+1D viscous solver: closed-form characteristic speeds, the isotropy the shipped
+# pi^{xy} row breaks, and the Bjorken limit.  Heavy version: Fluidum.jl/bench/bench_2p1d_viscous.jl
+include("test_2p1d_viscous.jl")

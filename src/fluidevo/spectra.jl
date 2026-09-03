@@ -117,7 +117,8 @@ function spectra_analytic(fo::FreezeOutResult{A,B},part::particle_attribute{S,R,
     x,phi=fo
     lb=leftbounds(x)
     rb=rightbounds(x)
-    rb=min.(rb,rightbound)
+    #rb=min.(rb,rightbound)   # 2026-09-02: `rightbound` is undefined — the identical line in the
+                              # sibling method above is already commented out for that reason.
     buff=alloc_segbuf(Float64, eltype(lb),Float64 ;size=1)
     [quadgk(alpha->_pointwise_spectra_analytic(pt,alpha,x,phi,part,eos),lb...,rb...;segbuf=buff,rtol=rtol) for pt in pt_range ] 
 

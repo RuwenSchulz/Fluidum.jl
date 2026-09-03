@@ -50,9 +50,13 @@
 `true` when the 2+1D viscous kernels use `two_d_viscous_matrix_derived` — the matrix re-derived
 from scratch by `Julia/tools/derive_2p1d_viscous.wls` — instead of the shipped
 `two_d_viscous_matrix`, ten of whose entries are wrong (see the note at the top of this file).
-Set from `FLUIDUM_2D_DERIVED` at load time; assignable at run time.
+Set from `FLUIDUM_2D_DERIVED` in `__init__` (NOT here: a `Ref(get(ENV, ...))` at module top level
+is evaluated when the precompile image is BUILT, so the environment variable would have no effect
+whatsoever — the trap already documented at src/Fluidum.jl:60 for `HQ_TAUN_SCALE`, and walked into
+again here on 2026-09-03: a shipped-vs-derived A/B of the FiVo comparison came back bit-identical in
+all 108 numbers because both runs were the shipped matrix).  Assignable at run time.
 """
-const VISC_2D_DERIVED = Ref(get(ENV, "FLUIDUM_2D_DERIVED", "0") == "1")
+const VISC_2D_DERIVED = Ref(false)
 
 """
     two_d_viscous_matrix_active(u, tau, p, dtp, dtdtp, zeta, visc, tauS, tauB)

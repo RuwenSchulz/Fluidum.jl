@@ -30,6 +30,35 @@ corrected matrix (`FLUIDUM_2D_DERIVED=1`) passes at 2.8e-14; M2 runs both and re
 
 Until 2026-09-03 this solver's entire test coverage was one `@test all(isfinite.(result))`.
 
+## A trap that bit this file's neighbour
+
+`FLUIDUM_2D_DERIVED` was **dead on arrival** when first shipped, written as
+
+```julia
+const VISC_2D_DERIVED = Ref(get(ENV, "FLUIDUM_2D_DERIVED", "0") == "1")   # WRONG
+```
+
+at module top level. A `Ref` initialised at top level is evaluated when the **precompile image is
+built** and its value serialised into the cache, so every later load carries the build-time value and
+the environment variable does nothing. `get(ENV, ...)` inside the process returns `"1"` quite
+happily; the `Ref` stays `false`. The fix is `Ref(false)` plus an assignment in `__init__`, which
+runs on every module load — and that exact lesson was already written into `src/Fluidum.jl:58` for
+`HQ_TAUN_SCALE`, three lines above its own fix, having been paid for once already.
+
+⚠ **A dead switch and a genuinely null effect are indistinguishable from the output alone.** The A/B
+that exposed it came back bit-identical in all 108 numbers, which reads exactly like "the repair
+changes nothing". Before believing any null A/B on an env-controlled flag, assert the flag is
+actually set inside the process:
+
+```julia
+julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]'                      # false
+FLUIDUM_2D_DERIVED=1 julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]' # true
+```
+
+Gates in this file are immune by construction: M2 sets `F.VISC_2D_DERIVED[]` **programmatically**
+and restores it, which always worked — only the `ENV` path was dead. `FLUIDUM_2DV_FULL` is read in a
+*script*, which is not precompiled, so it is evaluated at run time and is fine.
+
 ## Companion
 
 `Julia/Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl` carries the derivation side —

@@ -71,6 +71,10 @@ function __init__()
     HQ_MOMENTUM_DIMS[] in (2, 3) || error("FLUIDUM_HQ_MOMENTUM_DIMS must be 2 or 3")
     HQ_MOMENTUM_DIMS[] == 3 || @warn "Fluidum: charm τ_n/τ_M matched in the 2-D momentum measure — DIAGNOSTIC MODE, not production"
     HQ_TAUN_SCALE[] == 1.0 || @warn "Fluidum: τ_n scaled by HQ_TAUN_SCALE — DIAGNOSTIC MODE, not production" scale=HQ_TAUN_SCALE[]
+    # FLUIDUM_2D_DERIVED: use the re-derived 2+1D viscous matrix instead of the shipped one, ten of
+    # whose entries are wrong (Matrix/2d_viscous.jl).  Same reason as above for reading it HERE.
+    VISC_2D_DERIVED[] = get(ENV, "FLUIDUM_2D_DERIVED", "0") == "1"
+    VISC_2D_DERIVED[] && @info "Fluidum: 2+1D viscous hydro on the DERIVED matrix (FLUIDUM_2D_DERIVED=1)"
 end
 
 const fmGeV= 1/0.1973261

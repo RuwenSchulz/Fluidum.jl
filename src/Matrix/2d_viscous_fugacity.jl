@@ -1,4 +1,29 @@
 # the convention here are T, ux, uy, \[Pi]yy, \[Pi]zz, \[Pi]xy, \[Pi]B
+#
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# ⛔ 2026-09-04 — DO NOT USE.  RETRACTED IN PLACE, REPLACED BY Matrix/HQ_2p1d_BG.jl.
+#
+# `matrix2d_visc_HQ!` and its `two_d_viscous_HQ_matrix` are the ORIGINAL 10-field 2+1D
+# hydro+charm system, and they are unusable — the note recording that lived only in
+# HQ_2p1d_BG.jl until today, while this file opened with a one-line convention comment as if
+# it were live.  What is wrong, measured (Projects/FluidumValidation):
+#
+#   * Characteristic speeds: max|Im λ| = 3.02, max|Re λ| = 36.5 c over the physical state
+#     lattice of bench_fluidum_full.jl (98–130 c with complex pairs on the harder probe of
+#     bench_fluidum_2p1d.jl).  This is the SOLE entry behind that audit's standing M3
+#     SUPERLUMINAL failure and one of four behind M2.  The replacement `matrix2d_visc_HQ_BG!`
+#     measures max|Im λ| = 3.1e-16, max|Re λ| = 0.962 on the same lattice.
+#   * The wrapper reads `ϕ[6]` (= π^{xy} in its own documented layout) as the fugacity.
+#   * The wrapper passes `dpt` (entropy) into the matrix's `p` (pressure) slot — inert only
+#     because the body never uses `p`.
+#   * Its hydro block predates the 2026-09-03 shear-row repair of Matrix/2d_viscous.jl and is
+#     NOT routed through `two_d_viscous_matrix_active`, so it carries the ten wrong entries
+#     unconditionally.
+#
+# Kept unreferenced rather than deleted — this repo preserves wrong turns, dated.  Use
+# `matrix2d_visc_HQ_BG!` (HQ_2p1d_BG.jl), whose hydro block is `matrix2d_visc!`'s and whose
+# charm rows are the derived `hq2d_live_rows`, gated L1–L4 in bench_fluidum_2p1d.jl.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
 
 @inbounds @fastmath function matrix2d_visc_HQ!(A_i,Source,ϕ,t,X,params)
 

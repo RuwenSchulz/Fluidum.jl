@@ -163,11 +163,12 @@ function gate_M2()
     gate("M2", dv_all < 1e-11,
         @sprintf("rotational isotropy of the 7 characteristic speeds, DERIVED matrix: %.2e (%.2e with π = Π = 0)", dv_all, dv_id))
     note(@sprintf("the SHIPPED matrix gives %.3f c (%.3f c with π = Π = 0) — the π^{xy} defect in the header.", sh_all, sh_id))
-    note("the transverse shear channel propagates at √(2C_s) along x and at 0 along y; the ideal")
-    note("sector is unaffected, which is why B, G and A below hold for either matrix.")
-    note("FLUIDUM_2D_DERIVED=1 selects the corrected matrix everywhere, including the 10-field")
-    note("`matrix2d_visc_HQ_BG!`.  It is default OFF only so that results already on disk stay")
-    note("reproducible; it is not slower (measured 170 ns vs 193 ns per assembly).")
+    note("on the SHIPPED matrix the transverse shear channel propagates at √(2C_s) along x and at 0")
+    note("along y — a factor √2 too fast, see M3b; the ideal sector is unaffected, which is why B,")
+    note("G and A below hold for either matrix.")
+    note("FLUIDUM_2D_DERIVED selects the corrected matrix everywhere, including the 10-field")
+    note("`matrix2d_visc_HQ_BG!`.  DEFAULT ON since 2026-09-03 (`a1d9f924`); set it to 0 only to")
+    note("reproduce results already on disk.  It is not slower (measured 170 ns vs 193 ns).")
 end
 gate_M2()
 
@@ -182,14 +183,33 @@ function gate_M3()
     end
     gate("M3", worst < 1e-12,
         @sprintf("at rest the largest characteristic ≡ √(c_s² + (4/3)η/(wτ_π) + ζ/(wτ_Π)), the MIS front (%.2e)", worst))
+    # 🔴 CORRECTED 2026-09-03 (evening), BY MEASUREMENT — this gate used to assert √(2C_s), and
+    # that number was the DEFECT, not the physics.  It was written while the shipped matrix was the
+    # default, and the shipped π^{xy} row carries −2η ∂_x u^y where Israel–Stewart asks for
+    # −2ησ^{xy} = −η(∂_x u^y + ∂_y u^x) (the header's "exactly twice the correct coefficient").  For
+    # a perturbation depending on x alone that doubles the u^y ↔ π^{xy} coupling, hence doubles the
+    # squared speed — so the legacy matrix propagates the transverse shear channel at √(2C_s) and
+    # the corrected one at √(C_s), which is the Israel–Stewart shear-channel velocity
+    # v² = η/(τ_π(e+P)).  Measured on the derived matrix: the eigenvalue is √(C_s) EXACTLY
+    # (0.316228 at C_s = 0.1, 0.447214 at 0.2, 0.591608 at 0.35, both temperatures, residual 3e-16
+    # once the reference is right), and on the legacy matrix it is √(2C_s) to 3.3e-16.
+    #
+    # This is the failure class B19 already recorded — a gate asserting a hand copy of the formula
+    # under test, and so certifying the bug.  It survived the 2026-09-03 audit because the flag was
+    # still default OFF when the audit ran; the default flip (`a1d9f924`) is what exposed it, and
+    # `run_suite.jl bench` is what ran the file afterwards.  M3 above is untouched and still passes
+    # at 8e-16, which is the independent check that the shear NORMALISATION is otherwise right: the
+    # sound front carries (4/3)η/(wτ_π) through a different row.
     w2 = 0.0
     for Cs in (0.1,0.2,0.35), T in (0.2,0.45)
         pr = F.FluidProperties(EOS, QGPViscosity(0.1,Cs), ZeroBulkViscosity(), ZeroDiffusion())
         ev = sort(real.(eigvals(sys(T,0.0,0.0,0.0,0.0,0.0,0.0,2.0,pr)[1])))
-        w2 = max(w2, minimum(abs.(ev .- sqrt(2Cs))))
+        want = F.VISC_2D_DERIVED[] ? sqrt(Cs) : sqrt(2Cs)   # the legacy matrix's speed is the defect
+        w2 = max(w2, minimum(abs.(ev .- want)))
     end
     gate("M3b", w2 < 1e-12,
-        @sprintf("the transverse shear channel sits at √(2η/(wτ_π)) = √(2C_s), independent of T and of the EoS (%.2e)", w2))
+        @sprintf("the transverse shear channel sits at √(η/(wτ_π)) = √(C_s), independent of T and of the EoS (%.2e)%s",
+                 w2, F.VISC_2D_DERIVED[] ? "" : "  [LEGACY matrix: asserted against √(2C_s), which is the defect]"))
 end
 gate_M3()
 

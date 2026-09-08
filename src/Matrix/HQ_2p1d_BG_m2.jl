@@ -266,3 +266,141 @@ function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
     den = tauM * uT
     return (-Sxx/den, -Sxy/den, -Syy/den, -SB/den)
 end
+
+# ==============================================================================
+# THE LIVE DRIVER
+# ==============================================================================
+
+"""
+    matrix2d_HQ_BG_m2!(; dmn_eps = 1e-6, background_fields, α_max = 200.0, consistent_fm = true)
+
+Closure constructor for the 8-field 2+1D charm sector WITH the consistent second
+moment, matching `matrix2d_HQ_BG!`'s signature. Returns the
+`(A_i, Source, ϕ, tau, X, params)` callable `basicupwinding` expects, with
+`X = (x, y)` and `A_i` a 2-tuple of 8×8 matrices.
+
+`background_fields(tau, x, y)` returns the same 12-tuple `matrix2d_HQ_BG!` takes:
+`(T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy)`.
+
+⚠ ROWS 4-8 ARE PASSIVE AT c_M = 0, WHICH IS THE ONLY CASE THIS DRIVER SUPPORTS.
+The second moments read the current and the background but feed back into
+neither, so the 8×8 is BLOCK TRIANGULAR: rows 1-3 are exactly
+`matrix2d_HQ_BG!`'s, unchanged, and rows 4-8 hang off them. That is what makes it
+safe to reuse the first-moment block verbatim rather than re-deriving it, and it
+is the same structure the 1-D `matrix1d_visc_HQ_BG_consistent_m2_5f!` has with
+`HQ_CM_BACKREACTION=0`.
+"""
+function matrix2d_HQ_BG_m2!(; dmn_eps = 1e-6, background_fields, α_max = 200.0,
+                              consistent_fm::Bool = true)
+    (A_i, Source, ϕ, tau, X, params) -> matrix2d_HQ_BG_m2!(
+        A_i, Source, ϕ, tau, X, params;
+        dmn_eps = dmn_eps, background_fields = background_fields,
+        α_max = α_max, consistent_fm = consistent_fm)
+end
+
+function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
+        dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
+        consistent_fm::Bool = true)
+
+    T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy =
+        background_fields(tau, X[1], X[2])
+
+    α_safe = clamp(ϕ[1], -α_max, α_max)
+    uT = sqrt(1 + ux^2 + uy^2)
+
+    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
+    n = thermo.pressure
+    dn_dT, dn_da = thermo.pressure_derivative
+    dn_da += dmn_eps
+
+    κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
+    taun = τ_diffusion_hadron(T, α_safe, params.eos, params.diffusion) * HQ_TAUN_SCALE[]
+
+    # ── rows 1-3: the first moment, VERBATIM from the 3-field driver ──────────
+    At3, Ax3, Ay3, src3 = hq2d_matrices(α_safe, ϕ[2], ϕ[3], tau, T, ux, uy,
+                                        dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy,
+                                        n, dn_dT, dn_da, taun, κ)
+
+    # ── rows 4-8: the consistent second moment ────────────────────────────────
+    # They relax DIAGONALLY (tau_M u^tau d_tau X + tau_M u^i d_i X + src = 0) and
+    # carry no derivative couplings among themselves, so the block is
+    # At[4:8,4:8] = tau_M u^tau I, Ax = tau_M u^x I, Ay = tau_M u^y I, and every
+    # other dependence -- on alpha, on nu, on the background -- lands in `src`.
+    h, taun_h, Ds = hqc_enthalpy_per_particle(T, α_safe, params.eos, params.diffusion)
+    δ  = max(1e-4, 1e-3 * T)
+    hp = (hqc_enthalpy_per_particle(T + δ, α_safe, params.eos, params.diffusion)[1] -
+          hqc_enthalpy_per_particle(T - δ, α_safe, params.eos, params.diffusion)[1]) / (2δ)
+    z    = params.diffusion.mass / T
+    tauM = taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
+    etaM = T * taun / 2
+
+    # ⚠ THE alpha AND nu GRADIENTS GO IN THE MATRIX, NOT THE SOURCE. Rows 4-8
+    # depend on d_tau alpha, d_i alpha and d nu -- in this convention those are
+    # COLUMNS of At/Ax/Ay (columns 1, 2, 3), because alpha, nu^x and nu^y are
+    # evolved fields of this very system. Putting them in `src` with their
+    # current values frozen would lag them by a step and, worse, hide a real
+    # coupling from the characteristic analysis.
+    #
+    # `hq2d_m2_rows` returns explicit RATES, so the columns are read off by
+    # finite-differencing it in each gradient. They are exactly linear in every
+    # one of them (the system is quasi-linear -- gate G3 of
+    # derive_hq_m2_2p1d.wls), so a single difference is exact, not an
+    # approximation.
+    m2rate(dta, dxa, dya, dtnx, dxnx, dynx, dtny, dxny, dyny) =
+        hq2d_m2_rows((α_safe, ϕ[2], ϕ[3], ϕ[4], ϕ[5], ϕ[6], ϕ[7], ϕ[8]),
+                     tau, T, ux, uy, dtT, dxT, dyT,
+                     dtux, dxux, dyux, dtuy, dxuy, dyuy,
+                     dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
+                     n, taun, Ds, h, hp, tauM, etaM, params.diffusion.mass)
+
+    Z = ntuple(_ -> zero(T), 9)
+    r0 = m2rate(Z...)
+    unit(k) = ntuple(i -> i == k ? one(T) : zero(T), 9)
+    cols = ntuple(k -> begin
+        rk = m2rate(unit(k)...)
+        (rk[1] - r0[1], rk[2] - r0[2], rk[3] - r0[3], rk[4] - r0[4])
+    end, 9)
+
+    At = zeros(MMatrix{8,8,Float64}); Ax = zeros(MMatrix{8,8,Float64})
+    Ay = zeros(MMatrix{8,8,Float64}); src = zeros(MVector{8,Float64})
+    for i in 1:3, j in 1:3
+        At[i,j] = At3[i,j]; Ax[i,j] = Ax3[i,j]; Ay[i,j] = Ay3[i,j]
+    end
+    src[1] = src3[1]; src[2] = src3[2]; src[3] = src3[3]
+    for k in 4:8
+        At[k,k] = tauM * uT; Ax[k,k] = tauM * ux; Ay[k,k] = tauM * uy
+    end
+    # LHS sources: At[k,k] * (explicit rate) = -src[k]  =>  src[k] = -At[k,k]*rate.
+    # Row 7 (piQ^eta_eta) is the REDUNDANT dof: it is not evolved independently,
+    # it is reconstructed from the transverse block by tracelessness. Relaxing it
+    # toward that value keeps it consistent without adding a constraint equation.
+    # rows 4-8 at zero (alpha, nu) gradients -> the source; the gradient
+    # dependence -> the matrix columns. `cols[k]` is the derivative of the four
+    # rates w.r.t. gradient k, ordered
+    #   1: d_tau alpha  2: d_x alpha  3: d_y alpha
+    #   4: d_tau nu^x   5: d_x nu^x   6: d_y nu^x
+    #   7: d_tau nu^y   8: d_x nu^y   9: d_y nu^y
+    ROW = (4, 5, 6, 8)                     # rows 4,5,6 traceless; 8 the trace
+    for (a, k) in enumerate(ROW)
+        src[k] = -(tauM*uT) * r0[a]
+        At[k,1] = -(tauM*uT) * cols[1][a]; Ax[k,1] = -(tauM*uT) * cols[2][a]
+        Ay[k,1] = -(tauM*uT) * cols[3][a]
+        At[k,2] = -(tauM*uT) * cols[4][a]; Ax[k,2] = -(tauM*uT) * cols[5][a]
+        Ay[k,2] = -(tauM*uT) * cols[6][a]
+        At[k,3] = -(tauM*uT) * cols[7][a]; Ax[k,3] = -(tauM*uT) * cols[8][a]
+        Ay[k,3] = -(tauM*uT) * cols[9][a]
+    end
+    # Row 7 (piQ^eta_eta) is the REDUNDANT dof: not evolved independently, but
+    # reconstructed from the transverse block by tracelessness. Relaxing it toward
+    # that value keeps it consistent without adding a constraint equation.
+    src[7] = (ϕ[7] - hq2d_piQ_eta(ux, uy, uT, ϕ[4], ϕ[5], ϕ[6]))
+    At[7,7] = one(T); Ax[7,7] = zero(T); Ay[7,7] = zero(T)
+
+    Ainv = inv(SMatrix(At))
+    if !all(isfinite, Ainv)
+        @warn "matrix2d_HQ_BG_m2!: non-finite inv(A_t)" tau x=X[1] y=X[2] T ux uy tauM maxlog=5
+    end
+    A_mul_B!(A_i[1], Ainv, SMatrix(Ax))
+    A_mul_B!(A_i[2], Ainv, SMatrix(Ay))
+    jgemvavx!(Source, Ainv, SVector(src))
+end

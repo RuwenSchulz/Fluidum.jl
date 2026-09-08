@@ -49,6 +49,32 @@ axis to impose a parity on, unlike the 1-D cylindrical layouts above where `nur`
 end
 
 """
+    HQ_2p1d_BG_m2_init()
+
+Field layout for the 2+1D charm sector WITH the consistent second moment
+(`matrix2d_HQ_BG_m2!`): (alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy},
+piQ^eta_eta, Pi_Q) on a prescribed background.
+
+Cartesian transverse grid, so every boundary is a plain ghost -- there is no
+symmetry axis to impose a parity on, exactly as for `HQ_2p1d_BG_init`. The
+second-moment components are ordinary scalars on this grid; the ONE constraint
+they carry (tracelessness) is algebraic, not a boundary condition, and is
+restored by `hq2d_piQ_eta` after each step rather than imposed here.
+"""
+@inline function HQ_2p1d_BG_m2_init()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxx),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQeta),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:PiQ)
+    )
+end
+
+"""
     HQ_viscous_2d()
 
 Field layout for the 10-field 2+1D viscous hydro + passive charm system

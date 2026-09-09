@@ -413,7 +413,25 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     # Row 7 (piQ^eta_eta) is the REDUNDANT dof: not evolved independently, but
     # reconstructed from the transverse block by tracelessness. Relaxing it toward
     # that value keeps it consistent without adding a constraint equation.
-    src[7] = (ϕ[7] - hq2d_piQ_eta(ux, uy, uT, ϕ[4], ϕ[5], ϕ[6]))
+    # 🔴 2026-09-09. This used to read
+    #     src[7] = phi[7] - hq2d_piQ_eta(...);  At[7,7] = 1
+    # i.e. d_tau piQ^eta_eta = -(piQ^eta_eta - target), a relaxation with a time
+    # constant of ONE fm/c. Tracelessness is an ALGEBRAIC constraint, not a slow
+    # mode: over a 0.4 fm run that relaxation cannot reach its target, and measured
+    # on the physical IC it did not -- piQ^eta/(pxx+pyy) came out -0.343 against the
+    # -1 the constraint demands (FiVo, which imposes it, gives -0.995). The lag
+    # feeds straight back through pi:sigma and the trace, and it is what froze the
+    # cross-code difference at ~40% in pi_Q^xx and ~100% in Pi_Q REGARDLESS OF
+    # RESOLUTION -- the signature of a constraint violation rather than a
+    # discretisation error.
+    #
+    # `RELAX_RATE` sets how fast the constraint is enforced. It must be fast
+    # compared with tau_M (the physical relaxation of the moments themselves), so
+    # that row 7 tracks the transverse block instead of lagging it. 1/(0.05 fm) is
+    # ~25x faster than a typical tau_M ~ 0.25 fm here and still finite, which keeps
+    # the system an ODE rather than a DAE.
+    RELAX_RATE = 100.0
+    src[7] = RELAX_RATE * (ϕ[7] - hq2d_piQ_eta(ux, uy, uT, ϕ[4], ϕ[5], ϕ[6]))
     At[7,7] = one(T); Ax[7,7] = zero(T); Ay[7,7] = zero(T)
 
     Ainv = inv(SMatrix(At))

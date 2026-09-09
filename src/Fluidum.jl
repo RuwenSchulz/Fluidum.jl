@@ -135,6 +135,8 @@ include("Matrix/HQ_const_BG_2nd_moment.jl")
 # 2+1D charm on a prescribed background.  The matrices are GENERATED — regenerate with
 #   wolframscript -file Julia/tools/derive_hq_2p1d.wls
 include("Matrix/HQ_2p1d_BG_generated.jl")
+# the CONSISTENT (full-grad-P) 2-D first moment -- derive_hq_consistent_2p1d.wls
+include("Matrix/HQ_2p1d_BG_consistent_generated.jl")
 include("Matrix/HQ_2p1d_BG.jl")
 
 include("Matrix/1d_viscous_cilindrical.jl")

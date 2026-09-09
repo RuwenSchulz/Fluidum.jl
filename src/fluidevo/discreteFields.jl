@@ -243,9 +243,11 @@ Collect the information of the field and the space-doiscretization in one data t
 """
 function DiscreteFields(fields::Fields{N_field,space_dimension,S}
 ,discretization::CartesianDiscretization{space_dimension,Sizes,Lengths,DXS,M},type::Type{T},N_copies::Int=6) where {N_field,space_dimension,S,Sizes,Lengths,DXS,M,T}
-if N_copies<6 
-    N_copies=6
-end 
+# The interior sweep needs FOUR vector copies and one matrix copy per worker (see the note above
+# `basicupwinding`), so the floor is 4 x threads. Reading `Threads.nthreads()` HERE and not at
+# module scope is deliberate: a `const` initialised at load time is baked into the precompile
+# cache, which is how `FLUIDUM_2D_DERIVED` shipped dead (Matrix/2d_viscous.jl).
+N_copies = max(N_copies, 6, 4*Threads.nthreads())
 
 Sizes_ghosted=Sizes.+2
 idx=IndexStructure(N_field,Sizes_ghosted)
@@ -410,39 +412,57 @@ boundary_condition!(phi,discrete_fields.index_structure,discrete_fields.left_par
 #end
 
 
-@inbounds function basicupwinding(dphi,phi,t,discrete_fields::DiscreteFields{T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2},matrix_equation!,params) where {T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2}
-    #this is the discretization
-    #@show t
-    X=discrete_fields.discretization
-    #then we have the index structure 
-    idx=discrete_fields.index_structure
-    # the interior 
-    Interior=idx.interior
-    # this are the unit vector (1,0,0,...)
-    e_i=idx.unit_inidices_space
-    #parity stuff 
-    left_parity=discrete_fields.left_parity
-    right_parity=discrete_fields.right_parity
-    periodicity=discrete_fields.periodicity
-    #chace matrices where to write the intermidiate results
-    cache=discrete_fields.cache
-    #this is a ntuple of matrices Ndim
-    @inbounds A_i= cache.matrix[1]
-    #this is just a vector that is need it for the source term 
-    @inbounds Source= cache.vector[1][1]
-    @inbounds nabla= cache.vector[2]
-    @inbounds delta= cache.vector[3]
-    @inbounds temp= cache.vector[4][1]
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+#  THE INTERIOR SWEEP, AND HOW IT IS PARALLELISED
+#
+#  Every interior cell is independent: it READS `phi` at I and I ± e_i and WRITES only `dphi[:,I]`,
+#  and `matrix_equation!` writes only the `A_i`/`Source` handed to it. So the loop is embarrassingly
+#  parallel and the answer cannot depend on the order — which is why the threaded path below is
+#  asserted to be BITWISE identical to the serial one, not merely close.
+#
+#  What was in the way is the scratch. `A_i`, `Source`, `nabla`, `delta` and `temp` were ONE set of
+#  buffers reused by every cell, so threading the loop as written races on the first iteration.
+#
+#  🪤 And `FieldsCache`'s `N_copies` is NOT a pool of thread slots, which is the natural reading and
+#  the wrong one: copies 1-4 are FOUR DISTINCT BUFFERS (Source, nabla, delta, temp) and the matrix
+#  vector only ever used copy 1. So a worker needs one matrix copy and FOUR vector copies, and
+#  `N_copies` has to be ≥ 4 × workers. `DiscreteFields` now sizes it from `Threads.nthreads()`.
+#
+#  🪤 The work is split into CHUNKS and the buffer is chosen by CHUNK INDEX, never by
+#  `Threads.threadid()`. Under the default `:dynamic` scheduler a task may migrate between threads
+#  mid-iteration, so a `threadid()`-indexed buffer is a race that only shows up under load.
+#
+#  Slot 1 maps to exactly the buffers the serial code used, so a single-worker run is the old code
+#  path unchanged.
+# ════════════════════════════════════════════════════════════════════════════════════════════════
 
-    #now let do some computation regaring the grid 
+"how many chunks the interior sweep may use: threads, but never more than the cache can feed"
+@inline function _upwind_workers(discrete_fields, nI::Int)
+    cache = discrete_fields.cache
+    min(Threads.nthreads(), length(cache.matrix), length(cache.vector) >> 2, nI)
+end
+
+# the interior sweep over `Interior[lo:hi]`, using cache slot `slot`
+@inbounds function _basicupwinding_range!(dphi,phi,t,discrete_fields::DiscreteFields{T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2},matrix_equation!,params,slot::Int,lo::Int,hi::Int) where {T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2}
+    X=discrete_fields.discretization
+    idx=discrete_fields.index_structure
+    Interior=idx.interior
+    e_i=idx.unit_inidices_space
+    cache=discrete_fields.cache
+    b = (slot-1) << 2
+    @inbounds A_i= cache.matrix[slot]
+    @inbounds Source= cache.vector[b+1][1]
+    @inbounds nabla= cache.vector[b+2]
+    @inbounds delta= cache.vector[b+3]
+    @inbounds temp= cache.vector[b+4][1]
+
     deltax=Δx(X)
     inv_deltax=1 ./deltax
-    #inv_deltax_2=inv_deltax *inv_deltax
     onehalf= one(T)/2
     two=2*one(T)
 
-    #Loop over all the interior point I is a space iteration (x,y,z,....) the first index is not iterate
-    @inbounds @simd for I in Interior
+    @inbounds @simd for k in lo:hi
+        I = Interior[k]
         # now is a N_field vector here i do not allocate nothing  
         ϕ=@views phi[:,I]
         dϕ=@views dphi[:,I]
@@ -477,11 +497,29 @@ boundary_condition!(phi,discrete_fields.index_structure,discrete_fields.left_par
                 dϕ[n_field] -=  Δ_iϕ[n_field]
             end 
         end  
+    end
+    return nothing
+end
 
+@inbounds function basicupwinding(dphi,phi,t,discrete_fields::DiscreteFields{T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2},matrix_equation!,params) where {T,total_dimensions,space_dimension,N_field,Sizes_ghosted,Sizes,Length,DXS,M,S,N_field2}
+    idx=discrete_fields.index_structure
+    Interior=idx.interior
+    nI = length(Interior)
+    nw = _upwind_workers(discrete_fields, nI)
+
+    if nw <= 1
+        _basicupwinding_range!(dphi,phi,t,discrete_fields,matrix_equation!,params,1,1,nI)
+    else
+        # contiguous, balanced chunks; the buffer follows the chunk, not the thread
+        Threads.@threads for c in 1:nw
+            lo = 1 + ((c-1)*nI) ÷ nw
+            hi = (c*nI) ÷ nw
+            hi >= lo && _basicupwinding_range!(dphi,phi,t,discrete_fields,matrix_equation!,params,c,lo,hi)
+        end
     end
 
     #before returning we  we apply the boundary_condition to the array are already decided 
-    boundary_condition!(dphi,idx,left_parity, right_parity, periodicity)
+    boundary_condition!(dphi,idx,discrete_fields.left_parity, discrete_fields.right_parity, discrete_fields.periodicity)
 
     return nothing
 end

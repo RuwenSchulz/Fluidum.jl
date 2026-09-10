@@ -132,14 +132,56 @@ end
 The 10-field 2+1D viscous hydro + passive charm system.  `X = (x, y)`; `A_i` is a
 2-tuple of 10×10 matrices.
 """
-function matrix2d_visc_HQ_BG!(; dmn_eps = 1e-6, α_max = 200.0)
+function matrix2d_visc_HQ_BG!(; dmn_eps = 1e-6, α_max = 200.0,
+                               dmn_mode::Symbol = :absolute, n_freeze = 1e-8)
     (A_i, Source, ϕ, tau, X, params) -> matrix2d_visc_HQ_BG!(
-        A_i, Source, ϕ, tau, X, params; dmn_eps = dmn_eps, α_max = α_max)
+        A_i, Source, ϕ, tau, X, params; dmn_eps = dmn_eps, α_max = α_max,
+        dmn_mode = dmn_mode, n_freeze = n_freeze)
 end
 
 const _HQ2D_COL = (1, 2, 3, 8, 9, 10)   # where hq2d_live_rows' six columns land
 
-function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, α_max = 200.0)
+# ══════════════════════════════════════════════════════════════════════════════════════════════
+#  THE TAIL REGULATOR, AND WHY THE ABSOLUTE ONE IS NOT ENOUGH
+#
+#  The α row's time-derivative coefficient is `u^τ · dn_da` (`hq2d_live_rows`, AtL[1,4]), and for
+#  the charm list `n ∝ e^α` EXACTLY, so `dn_da = n`.  Where n → 0 the row loses its evolution
+#  coefficient and `inv(At)` throws `SingularException(10)`.  `dn_da += dmn_eps` prevents that.
+#
+#  🔴 MEASURED on a real MC-Glauber 0-5 % event (ic2d_00-05_ev01), INSIDE T > T_fo:
+#      n spans 3.1e-01 down to 6.6e-91 — α reaching the −200 clamp — and 9-18 % of the compared
+#      cells have n < 1e-6.  There the absolute regulator IS the coefficient, not a perturbation:
+#      varying dmn_eps over a factor 100 moves ν by 32-85 % while T and u move by 1e-13.
+#
+#  `dmn_mode` selects what to do about it:
+#
+#    :absolute  `dn_da += dmn_eps`.  The shipped behaviour.  Inert on the smooth and elliptic ICs
+#               `compare_2p1d.jl` runs, where n never gets small; NOT inert on a real event.
+#
+#    :relative  `dn_da += dmn_eps · n_eq(T)`, the local EQUILIBRIUM density, so the regulator is a
+#               fraction of the natural scale instead of an absolute number in whatever units n
+#               carries.  `n_eq = n·e^{-α}` exactly, evaluated in LOGS so `e^{+200}` never forms.
+#               Equivalent to flooring `e^α` at `dmn_eps`, i.e. α at `ln dmn_eps`.
+#
+#    :freeze    below `n_freeze` the charm sector is HELD: rows 8-10 become the identity, so
+#               ∂_τ(α, ν) = 0 there and nothing is regularised because nothing evolves.  This is
+#               structurally what FiVo's vacuum ramp does, and why FiVo has no such failure.
+#
+#  ⛔ MEASURED OUTCOMES (2026-09-10, ic2d_00-05_ev01, 128², τ → 10).  Kept as options so the record
+#  is reproducible; the default is unchanged and bitwise the shipped behaviour.
+#
+#    :absolute  1e-8 SINGULAR · 1e-6 and 1e-4 reach τ = 10.  T and u move by 1e-13 across that
+#               range; ν moves 32-85 %.  Works, but ν is regulator-dominated on a real event.
+#    :relative  FAILS at EVERY strength tried (1e-6, 1e-3, 1e-1).  The scale it is relative to
+#               vanishes too — `n_eq` underflows at low T, and then there is no regulator at all.
+#               You cannot regularise your way out when the reference scale is what collapses.
+#    :freeze    HANGS.  The first case ran 3½ hours without finishing (the others take 25-70 s).
+#               A hard on/off switch in the RHS makes the solution discontinuous wherever a cell
+#               crosses `n_freeze`, and the adaptive Tsit5 step collapses there.  FiVo's vacuum
+#               weight is a SMOOTH ramp for exactly this reason; a freeze needs one too.
+# ══════════════════════════════════════════════════════════════════════════════════════════════
+function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, α_max = 200.0,
+                              dmn_mode::Symbol = :absolute, n_freeze = 1e-8)
     T  = ϕ[1]
     dpt  = pressure_derivative(T, Val(1), params.eos)     # entropy
     dptt = pressure_derivative(T, Val(2), params.eos)
@@ -160,7 +202,13 @@ function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, �
     thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
     n = thermo.pressure
     dn_dT, dn_da = thermo.pressure_derivative
-    dn_da += dmn_eps
+    if dmn_mode === :relative
+        # n_eq(T) = n·e^{-α}; in LOGS so the exponential never overflows at the α clamp
+        n_eq = n > 0.0 ? exp(log(n) - α_safe) : 1.0
+        dn_da += dmn_eps * n_eq
+    else
+        dn_da += dmn_eps
+    end
     κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
     taun = τ_diffusion_hadron(T, α_safe, params.eos, params.diffusion) * HQ_TAUN_SCALE[]
     AtL, AxL, AyL, srcL = hq2d_live_rows(α_safe, ϕ[9], ϕ[10], tau, T, ϕ[2], ϕ[3],
@@ -183,6 +231,18 @@ function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, �
         end
     end
     @inbounds for i in 1:3; src[7+i] = srcL[i]; end
+
+    # :freeze — HOLD the charm sector where there is no charm to speak of. Rows 8-10 become the
+    # identity in ∂_τ and nothing else, so ∂_τ(α, ν^x, ν^y) = 0 in that cell. Nothing is
+    # regularised because nothing evolves, and the medium (rows 1-7) is untouched — charm is a
+    # passive tracer, so freezing it cannot feed back. The analogue of FiVo's vacuum ramp.
+    if dmn_mode === :freeze && n < n_freeze
+        @inbounds for j in 1:10, i in 8:10
+            At[i,j] = (i == j) ? 1.0 : 0.0
+            Ax[i,j] = 0.0; Ay[i,j] = 0.0
+        end
+        @inbounds for i in 8:10; src[i] = 0.0; end
+    end
 
     Ainv = inv(SMatrix{10,10}(At))
     A_mul_B!(A_i[1], Ainv, SMatrix{10,10}(Ax))

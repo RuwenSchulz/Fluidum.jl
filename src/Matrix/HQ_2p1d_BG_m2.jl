@@ -53,14 +53,48 @@
 # 2.3e-15.  This file is written against that record.
 #
 # ------------------------------------------------------------------------------
+# TWO TERMS ADDED 2026-09-11 -- AND WHY NO GATE HAD CAUGHT THEM
+# ------------------------------------------------------------------------------
+# Both belong to the derived equation and both were simply absent, here and in
+# FiVo, because both 2-D files were written from the 1-D reduction:
+#
+#   hq2d_proj_corr   the Delta-PROJECTION of the comoving derivative.  DEFAULT ON
+#                    (`projector = true`) -- it is not optional physics, the
+#                    switch exists only to reproduce a pre-2026-09-11 number.
+#   hq2d_vorticity   the DNMR corotation term 2 pi^{l<i} omega_l^{j>}.  DEFAULT
+#                    OFF (`vorticity = false`), to keep parity with FiVo's
+#                    default and leave every existing number unchanged.
+#
+# ⛔ THE LESSON, and it is the same one twice: a cross-code gate proves the two
+# codes agree, NOT that either is right.  N3 held at 2.2e-16 while BOTH codes
+# omitted BOTH terms.  And the 1-D-reduction gates are blind by construction --
+# the vorticity coupling VANISHES IDENTICALLY on an axisymmetric state, and N1
+# mapped the 2-D rate onto the 1-D p_l with the projection HELD FIXED, which is
+# exactly the projector term, so a frozen map agreed with projector-less rows.
+# N1's mapping is corrected (it now differentiates the projection along the
+# trajectory) and a new gate covers the terms on genuinely 2-D states:
+# Projects/FiVoFluidumComparison/gate_2p1d_m2_newterms.jl.
+#
+# Both are derived symbolically, and the derivation is gated: G6 (the projector's
+# closed form, exactly) and G7 (the coupling's antisymmetry, u-orthogonality,
+# tracelessness, its vanishing in 1-D, and the split that fixes its SIGN --
+# sigma-coupling + omega-coupling == the full pi.NablaPerp u contraction) in
+# Julia/tools/derive_hq_m2_2p1d.wls, 22/22.
+#
+# ------------------------------------------------------------------------------
 # VALIDATION
 # ------------------------------------------------------------------------------
 # This is an INDEPENDENT implementation, not a call into FiVo: the point of a
-# cross-check is two codes, and a shared implementation would prove nothing.  It
-# is gated three ways, in Projects/FiVoFluidumComparison/converge_2p1d_m2.jl:
+# cross-check is two codes, and a shared implementation would prove nothing.
 #     N1  the axisymmetric reduction against Fluidum's OWN 1-D hqc_m2_rows
 #     N2  rotational covariance of the traceless block
 #     N3  agreement with FiVo's src2d/hq_consistent_m2_2d.jl at identical states
+#     N4  the live 8x8 driver assembles those rows
+#     N5  the projector moves the rows; the coupling is traceless, dies in 1-D,
+#         and enters exactly as -W/u^tau            [gate_2p1d_m2.jl, 5/5]
+#     M1-M5  both terms, both codes, on GENUINELY 2-D states: every switch
+#         combination agrees at ~1e-16, the coupling is live there (1.4e-4), and
+#         the two switches are additive  [gate_2p1d_m2_newterms.jl, 3/3]
 # ==============================================================================
 
 """
@@ -127,6 +161,103 @@ index lowered by the metric; the tau-row contributes `-(pi.u)^i (sigma.u)^j/(u^t
            pxy*(sxx + syy + syy*ux^2 - 2*sxy*ux*uy + sxx*uy^2) +
            pxx*(sxy - syy*ux*uy + sxy*uy^2)) / (2*d)
     return (cxx, cxy, cyy)
+end
+
+"""
+    hq2d_proj_corr(pxx, pxy, pyy, ax, ay, ux, uy, uT) -> (dxx, dxy, dyy)
+
+The correction that turns a plain comoving derivative into a Delta-PROJECTED
+one. The equation's first term is `tau_M Delta^{ij}_{ab} D pi_Q^{ab}`, and for a
+symmetric, traceless, u-orthogonal `pi` the projection is closed-form:
+differentiating `u_a pi^{ab} = 0` gives `u_a D pi^{ab} = -pi^{ab} a_a`, hence
+
+    Delta^{ij}_{ab} D pi^{ab} = D pi^{ij} - u^i c^j - u^j c^i,   c^j = pi^{j b} a_b
+
+so what must be SUBTRACTED from the LHS source is `tau_M (u^i c^j + u^j c^i)`.
+Returned here as that quantity, already symmetrised; the caller subtracts it.
+
+⚠ ADDED 2026-09-11. Until then this file — and FiVo's twin until 2026-09-10 —
+integrated the plain `D pi^{ij}`, i.e. the correction was simply missing. The
+cross-code gate could not see it, because BOTH codes omitted it and agreed at
+2.2e-16 (gate_2p1d_m2.jl N3). Nor could the 1-D-reduction gate N1: it mapped the
+2-D rate onto the 1-D `p_l` with the projection held FIXED (`l_mu l_nu d_tau
+pi^{mu nu}`), but `l` depends on `u(tau)`, and `d_tau(l l pi) - l l d_tau pi` is
+exactly this term — so the mis-mapped gate agreed with the projector-less code.
+
+Derived and gated symbolically in `Julia/tools/derive_hq_m2_2p1d.wls` (G6):
+the orthogonality identity, the closed form EXACTLY on the transverse block, and
+the fact that it leaves no trace remainder. Size: 1.6e-4 to 3.4e-3 of the rate.
+It vanishes at rest on the EVOLVED ij block (it is O(u a)); its tau-i components
+do not, which is why only the ij block is stored.
+"""
+@inline function hq2d_proj_corr(pxx, pxy, pyy, ax, ay, ux, uy, uT)
+    # the tau-row of pi, from orthogonality (the same construction as everywhere here)
+    ptx = (ux*pxx + uy*pxy)/uT
+    pty = (ux*pxy + uy*pyy)/uT
+    aT  = (ux*ax + uy*ay)/uT                     # a^tau, from u.a = 0
+    # c^j = pi^{j b} a_b, with a_b = g_{bb} a^b: the tau-row enters with -1
+    cx = -ptx*aT + pxx*ax + pxy*ay
+    cy = -pty*aT + pxy*ax + pyy*ay
+    return (2*ux*cx, ux*cy + uy*cx, 2*uy*cy)
+end
+
+"""
+    hq2d_vorticity(pxx, pxy, pyy, ax, ay, ux, uy, uT,
+                   dtux, dtuy, dxux, dxuy, dyux, dyuy) -> (wxx, wxy, wyy)
+
+The transverse block of the DNMR corotation term `2 pi^{l<i} omega_l^{j>}`, with
+
+    omega^{a n} = (1/2)(NablaPerp^a u^n - NablaPerp^n u^a),
+    NablaPerp^a u^n = g^{aa} d_a u^n + u^a a^n        (derivative index FIRST)
+
+Multiply by `tau_M` and ADD to the LHS source.
+
+⚠ `omega` IS NOT `d_x u^y - d_y u^x`. A boost-invariant transverse flow carries
+the acceleration terms too: `omega^{xy} = (1/2)(d_xu^y - d_yu^x + u^x a^y - u^y a^x)`.
+
+Every eta-component of omega vanishes by boost invariance, so only the (tau,x,y)
+block enters, and
+
+    2 pi^{l<i} omega_l^{j>} = (pi g omega) + (pi g omega)^T
+
+is ALREADY symmetric, traceless and u-orthogonal (pi symmetric, omega
+antisymmetric, both u-orthogonal) — no projection is needed. All four of those
+properties are gated symbolically in `Julia/tools/derive_hq_m2_2p1d.wls` (G7).
+
+⚠ OFF BY DEFAULT (`vorticity = false`), to preserve parity with FiVo's default
+and so that every existing number is unchanged. It VANISHES IDENTICALLY in 1+1D
+— a radial flow has no transverse vorticity — which is why the 1-D code never
+needed it, why both 2-D ports inherited its absence from the 1-D reduction, and
+why no 1-D-limit gate can see it. THE GATE THAT FIXES ITS SIGN is G7-splits:
+sigma-coupling + omega-coupling equals the full contraction
+`pi^{l<i} NablaPerp_l u^{j>}` EXACTLY, which ties this term's normalisation to
+the sigma coupling that gate N1 already holds at 1e-15.
+
+Measured in FiVo on a real Pb+Pb event, converged over N = 160/480/640:
+`|omega|/|sigma|` median 3.01e-2 -> 2.84e-2 -> 2.79e-2, moving pi_Q by ~1e-2.
+"""
+@inline function hq2d_vorticity(pxx, pxy, pyy, ax, ay, ux, uy, uT,
+                                dtux, dtuy, dxux, dxuy, dyux, dyuy)
+    aT = (ux*ax + uy*ay)/uT                      # a^tau, from u.a = 0
+    # d_i u^tau follows from u^tau = sqrt(1 + u_perp^2)
+    dxuT = (ux*dxux + uy*dxuy)/uT
+    dyuT = (ux*dyux + uy*dyuy)/uT
+    # A^{a n} = NablaPerp^a u^n on the mixed pairs; g^{tau tau} = -1 flips the d_tau row
+    Atx = -dtux + uT*ax;   Axt = dxuT + ux*aT
+    Aty = -dtuy + uT*ay;   Ayt = dyuT + uy*aT
+    Axy =  dxuy + ux*ay;   Ayx = dyux + uy*ax
+    wtx = (Atx - Axt)/2
+    wty = (Aty - Ayt)/2
+    wxy = (Axy - Ayx)/2
+    # pi^{tau i} from orthogonality; pi^{tau tau} does not enter the ij block
+    ptx = (ux*pxx + uy*pxy)/uT
+    pty = (ux*pxy + uy*pyy)/uT
+    # (pi g omega)^{i n} = -pi^{i tau} omega^{tau n} + pi^{i x} omega^{x n} + pi^{i y} omega^{y n}
+    Mxx = -ptx*wtx              - pxy*wxy
+    Mxy = -ptx*wty + pxx*wxy
+    Myx = -pty*wtx              - pyy*wxy
+    Myy = -pty*wty + pxy*wxy
+    return (2*Mxx, Mxy + Myx, 2*Myy)
 end
 
 """
@@ -198,11 +329,24 @@ couplings among themselves — the same structure the 1-D `hqc_m2_rows` has, whe
 transverse block by `hq2d_piQ_eta` after the update.
 
 `X = (alpha, nu^x, nu^y, pxx, pxy, pyy, peta, PiQ)`.
+
+TWO TERMS ARE SWITCHABLE, both added 2026-09-11 (see their helpers for the full
+story and for why no existing gate could see either):
+
+  * `projector = true` (DEFAULT ON) — the Delta-projection of the comoving
+    derivative, `hq2d_proj_corr`. It belongs in the equation; it was simply
+    missing. Turning it OFF reproduces this file's pre-2026-09-11 behaviour, and
+    is the way to reproduce an old number.
+  * `vorticity = false` (DEFAULT OFF) — the DNMR corotation term,
+    `hq2d_vorticity`. It also belongs in the equation, but it is left off so that
+    parity with FiVo's default (`m2_vorticity = false`) and every existing number
+    are unchanged. Turn BOTH codes on together.
 """
 function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
                       dtux, dxux, dyux, dtuy, dxuy, dyuy,
                       dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
-                      n, taun, Ds, h, hp, tauM, etaM, mq)
+                      n, taun, Ds, h, hp, tauM, etaM, mq;
+                      projector::Bool = true, vorticity::Bool = false)
     uT = sqrt(1 + ux^2 + uy^2)
     nux = X[2]; nuy = X[3]
     pxx = X[4]; pxy = X[5]; pyy = X[6]; pet = X[7]; PiQ = X[8]
@@ -257,6 +401,19 @@ function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
     Sxy = pxy + 2*ηQ*nxy + geo*pxy + 2*tauM*(cxy - (ux*uy)*πσ/3) +
           2*tauM*PiQ*sxy + 2*cf.ηbar*sxy + qxy
 
+    # the corotation (vorticity) coupling — ADDED to the LHS source, see hq2d_vorticity
+    if vorticity
+        wxx, wxy, wyy = hq2d_vorticity(pxx, pxy, pyy, ax, ay, ux, uy, uT,
+                                       dtux, dtuy, dxux, dxuy, dyux, dyuy)
+        Sxx += tauM*wxx; Sxy += tauM*wxy; Syy += tauM*wyy
+    end
+
+    # the Delta-projection of D pi — SUBTRACTED, see hq2d_proj_corr
+    if projector
+        dxx, dxy, dyy = hq2d_proj_corr(pxx, pxy, pyy, ax, ay, ux, uy, uT)
+        Sxx -= tauM*dxx; Sxy -= tauM*dxy; Syy -= tauM*dyy
+    end
+
     # the trace channel — a scalar, so identical in form to 1-D
     ngT = nux*gTx + nuy*gTy - ((nux*ux + nuy*uy)*(gTx*ux + gTy*uy))/d
     SB  = PiQ + ζQ*thnu + geo*PiQ + (2//3)*tauM*πσ +
@@ -291,16 +448,19 @@ is the same structure the 1-D `matrix1d_visc_HQ_BG_consistent_m2_5f!` has with
 `HQ_CM_BACKREACTION=0`.
 """
 function matrix2d_HQ_BG_m2!(; dmn_eps = 1e-6, background_fields, α_max = 200.0,
-                              consistent_fm::Bool = true)
+                              consistent_fm::Bool = true,
+                              projector::Bool = true, vorticity::Bool = false)
     (A_i, Source, ϕ, tau, X, params) -> matrix2d_HQ_BG_m2!(
         A_i, Source, ϕ, tau, X, params;
         dmn_eps = dmn_eps, background_fields = background_fields,
-        α_max = α_max, consistent_fm = consistent_fm)
+        α_max = α_max, consistent_fm = consistent_fm,
+        projector = projector, vorticity = vorticity)
 end
 
 function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
-        consistent_fm::Bool = true)
+        consistent_fm::Bool = true,
+        projector::Bool = true, vorticity::Bool = false)
 
     T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy =
         background_fields(tau, X[1], X[2])
@@ -371,7 +531,8 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
                      tau, T, ux, uy, dtT, dxT, dyT,
                      dtux, dxux, dyux, dtuy, dxuy, dyuy,
                      dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
-                     n, taun, Ds, h, hp, tauM, etaM, params.diffusion.mass)
+                     n, taun, Ds, h, hp, tauM, etaM, params.diffusion.mass;
+                     projector = projector, vorticity = vorticity)
 
     Z = ntuple(_ -> zero(T), 9)
     r0 = m2rate(Z...)

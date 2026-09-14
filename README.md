@@ -102,5 +102,37 @@ plot(phi[1,:,25])
 plot!(res[end][1,:,25])
 ```
 
+## The 2+1D solvers, and where their documentation lives
+
+The transverse-Cartesian, boost-invariant Milne sector grew a great deal after the snippet above was
+written, and none of it is described here. Start with the documents, not this file:
+
+| | |
+|---|---|
+| `examples/2p1d_viscous/README.md` | how to run the 2+1D viscous solver, the `pi^eta_eta` convention, and the three worked examples |
+| `bench/README.md` | the 19-gate closed-form bench, and the `FLUIDUM_2D_DERIVED` trap |
+| `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_VISCOUS.md` | the derivation, the audit that found ten wrong entries, and the repair |
+| `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_HQ.md` | the 2+1D charm sector: first moment, consistent first moment, second moment |
+| `Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md` | this code against FiVoHydro.jl, row by row and solve by solve |
+
+The entry points, all on a transverse Cartesian grid in Milne coordinates:
+
+| driver | fields | what it is |
+|---|---|---|
+| `matrix2d_visc!` | `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi)` | the medium, Israel-Stewart |
+| `matrix2d_HQ_BG!` | `(alpha, nu^x, nu^y)` | the charm first moment on a **prescribed** background |
+| `matrix2d_visc_HQ_BG!` | the seven above + `(alpha, nu^x, nu^y)` | medium and charm together, charm passive |
+| `matrix2d_HQ_BG_m2!` | `(alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, piQ^eta_eta, Pi_Q)` | charm first **and** second moment on a prescribed background. `src/Matrix/HQ_2p1d_BG_m2.jl` is not `include`d by `src/Fluidum.jl` — load it with `Base.include(Fluidum, ...)`, as the 1-D `HQ_const_BG_consistent*.jl` are loaded |
+
+**Two defaults worth knowing before you compare anything.**
+
+* `FLUIDUM_2D_DERIVED` is **on** since 2026-09-03: the 2+1D viscous kernels use the re-derived
+  matrix, because ten entries of the original are wrong in the two shear rows. Set it to `0` only to
+  reproduce a number made before that date.
+* `matrix2d_HQ_BG_m2!` takes `consistent_fm` and defaults it to **true** (the full-grad-P charm
+  first moment). The other two charm drivers carry the shipped grad-alpha row and have no switch,
+  and FiVoHydro's `build_model_2d` defaults the same flag to **false**. State it explicitly in any
+  cross-code run.
+
 ## Citing 
 When using Fluidum.jl for research, teaching or similar, please cite our work, see [CITATIONS.bib](CITATIONS.bib).

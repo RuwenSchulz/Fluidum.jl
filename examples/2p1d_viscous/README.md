@@ -37,7 +37,7 @@ carries would move `pi^eta_eta` by ~8 % on the state it reaches, and it is measu
 difference is why a Fluidum-vs-FiVoHydro comparison must be run with FiVo's `delta_pipi` switched
 off to be like-for-like (`Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md` §3).
 
-## Use `FLUIDUM_2D_DERIVED=1` for new work
+## The derived matrix — ON by default since 2026-09-03
 
 The shipped generated matrix has ten wrong entries in its two shear rows: the `pi^{xy}` row is
 driven by the one-sided velocity gradient `-2 eta d_x u^y` where Israel–Stewart asks for
@@ -50,10 +50,16 @@ driven by the one-sided velocity gradient `-2 eta d_x u^y` where Israel–Stewar
 * it makes the characteristic structure **anisotropic** — the transverse shear channel propagates at
   `sqrt(2 C_s)` along x and at 0 along y.
 
-`FLUIDUM_2D_DERIVED=1` (or `Fluidum.VISC_2D_DERIVED[] = true`) routes every 2+1D kernel, the
-10-field `matrix2d_visc_HQ_BG!` included, to the matrix re-derived from scratch by
-`Julia/tools/derive_2p1d_viscous.wls`. It is not slower. It is default **off** only so that results
-already on disk keep their meaning. Full account: the note at the top of `src/Matrix/2d_viscous.jl`.
+The repaired matrix, re-derived from scratch by `Julia/tools/derive_2p1d_viscous.wls`, routes every
+2+1D kernel including the 10-field `matrix2d_visc_HQ_BG!`. It is not slower (173 ns against 197).
+
+⚠ **It has been the DEFAULT since 2026-09-03** — `__init__` sets
+`VISC_2D_DERIVED[] = get(ENV, "FLUIDUM_2D_DERIVED", "1") != "0"`, so you get the repaired matrix
+unless you ask for the legacy one with `FLUIDUM_2D_DERIVED=0` (which also prints a warning). This
+section said "default **off** only so that results already on disk keep their meaning" until
+2026-09-14; it was written at 10:23 on 2026-09-03 and the flip landed at 13:12 the same day.
+Reproducing a pre-2026-09-03 number is what `FLUIDUM_2D_DERIVED=0` is for.
+Full account: the note at the top of `src/Matrix/2d_viscous.jl`.
 
 ## Where the gates live
 

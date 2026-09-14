@@ -9,7 +9,7 @@ julia --project=Julia Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl
 FLUIDUM_2DV_FULL=1 julia --project=Julia Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl   # finer grids
 ```
 
-20 gates, ~6 minutes in fast mode. Every reference is a closed form or an ODE integrated inside the
+19 gates, ~6 minutes in fast mode (**19/19 on 2026-09-14**; this line said 20 until then). Every reference is a closed form or an ODE integrated inside the
 file; nothing reads the DataStore, so the suite is portable and deterministic.
 
 | section | what it establishes |
@@ -51,9 +51,12 @@ changes nothing". Before believing any null A/B on an env-controlled flag, asser
 actually set inside the process:
 
 ```julia
-julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]'                      # false
-FLUIDUM_2D_DERIVED=1 julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]' # true
+julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]'                      # true  (the default since 2026-09-03)
+FLUIDUM_2D_DERIVED=0 julia -e 'using Fluidum; @show Fluidum.VISC_2D_DERIVED[]' # false (the legacy matrix, + a warning)
 ```
+⚠ The annotated outputs above were `false` / `true` until 2026-09-14 — they dated from before the
+repair became the default, so the snippet meant to catch a dead switch was itself reading the old
+world. Both lines are re-measured.
 
 Gates in this file are immune by construction: M2 sets `F.VISC_2D_DERIVED[]` **programmatically**
 and restores it, which always worked — only the `ENV` path was dead. `FLUIDUM_2DV_FULL` is read in a

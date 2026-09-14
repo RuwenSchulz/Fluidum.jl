@@ -355,6 +355,12 @@ export Analytic, Gluing,Thermodynamic, EquationOfState, readresonancelist
 export Heavy_Quark, HQdiffusion, free_hadron, QGPViscosity,ZeroDiffusion
 export matrix2d_HQ_BG!, HQ_2p1d_BG_init, hq2d_matrices, axisymmetric_bg_2d
 export matrix2d_visc_HQ_BG!, HQ_viscous_2d, hq2d_live_rows
+# The 2-D second moment's FIELD LAYOUT, exported 2026-09-14 — every other layout in
+# fluidevo/initial_fields.jl (HQ_2p1d_BG_init, HQ_viscous_2d) was already exported and this one
+# was not.  Its DRIVER `matrix2d_HQ_BG_m2!` is deliberately NOT here: Matrix/HQ_2p1d_BG_m2.jl is
+# not included by this file (see its header), exactly as the 1-D HQ_const_BG_consistent*.jl are
+# not — those matrices are `Base.include(Fluidum, …)`d at run time by the driver that wants them.
+export HQ_2p1d_BG_m2_init
 # type piracy 
 
 Bessels.besselk0(d::Dual{T,V,N}) where {T,V,N} = Dual{T}(Bessels.besselk0(value(d)), -Bessels.besselk1(value(d)) * partials(d))

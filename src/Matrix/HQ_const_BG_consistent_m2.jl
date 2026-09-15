@@ -1,3 +1,21 @@
+# ⚠ "const_BG" IS A MISNOMER, AND THE NAME IS KEPT ONLY BECAUSE IT IS ON DISK.
+# The background here is NOT constant. `background_fields(tau, X[1])` returns
+#     T, ur, dtT, drT, drur, dtur
+# at that (tau, r) — a fully time- and space-dependent medium, splined over an r-grid AND a
+# tau-grid (see Projects/LangevinPaper1/generate_background_splines.jl). What "BG" actually means
+# is PRESCRIBED rather than CO-EVOLVED: the medium is supplied to the charm sector instead of being
+# advanced alongside it.
+#
+# 🔑 AND THAT IS NOT AN APPROXIMATION. At c_M = 0 the charm is a PROBE — it does not back-react on
+# the medium. Measured 2026-09-15 (Projects/FiVoFluidumComparison/COMPARISON_1P1D.md §3.2), two ways:
+#   * structure: in the live 7-field matrix1d_visc_HQ!, max|B[1:5, 6:7]| = 0.000e+00 exactly, and no
+#     medium source row references alpha or nu^r;
+#   * behaviour: quadrupling D_s (0.1 -> 0.4) moves nu^r by 62 % and the medium by 6.6e-16 ... 8.6e-15.
+# So prescribing the medium and co-evolving it are the SAME problem, up to discretisation. Solving
+# it in two stages is a choice about scheduling, not about physics.
+#
+# ⛔ The symbols `:HQ_const_BG*` are written into stored artifacts as `evo_mode`; renaming them
+# would orphan every .jld2 that carries one. The name stays; this note is the fix.
 # ==============================================================================
 # HQ_const_BG_consistent_m2.jl — THE THERMODYNAMICALLY CONSISTENT SECOND MOMENT.
 #

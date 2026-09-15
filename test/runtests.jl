@@ -205,4 +205,5 @@ end
 
 # the 2+1D viscous solver: closed-form characteristic speeds, the isotropy the shipped
 # pi^{xy} row breaks, and the Bjorken limit.  Heavy version: Fluidum.jl/bench/bench_2p1d_viscous.jl
+include("test_1p1d_viscous.jl")
 include("test_2p1d_viscous.jl")

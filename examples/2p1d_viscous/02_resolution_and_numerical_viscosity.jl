@@ -33,7 +33,21 @@ the DIFFERENCE of a perturbed and an unperturbed run, which removes the residual
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, Plots
-gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 150, lw = 2)
+# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
+# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
+# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
+# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
+               titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
+               foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
+               left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
+               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
+                                             # tick labels on every map panel (measured on ex10)
+               top_margin = 2Plots.mm)
+# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
+# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
+# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
+# all three panels and reappeared only once the margins were set.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -117,7 +131,7 @@ Dn = 2*ei[end]/K^2; dx = 40.0/Ns[end]
 @printf("  Richardson from the two finest grids: Im omega -> %.6f against the exact %.6f (%.1f %%)\n",
         -imag(om) + 2ei[end] - ei[end-1], -imag(om), 100*abs(2ei[end] - ei[end-1])/abs(imag(om)))
 
-plt = plot(layout = (1,2), size = (1040, 400))
+plt = plot(layout = (1,2), size = (1040, 440))
 for (N, taus, a) in series
     plot!(plt[1], taus .- 200.0, abs.(a)./abs(a[1]); label = "N = $N", yscale = :log10,
           xlabel = "tau - tau_0  [fm/c]", ylabel = "amplitude (normalised)", title = "sound decay")

@@ -4,6 +4,17 @@ struct DiscreteInitialFields{A,B,C}
     initial_field::C
 end
 
+"""
+    HQ_viscous_1d()
+
+Field layout for the 7-field 1+1D viscous hydro + charm system (`matrix1d_visc_HQ!`):
+`(T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r)` in cylindrical Milne. [`viscous_1d`](@ref)
+plus the charm fugacity and its diffusion current; the Cartesian sibling is [`HQ_viscous_2d`](@ref).
+
+`u^r` and `nu^r` are ODD at the origin and everything else EVEN — the r = 0 axis is a symmetry
+axis, not a boundary, and getting a parity wrong there shows up as a kink in the first cells rather
+than as an error. Charm is a PASSIVE tracer: it does not feed `T^{munu}`.
+"""
 @inline function HQ_viscous_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -16,6 +27,17 @@ end
     )
 end
 
+"""
+    HQ_const_BG_init()
+
+Field layout for the charm FIRST MOMENT on a PRESCRIBED 1+1D background (`matrix1d_visc_HQ_BG!`):
+`(alpha, nu^r)`. The medium is handed in as `background_fields(tau, r)` instead of being evolved,
+which is what makes a closure study cheap — the same background can be replayed under different
+charm closures. The 2-D twin is [`HQ_2p1d_BG_init`](@ref).
+
+`alpha` carries a plain ghost rather than an even parity because it is not a tensor component;
+`nu^r` is ODD at the axis.
+"""
 @inline function HQ_const_BG_init()
     return Fields(
     NDField((:ghost,),(:ghost,),:α), 
@@ -23,6 +45,17 @@ end
     )
 end
 
+"""
+    HQ_const_BG_second_moment_init()
+
+[`HQ_const_BG_init`](@ref) plus the charm SECOND MOMENT: `(alpha, nu^r, Pi_Q^r, Pi_Q^perp, Pi_Q)`
+on a prescribed background (`matrix1d_visc_HQ_BG_second_moment!`). In radial symmetry the moment
+is diagonal in the parallel-transported triad `(l, phihat, etahat)`, so two traceless channels plus
+the trace `Pi_Q` are all there is. The 2-D twin is [`HQ_2p1d_BG_m2_init`](@ref), which needs four
+stored components because the transverse block is no longer diagonal.
+
+⚠ Its default `c_M = D_s/T` is the ELLIPTIC branch — see `FLUIDUM_ATTRACTOR_AUDIT.md` section 3.
+"""
 @inline function HQ_const_BG_second_moment_init()
     return Fields(
     NDField((:ghost,),(:ghost,),:α), 
@@ -95,6 +128,15 @@ Field layout for the 10-field 2+1D viscous hydro + passive charm system
     )
 end
 
+"""
+    HQ_viscous_gamma_1d()
+
+[`HQ_viscous_1d`](@ref) with the charm fugacity carried as `gamma = e^alpha` instead of `alpha`
+(`matrix1d_visc_gamma_HQ!`). A second formulation of the same physics, kept so the two can be
+cross-checked; gate X2 of `Projects/FluidumValidation/bench_fluidum_full.jl` does exactly that and
+reports a 1.06e-2, alpha-independent difference that is explained (not a defect) in
+`FLUIDUM_FULL_AUDIT.md` section 3.
+"""
 @inline function HQ_viscous_gamma_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -107,6 +149,12 @@ end
     )
 end 
 
+"""
+    HQ_viscous_no_bulk_1d()
+
+[`HQ_viscous_1d`](@ref) without the bulk pressure: `(T, u^r, pi^phi_phi, pi^eta_eta, alpha, nu^r)`.
+Six fields, for runs that want shear only. Referenced by `MainFluidum/FluidumEvolutionModes.jl`.
+"""
 @inline function HQ_viscous_no_bulk_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -119,6 +167,13 @@ end
 end 
 
 
+"""
+    HQ_viscous_BG_ideal_current_1d()
+
+Viscous medium plus an IDEAL (non-diffusing) charm fugacity: `(T, u^r, pi^phi_phi, pi^eta_eta, Pi,
+alpha)`. No `nu^r` field at all, so the charm is advected and diluted but never diffuses — the
+`D_s -> 0` reference against which a diffusion current is measured.
+"""
 @inline function HQ_viscous_BG_ideal_current_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -130,6 +185,13 @@ end
     )
 end 
 
+"""
+    HQ_viscous_BG_ideal_current_density_1d()
+
+[`HQ_viscous_BG_ideal_current_1d`](@ref) with the charm carried as the DENSITY `n` rather than the
+fugacity `alpha`. The two are related by the equation of state, and which is the evolved variable
+changes what the matrix's time-derivative column is — not a cosmetic choice.
+"""
 @inline function HQ_viscous_BG_ideal_current_density_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -141,6 +203,12 @@ end
     )
 end 
 
+"""
+    HQ_ideal_1d()
+
+The smallest charm layout: ideal medium and an ideal charm fugacity, `(T, u^r, alpha)`. No
+dissipative field of any kind.
+"""
 @inline function HQ_ideal_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -149,6 +217,14 @@ end
     )
 end 
 
+"""
+    HQ_ideal_br_p_density_1d()
+
+[`HQ_ideal_1d`](@ref) with the charm as a DENSITY: `(T, u^r, n)`.
+⚠ Its drivers `matrix1d_ideal_HQ_br_p_density!` / `_fugacity!` are DEAD — they throw
+`UndefVarError: n` inside the module (gate M1 of `bench_fluidum_full.jl`, a declared known failure).
+Kept because this repository preserves wrong turns; do not start new work from it.
+"""
 @inline function HQ_ideal_br_p_density_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -157,6 +233,25 @@ end
     )
 end 
 
+"""
+    viscous_1d()
+
+Field layout for the 5-field 1+1D viscous hydro system (`matrix1d_visc!`):
+`(T, u^r, pi^phi_phi, pi^eta_eta, Pi)` in cylindrical Milne. **This is the production layout** —
+LangevinPaper1, AttractorHydro and SpectraDiagnostic all stand on the matrix that evolves it. The
+Cartesian sibling is [`viscous_2d`](@ref).
+
+`pi^phi_phi` and `pi^eta_eta` are MIXED components (`pi^eta_eta = tau^2 pi^{eta eta}`), the same
+convention `viscous_2d` uses for `piyy`/`pizz`. On a Bjorken background the Navier-Stokes fixed
+points are
+
+    pi^eta_eta -> -4 eta/(3 tau),   pi^phi_phi -> +2 eta/(3 tau),   Pi -> -zeta/tau
+
+and the relaxation is PLAIN Israel-Stewart — no `delta_pipi`, no `tau_pipi`, no `lambda_piPi`.
+Gate B1 of `bench/bench_1p1d_viscous.jl` pins all of that to 1e-13.
+
+`u^r` is ODD at the origin, every other field EVEN: r = 0 is a symmetry axis, not a boundary.
+"""
 @inline function viscous_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),

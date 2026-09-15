@@ -21,6 +21,35 @@ julia --project=Julia Julia/Fluidum.jl/examples/2p1d_viscous/03_elliptic_firebal
 | **02** resolution and numerical viscosity | the sound attenuation against the *exact* MIS dispersion relation, and the measurement that the first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx` — comparable to the physical `Γ_s` at production resolution |
 | **03** an elliptic fireball | the sector ladder on a deformed Woods–Saxon, the causal envelope measured from the characteristic matrix, and where the run actually leaves it |
 
+### 01 — the first run
+
+A transversely uniform state must integrate the 0+1D Israel–Stewart equations, and does, to 1e-13.
+
+![the Bjorken limit](figures/ex01_bjorken.png)
+
+### 02 — resolution and numerical viscosity
+
+The sound attenuation against the *exact* MIS dispersion relation, and the measurement that the
+first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx` — comparable to the physical `Γ_s`
+at production resolution. This is the figure to look at before choosing a grid.
+
+![resolution and numerical viscosity](figures/ex02_numerical_viscosity.png)
+
+### 03 — an elliptic fireball
+
+The sector ladder on a deformed Woods–Saxon, the causal envelope measured from the characteristic
+matrix, and where the run actually leaves it.
+
+![an elliptic fireball](figures/ex03_elliptic_fireball.png)
+
+⚠ **Do not read the green `bulk` curve as physics.** It drives the momentum anisotropy to ~0 by
+τ = 6, and that collapse is a RESOLUTION ARTEFACT at this grid, not what bulk viscosity does. The
+mechanism is measured in `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_VISCOUS.md` §8: what controls
+it is the width of the ζ Lorentzian **in x** against `dx` — `FWHM_x(ζ)/dx`, with a threshold near
+1.4 — and `a_surf/dx` was REFUTED as the controlling variable by a pedestal scan. At N = 96 on this
+box the run sits near that threshold. The same artefact is why two entries of the 2+1D cross-code
+convergence table do not converge (`COMPARISON_2P1D.md` §40.2).
+
 ## Conventions, and the one that has caught people
 
 `pi^{zz}` is the **mixed** Milne component `pi^eta_eta = tau^2 pi^{eta eta}`, not `pi^{eta eta}`;

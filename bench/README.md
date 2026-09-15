@@ -1,16 +1,46 @@
 # Fluidum benchmarks
 
-| | |
-|---|---|
-| `bench_2p1d_viscous.jl` | the 2+1D viscous solver (`matrix2d_visc!`) against closed forms |
+| | | gates | time |
+|---|---|---|---|
+| `bench_1p1d_viscous.jl` | the 1+1D viscous solver (`matrix1d_visc!`) against closed forms | **12** | ~25 s |
+| `bench_2p1d_viscous.jl` | the 2+1D viscous solver (`matrix2d_visc!`) against closed forms | **19** | ~6 min |
 
 ```sh
+julia --project=Julia Julia/Fluidum.jl/bench/bench_1p1d_viscous.jl
+FLUIDUM_1DV_FULL=1 julia --project=Julia Julia/Fluidum.jl/bench/bench_1p1d_viscous.jl   # + N = 800 in A
+
 julia --project=Julia Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl
 FLUIDUM_2DV_FULL=1 julia --project=Julia Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl   # finer grids
 ```
 
-19 gates, ~6 minutes in fast mode (**19/19 on 2026-09-14**; this line said 20 until then). Every reference is a closed form or an ODE integrated inside the
-file; nothing reads the DataStore, so the suite is portable and deterministic.
+Both are discovered by `run_suite.jl` (it walks `Julia/*/bench`) and carry a recorded baseline in
+`Julia/Projects/suite_baseline.toml`.
+
+## `bench_1p1d_viscous.jl` — the production kernel
+
+Added 2026-09-14, and the reason it did not exist before is worth stating: the 2+1D solver got a
+closed-form bench on 2026-09-03, and the 1+1D one — **which is the kernel every manuscript in this
+repository actually uses** — had none inside the package. Its coverage lived entirely in
+`Julia/Projects/FluidumValidation/`, which the suite cannot discover, and in scattered asserts in
+`test/runtests.jl`. 12/12 on 2026-09-14.
+
+| section | what it establishes |
+|---|---|
+| **M** | the two stored shear channels close onto a traceless, u-orthogonal `pi^{mu nu}`; at rest the largest characteristic is the MIS front `sqrt(c_s^2 + (4/3)eta/(w tau_pi) + zeta/(w tau_Pi))` to 6e-16; with viscosity off the extreme characteristics are the boosted sound cone to 1e-14; `A_t` conditioning over T = 0.05…0.6 GeV |
+| **D** | the CONTROL that makes the whole derivation trustworthy: `one_d_viscous_matrix_derived` reproduces the shipped production kernel **entry by entry** over 540 states (5.0e-15). That control existed from 2026-09-03 as gate G1 of a file named for the 2-D sector, documented in no 1-D document, so nothing on the 1-D side ever ran it |
+| **B** | a radially uniform state integrates the 0+1D Israel–Stewart equations to 1e-13; `pi^phi_phi = -pi^eta_eta/2` EMERGES from two independently evolved rows; uniformity and rest are exact fixed points; with viscosity off `tau*s` is conserved |
+| **A** | a Woods–Saxon fireball reaches τ = 4 finite; `|u^r|` at the axis falls monotonically under refinement (1.0e-3 → 1.3e-4 over N = 100…400); T self-converges at observed order **1.03** |
+| **C** | cost, deliberately NOT normalised per cell — the step count is not fixed across these grids, so a µs/cell figure divides by the wrong thing |
+
+⚠ **Warm up before timing.** Without a warm-up run the first size carries compilation and the cost
+table reads 1329 µs/cell at N = 400 against 423 at N = 100, i.e. apparently super-linear. With it,
+the same three grids give a flat 4.05× for 4× the cells. The 2-D bench records the same trap.
+
+## `bench_2p1d_viscous.jl` — the transverse solver
+
+19 gates, ~6 minutes in fast mode (**19/19 on 2026-09-14**; this line said 20 until then). Every
+reference is a closed form or an ODE integrated inside the file; nothing reads the DataStore, so
+both suites are portable and deterministic.
 
 | section | what it establishes |
 |---|---|
@@ -21,7 +51,7 @@ file; nothing reads the DataStore, so the suite is portable and deterministic.
 | **A** | the 1-D and 2-D transport-coefficient paths agree; an axisymmetric 2-D viscous solve converges onto the 1-D cylindrical solver in all five fields; axisymmetry is preserved in the limit |
 | **C** | cost |
 
-## What this suite found
+### What the 2+1D suite found
 
 Gate **M2** — rotational isotropy of the characteristic speeds — fails on the shipped matrix by
 **0.69 c**. The `pi^{xy}` row is driven by the one-sided velocity gradient rather than its symmetric

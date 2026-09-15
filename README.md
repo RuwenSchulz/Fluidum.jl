@@ -109,16 +109,22 @@ written, and none of it is described here. Start with the documents, not this fi
 
 | | |
 |---|---|
-| `examples/2p1d_viscous/README.md` | how to run the 2+1D viscous solver, the `pi^eta_eta` convention, and the three worked examples |
-| `bench/README.md` | the 19-gate closed-form bench, and the `FLUIDUM_2D_DERIVED` trap |
+| `examples/1p1d_viscous/README.md` | how to run the 1+1D viscous and charm solvers -- **the production kernels** -- the mixed `pi^eta_eta` convention, the axis parity, and three worked examples |
+| `examples/2p1d_viscous/README.md` | the same for the 2+1D transverse solver |
+| `bench/README.md` | the two closed-form benches: 12 gates in 1+1D, 19 in 2+1D, and the `FLUIDUM_2D_DERIVED` trap |
 | `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_VISCOUS.md` | the derivation, the audit that found ten wrong entries, and the repair |
 | `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_HQ.md` | the 2+1D charm sector: first moment, consistent first moment, second moment |
+| **`Julia/Projects/FiVoFluidumComparison/README.md`** | **the index**: both codes, all four solvers, every gate and what it costs |
+| `Julia/Projects/FiVoFluidumComparison/COMPARISON_1P1D.md` | this code against FiVoHydro.jl in **1+1D**, on the worked-example configurations |
 | `Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md` | this code against FiVoHydro.jl, row by row and solve by solve |
 
-The entry points, all on a transverse Cartesian grid in Milne coordinates:
+The entry points. The first two are cylindrical (1+1D), the rest transverse Cartesian (2+1D);
+all are boost invariant, in Milne coordinates:
 
 | driver | fields | what it is |
 |---|---|---|
+| `matrix1d_visc!` | `(T, u^r, pi^phi_phi, pi^eta_eta, Pi)` | the medium in CYLINDRICAL Milne -- the 1+1D production kernel |
+| `matrix1d_visc_HQ!` | the five above + `(alpha, nu^r)` | 1+1D medium and charm, charm passive -- what the heavy-quark papers run |
 | `matrix2d_visc!` | `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi)` | the medium, Israel-Stewart |
 | `matrix2d_HQ_BG!` | `(alpha, nu^x, nu^y)` | the charm first moment on a **prescribed** background |
 | `matrix2d_visc_HQ_BG!` | the seven above + `(alpha, nu^x, nu^y)` | medium and charm together, charm passive |

@@ -11,9 +11,12 @@
 #   tauS Delta^{mn}_{ab} D pi^{ab} + pi^{mn} + 2 eta sigma^{mn} = 0
 #   tauB D Pi + Pi + zeta theta = 0
 #
-# The 1-D routine reproduces Fluidum's shipped `one_d_viscous_matrix` entry by entry
-# (gate G4 of Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl); that is why
-# the 2-D routine is trusted where it DISAGREES with the shipped `two_d_viscous_matrix`.
+# The 1-D routine reproduces Fluidum's shipped `one_d_viscous_matrix` entry by entry;
+# that is why the 2-D routine is trusted where it DISAGREES with the shipped
+# `two_d_viscous_matrix`.  That control runs in TWO places:
+#   * gate D1 of bench/bench_1p1d_viscous.jl   (540 states, 5.0e-15)  -- inside this package
+#   * gate G1 of Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl (2000 states, 1.8e-15)
+# (This header said "gate G4" until 2026-09-14; G4 is the Jaumann-coupling check, a different gate.)
 # ============================================================================
 
 """

@@ -16,7 +16,8 @@ CONVENTIONS, which this file also pins:
   delta_pipi = (4/3) tau_pi term of the kind FiVoHydro carries would move pi^eta_eta by ~20 % on
   the state reached below, and it is measurably absent.
 
-USE THE CORRECTED MATRIX FOR NEW WORK: `FLUIDUM_2D_DERIVED=1`.  The shipped generated matrix has ten
+THE CORRECTED MATRIX IS THE DEFAULT (since 2026-09-03; set `FLUIDUM_2D_DERIVED=0` only to reproduce
+something older).  The legacy generated matrix has ten
 wrong entries in its two shear rows (the pi^{xy} row is driven by the one-sided velocity gradient
 instead of its symmetric part).  It is exact for irrotational transverse flow, which is why nothing
 in THIS file changes -- Bjorken has no transverse flow at all -- but it is wrong wherever the flow
@@ -25,7 +26,21 @@ src/Matrix/2d_viscous.jl.
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, OrdinaryDiffEq, Plots
-gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 150, lw = 2)
+# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
+# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
+# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
+# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
+               titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
+               foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
+               left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
+               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
+                                             # tick labels on every map panel (measured on ex10)
+               top_margin = 2Plots.mm)
+# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
+# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
+# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
+# all three panels and reappeared only once the margins were set.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -78,7 +93,7 @@ mv = maximum(abs, u[2,2:33,2:33]) + maximum(abs, u[3,2:33,2:33])
         100*(4/3)*F.τ_shear(ref(TAUF)[1], thermodynamic(ref(TAUF)[1], EOS), PAR.shear)/TAUF)
 
 taus = range(TAU0, TAUF; length = 200)
-plt  = plot(layout = (1,3), size = (1150, 360))
+plt  = plot(layout = (1,3), size = (1150, 440))
 for (j, (k, m, lbl)) in enumerate(((1,1,"T  [GeV]"), (5,2,"pi^eta_eta  [GeV/fm^3]"), (7,3,"Pi  [GeV/fm^3]")))
     plot!(plt[j], taus, [sol(t)[k,ic,ic] for t in taus]; label = "2+1D solver",
           xlabel = "tau  [fm/c]", ylabel = lbl)

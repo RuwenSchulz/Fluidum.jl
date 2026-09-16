@@ -44,7 +44,16 @@ const SUITES = [
     ("bench_fluidum_attractor.jl",        "the charm sector on a closed-form flowing bg",     Dict{String,String}()),
     ("bench_fluidum_2p1d.jl",             "the 2+1D charm/HQ system",                         Dict("FLUIDUM_2D_FULL" => "1")),
     ("bench_fluidum_2p1d_viscous.jl",     "the 2+1D viscous DERIVATION and its audit",        Dict{String,String}()),
+    # the four above are ALGEBRA at sampled states. This one integrates a REAL MC-Glauber event
+    # with the production entry point: it is the only thing here that gates the path a user runs.
+    # Fast mode stops its long leg at tau = 4; FULL takes it to freeze-out at tau = 12.
+    ("bench_fluidum_2p1d_production.jl",  "the 2+1D HQ PRODUCTION PATH on a real event",       Dict{String,String}()),
 ]
+
+# `extra` above is applied only in FULL mode — it ADDS work. This one SUBTRACTS it: outside FULL the
+# production suite is asked to stop its long leg at tau = 4 instead of freeze-out at tau = 12, which
+# keeps all thirteen gates and takes ~3 min off the wall time.
+const FAST_ENV = Dict("bench_fluidum_2p1d_production.jl" => Dict("FLUIDUM_2D_PROD_FAST" => "1"))
 
 println("="^100)
 println("Fluidum — the validation suites in Julia/Projects/FluidumValidation/   (",
@@ -64,6 +73,7 @@ function main()
         nrun += 1
         env = copy(ENV)
         FULL && for (k, v) in extra; env[k] = v; end
+        FULL || for (k, v) in get(FAST_ENV, file, Dict{String,String}()); env[k] = v; end
         io = IOBuffer(); t0 = time()
         ok = try
             run(pipeline(setenv(`$(Base.julia_cmd()) --project=$PROJ $path`, env);

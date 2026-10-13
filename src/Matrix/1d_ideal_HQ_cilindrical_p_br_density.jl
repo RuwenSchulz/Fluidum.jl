@@ -1,3 +1,15 @@
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# ⛔ RETRACTED IN PLACE 2026-10-13 (Projects/FluidumValidation/MATRICES_PROGRAMME.md, P2).
+# DEAD: the wrapper builds a NON-FINITE matrix at every state (FLUIDUM_FULL_AUDIT.md §1.2: the
+# charm EoS returns an incomplete Hessian, ddP/dT² = ddP/dα² = 0, so A_t is singular), and the
+# `invert_n_for_alpha` it calls is off by the fm⁻³ ↔ GeV³ factor 130 (§1.3, gate X4).
+# The kernel (two-way: charm pressure in T^{mn}) is UNVERIFIED -- no gate has ever compared it with
+# a derivation (its source notebook is Notebooks/ideal/ideal_r_tau_br_p_n.nb). Its mode (:ideal_HQ_br_p_density) is registered in
+# MainFluidum/FluidumEvolutionModes.jl but nothing runs it. Kept, not repaired, because this repo
+# keeps its wrong turns; the two-way charm system is being derived from scratch (P3a,
+# Julia/tools/derive_two_way*.wls). Do NOT "fix" the wrapper by binding the missing names -- see
+# FLUIDUM_FULL_AUDIT.md §1.1-1.3 for why the obvious patch is wrong.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
 #
 # The matrices are based on the notebook: ideal_r_tau_br_p_n.nb
 # The fields are stored in the order : T, ur, n 

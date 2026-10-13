@@ -15,9 +15,10 @@ CONVENTIONS, which this file also pins:
   pi^eta_eta is the MIXED Milne component tau^2 pi^{eta eta} (NOT pi^{eta eta}), pi^phi_phi the
   mixed r^2 pi^{phi phi}.  Navier-Stokes fixed points on a Bjorken background:
       pi^eta_eta -> -4 eta/(3 tau),   pi^phi_phi -> +2 eta/(3 tau),   Pi -> -zeta/tau.
-  The relaxation is PLAIN ISRAEL-STEWART: no delta_pipi, no tau_pipi, no lambda_piPi.  A
-  delta_pipi = (4/3) tau_pi term of the kind FiVoHydro carries would move pi^eta_eta by ~20 % on
-  the state reached below, and it is measurably absent.
+  The relaxation is ISRAEL-STEWART + delta_pipi pi theta, delta_pipi = (4/3) tau_pi (the DNMR value,
+  default since 2026-10-13; FLUIDUM_DELTA_PIPI=0 restores plain IS); no tau_pipi, no lambda_piPi.
+  The reference below follows the switch; the two delta_pipi values differ by ~20 % in pi^eta_eta on
+  the state reached below, so the agreement pins which one the kernel carries.
 
 THE AXIS IS NOT A BOUNDARY.  r = 0 is a symmetry axis: `ur` is declared ODD there and every other
 field EVEN (`viscous_1d`).  Nothing in this file exercises that — a uniform state has u^r = 0
@@ -71,7 +72,8 @@ function rhs!(du, U, p, tau)
     eta  = F.viscosity(T, dpt, PAR.shear);       taupi = F.τ_shear(T, dpt, PAR.shear)
     zet  = F.bulk_viscosity(T, dpt, PAR.bulk);   tauPi = F.τ_bulk(T, dpt, dptt, PAR.bulk)
     du[1] = (-(ene(T) + F.pressure(T, EOS) + Pi + pieta)/tau)/(T*dst(T))   # de/dT = T d2P/dT2
-    du[2] = (-pieta - 4eta/(3tau))/taupi
+    # theta = 1/tau on Bjorken; delta_pipi = Fluidum.DELTA_PIPI[] * (4/3) tau_pi, as the kernel runs
+    du[2] = (-pieta - 4eta/(3tau) - F.DELTA_PIPI[]*(4/3)*taupi*pieta/tau)/taupi
     du[3] = (-Pi    - zet/tau)/tauPi
 end
 ref = solve(ODEProblem(rhs!, [T0, 0.0, 0.0], (TAU0, TAUF)), Tsit5(); reltol = 1e-12, abstol = 1e-14)

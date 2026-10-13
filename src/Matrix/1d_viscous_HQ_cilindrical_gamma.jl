@@ -1,4 +1,15 @@
-# the convention here are T, ur,  \[Pi]phiphi, \[Pi]etaeta, \[Pi]B, mu, nur
+# The 7-field :MIS system in the variable gamma = e^alpha instead of alpha (mode :MIS_gamma).
+# Fields phi = (T, u^r, pi^phi_phi, pi^eta_eta, Pi, gamma, nu^r)  (the old line here said "mu" for field 6).
+# Same medium as 1d_viscous_HQ_cilindrical_fugacity.jl (IS + delta_pipi = 4/3 tau_pi). Charm rows:
+#   Nabla.(gamma n0(T) u + nu) = 0;  tau_n Delta D nu + nu + kappa0 Delta grad(gamma) = 0,
+# n0, kappa0, tau_n evaluated at alpha = 0 (the wrapper's hard-coded 0.0).
+# GATED 2026-10-13: M-G7 of Julia/tools/derive_1d_matrices.wls (solved form, exact) and J-G7 of
+# Projects/FluidumValidation/gate_matrices_1d.jl.
+# ⚠ EQUIVALENT to the alpha form only for a list whose charm states all carry ONE charm quark:
+# n(T, alpha) = e^alpha n0(T) and kappa(alpha) = e^alpha kappa0 hold exactly only then. With the
+# production list's charmonia (q = 2, n ∝ e^{2 alpha}) the two formulations are different models --
+# which is the alpha-independent ~1 % gap gate X2 of bench_fluidum_full.jl measures, not a defect of
+# either kernel. Nothing in production runs this mode.
 
 #THIS IS THE MATRIX THAT DID NOT CREATE PROBLEMS WITH THE BUMP (GUBSER)
 

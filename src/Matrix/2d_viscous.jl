@@ -5,8 +5,15 @@
 #
 # Julia/tools/derive_2p1d_viscous.wls re-derives this system from scratch (plain Israel–Stewart,
 # no second-order coefficients) and emits Matrix/viscous_generated.jl.  The SAME generator
-# reproduces the shipped 1-D cylindrical `one_d_viscous_matrix` — the kernel every production
-# 1-D run has used for a year — ENTRY BY ENTRY to 7.8e-16 (gate G4).  Against that reference the
+# reproduces the shipped 1-D cylindrical `one_d_viscous_matrix` (`matrix1d_visc!`'s kernel) ENTRY BY ENTRY to 7.8e-16 (gate B-G1 of bench_fluidum_2p1d_viscous.jl;
+# since 2026-10-13 also symbolically, read out of the .jl, as gate V-G4 of the generator; this line
+# said "gate G4", a name three different gates shared).  [Corrected 2026-10-13: this paragraph
+# called that 5-field kernel "the kernel every production 1-D run has used for a year". The
+# production 1-D backgrounds come from the 7-field :MIS kernel, `one_d_viscous_matrix_fugacity`,
+# whose medium is the same Israel-Stewart PLUS delta_pipi = 4/3 tau_pi (derive_1d_matrices.wls,
+# M-V7m) -- a term neither this matrix nor its derived replacement had.  Since 2026-10-13 (P2b) the
+# derived replacement and the 5-field kernel carry it too, behind FLUIDUM_DELTA_PIPI (default 4/3
+# tau_pi, "0" = plain IS bit for bit); THIS legacy matrix stays plain IS.]  Against that reference the
 # 7-field matrix below differs in exactly ten entries, over any state lattice:
 #
 #     A_t[4,3]  A_t[6,2]  A_t[6,3]    A_x[4,3]  A_x[6,2]  A_x[6,3]
@@ -34,7 +41,7 @@
 #     cannot reach.
 #
 # Neither defect can be seen in 1-D: the transverse vorticity of a purely radial flow vanishes
-# identically, so gate G4 passes either way.
+# identically, so the 1-D control (V-G4 / B-G1) passes either way.
 #
 # HOW WRONG, ON A REAL FIREBALL.  The error this matrix makes in its own equations,
 # ||(A_shipped - A_derived).grad(phi)|| / ||equation||, over the cells of a 96^2 elliptic fireball
@@ -43,8 +50,9 @@
 # not, and it grows with the transverse vorticity (21 % of the strain at tau = 2, 24 % at tau = 4).
 #
 # THE REPAIR IS THE DEFAULT SINCE 2026-09-03.  `Fluidum.VISC_2D_DERIVED[]` is true unless
-# `FLUIDUM_2D_DERIVED=0`, and it routes `matrix2d_visc!` (and, through it, the 10-field
-# `matrix2d_visc_HQ_BG!`, whose hydro block is this one) to `two_d_viscous_matrix_derived`.
+# `FLUIDUM_2D_DERIVED=0`, and it routes `matrix2d_visc!` and the 10-field `matrix2d_visc_HQ_BG!`
+# (whose hydro block is this one; it calls `two_d_viscous_matrix_active` directly, not through
+# `matrix2d_visc!`) to `two_d_viscous_matrix_derived`.
 # `two_d_viscous_matrix` below is kept, unchanged and dated, because this repo keeps its wrong
 # turns -- set the flag to 0 to reproduce anything made before that date.  The repair is free:
 # 163 ns against 186, i.e. the correct matrix is the faster one.
@@ -73,7 +81,9 @@ const VISC_2D_DERIVED = Ref(false)
 
 `two_d_viscous_matrix_derived` when `VISC_2D_DERIVED[]`, else the shipped
 `two_d_viscous_matrix`.  Both have the same signature and the same field layout, so this is the
-one place the choice is made.
+one place the choice is made.  The derived matrix takes delta_pipi from its default trailing
+argument `delta_pipi(tauS)` (FLUIDUM_DELTA_PIPI: 4/3 tau_pi unless "0", since 2026-10-13); the
+legacy matrix has no delta_pipi at all.
 """
 @inline two_d_viscous_matrix_active(args...) =
     VISC_2D_DERIVED[] ? two_d_viscous_matrix_derived(args...) : two_d_viscous_matrix(args...)

@@ -105,54 +105,70 @@ end
     # `Julia/tools/derive_2p1d_viscous.wls` re-derives Israel-Stewart from scratch. Its 1-D routine
     # must reproduce the SHIPPED production kernel entry by entry -- that control is what makes the
     # 2-D half of the same derivation trustworthy where it DISAGREES with the shipped 2-D matrix.
+    # both delta_pipi values (2026-10-13): dpp = 0 (FLUIDUM_DELTA_PIPI=0) and the default 4/3 tau_pi
     worst = 0.0
     for T in (0.12, 0.35, 0.55), ur in (-1.3, 0.0, 2.2),
         (pphi, peta, PiB) in ((0.0,0.0,0.0), (0.02,-0.05,0.01)), tau in (0.4, 7.0), r in (0.05, 12.0)
         eta, taupi, zeta, tauPi = _coeffs1(T)
         phi = [T, ur, pphi, peta, PiB]
-        a = Fluidum.one_d_viscous_matrix(        phi, tau, r, _prs(T,_EOS1), _ent(T,_EOS1), _dst(T,_EOS1), zeta, eta, taupi, tauPi)
-        b = Fluidum.one_d_viscous_matrix_derived(phi, tau, r, _prs(T,_EOS1), _ent(T,_EOS1), _dst(T,_EOS1), zeta, eta, taupi, tauPi)
-        for (x, y) in zip(a, b)
-            worst = max(worst, maximum(abs, Array(x) .- Array(y))/max(maximum(abs, x), 1e-30))
+        for dpp in (0.0, (4/3)*taupi)
+            a = Fluidum.one_d_viscous_matrix(        phi, tau, r, _prs(T,_EOS1), _ent(T,_EOS1), _dst(T,_EOS1), zeta, eta, taupi, tauPi, dpp)
+            b = Fluidum.one_d_viscous_matrix_derived(phi, tau, r, _prs(T,_EOS1), _ent(T,_EOS1), _dst(T,_EOS1), zeta, eta, taupi, tauPi, dpp)
+            for (x, y) in zip(a, b)
+                worst = max(worst, maximum(abs, Array(x) .- Array(y))/max(maximum(abs, x), 1e-30))
+            end
         end
     end
     @test worst < 1e-12
 end
 
-@testset "1+1D viscous -- Bjorken is the 0+1D Israel-Stewart system" begin
+@testset "1+1D viscous -- Bjorken is the 0+1D Israel-Stewart (+ delta_pipi) system" begin
     # The one configuration with a closed-form answer: no radial dependence, u^r = 0. The mixed
     # convention is pinned here -- pi^eta_eta -> -4 eta/(3 tau), pi^phi_phi -> +2 eta/(3 tau),
-    # Pi -> -zeta/tau -- and the relaxation is PLAIN Israel-Stewart: no delta_pipi, no tau_pipi,
-    # no lambda_piPi. A delta_pipi = (4/3) tau_pi of the kind FiVoHydro carries would move
-    # pi^eta_eta by ~20 % on the state reached below, so this is a sharp statement, not a smoke test.
+    # Pi -> -zeta/tau. On Bjorken theta = 1/tau, so the shear row the matrix encodes is
+    #     tau_pi d_tau pi^eta_eta + pi^eta_eta + 4 eta/(3 tau) + delta_pipi pi^eta_eta/tau = 0
+    # with delta_pipi = (4/3) tau_pi by default and 0 under FLUIDUM_DELTA_PIPI=0 (2026-10-13; until
+    # then this kernel was plain IS). No tau_pipi, no lambda_piPi. Both switch values are asserted,
+    # each against its own ODE; the two answers differ by ~20 % in pi^eta_eta on the state reached
+    # below, so each is a sharp statement, not a smoke test.
     T0, tau0, tauf = 0.45, 0.4, 4.0
-    function rhs!(du, U, p, tau)
-        T, peta, PiB = U
-        eta, taupi, zeta, tauPi = _coeffs1(T)
-        du[1] = (-(_ene(T,_EOS1) + _prs(T,_EOS1) + PiB + peta)/tau)/(T*_dst(T,_EOS1))
-        du[2] = (-peta - 4eta/(3tau))/taupi
-        du[3] = (-PiB  - zeta/tau)/tauPi
+    function solve_ref(f)
+        function rhs!(du, U, p, tau)
+            T, peta, PiB = U
+            eta, taupi, zeta, tauPi = _coeffs1(T)
+            du[1] = (-(_ene(T,_EOS1) + _prs(T,_EOS1) + PiB + peta)/tau)/(T*_dst(T,_EOS1))
+            du[2] = (-peta - 4eta/(3tau) - f*(4/3)*taupi*peta/tau)/taupi
+            du[3] = (-PiB  - zeta/tau)/tauPi
+        end
+        solve(ODEProblem(rhs!, [T0, 0.0, 0.0], (tau0, tauf)), Tsit5(); reltol = 1e-12, abstol = 1e-14)
     end
-    ref = solve(ODEProblem(rhs!, [T0, 0.0, 0.0], (tau0, tauf)), Tsit5();
-                reltol = 1e-12, abstol = 1e-14)
+    had = Fluidum.DELTA_PIPI[]
+    try
+        for fac in (1.0, 0.0)
+            Fluidum.DELTA_PIPI[] = fac
+            d   = DiscreteFields(Fluidum.viscous_1d(),
+                                 CartesianDiscretization(Fluidum.OriginInterval(16, 20.0)), Float64)
+            phi = set_array(r -> T0, :temperature, d)
+            for fl in (:ur, :piphiphi, :pietaeta, :piB); set_array!(phi, r -> 0.0, fl, d); end
+            sol = Fluidum.oneshoot(d, Fluidum.matrix1d_visc!, _PAR1, phi, (tau0, tauf);
+                                   reltol = 1e-11, abstol = 1e-13)
 
-    d   = DiscreteFields(Fluidum.viscous_1d(),
-                         CartesianDiscretization(Fluidum.OriginInterval(16, 20.0)), Float64)
-    phi = set_array(r -> T0, :temperature, d)
-    for f in (:ur, :piphiphi, :pietaeta, :piB); set_array!(phi, r -> 0.0, f, d); end
-    sol = Fluidum.oneshoot(d, Fluidum.matrix1d_visc!, _PAR1, phi, (tau0, tauf);
-                           reltol = 1e-11, abstol = 1e-13)
-
-    fin = sol[end]; k = size(fin, 2) ÷ 2
-    Tr, petar, PiBr = ref(tauf)
-    @test isapprox(fin[1, k], Tr;    rtol = 1e-9)
-    @test isapprox(fin[4, k], petar; rtol = 1e-8)
-    @test isapprox(fin[5, k], PiBr;  rtol = 1e-8)
-    # pi^phi_phi = -pi^eta_eta/2 must EMERGE from two independently evolved rows, not be imposed
-    @test abs(fin[3, k] + fin[4, k]/2)/abs(fin[4, k]) < 1e-9
-    # uniformity and rest are exact fixed points of the discretisation
-    @test maximum(abs, fin[1, :] .- fin[1, k])/fin[1, k] < 1e-11
-    @test maximum(abs, fin[2, :])                        < 1e-11
+            fin = sol[end]; k = size(fin, 2) ÷ 2
+            Tr, petar, PiBr = solve_ref(fac)(tauf)
+            @test isapprox(fin[1, k], Tr;    rtol = 1e-9)
+            @test isapprox(fin[4, k], petar; rtol = 1e-8)
+            @test isapprox(fin[5, k], PiBr;  rtol = 1e-8)
+            # pi^phi_phi = -pi^eta_eta/2 must EMERGE from two independently evolved rows, not be imposed
+            @test abs(fin[3, k] + fin[4, k]/2)/abs(fin[4, k]) < 1e-9
+            # uniformity and rest are exact fixed points of the discretisation
+            @test maximum(abs, fin[1, :] .- fin[1, k])/fin[1, k] < 1e-11
+            @test maximum(abs, fin[2, :])                        < 1e-11
+            # and the OTHER switch value's ODE is far away: the term is really there (or really absent)
+            @test abs(fin[4, k]/solve_ref(1.0 - fac)(tauf)[2] - 1) > 0.05
+        end
+    finally
+        Fluidum.DELTA_PIPI[] = had
+    end
 end
 
 @testset "1+1D viscous -- the 1-D and 2-D transport paths agree" begin

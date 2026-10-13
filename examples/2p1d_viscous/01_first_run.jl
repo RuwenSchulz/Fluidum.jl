@@ -12,9 +12,10 @@ CONVENTIONS, which this file also pins:
   pi^{zz} is the MIXED Milne component pi^eta_eta = tau^2 pi^{eta eta}  (NOT pi^{eta eta}),
   pi^{yy} is the Cartesian pi^y_y.  Navier-Stokes fixed points on a Bjorken background:
       pi^eta_eta -> -4 eta/(3 tau),  pi^y_y -> +2 eta/(3 tau),  Pi -> -zeta/tau.
-  The relaxation is PLAIN ISRAEL-STEWART: no delta_pipi, no tau_pipi, no lambda_piPi.  A
-  delta_pipi = (4/3) tau_pi term of the kind FiVoHydro carries would move pi^eta_eta by ~20 % on
-  the state reached below, and it is measurably absent.
+  The relaxation is ISRAEL-STEWART + delta_pipi pi theta, delta_pipi = (4/3) tau_pi (the DNMR value,
+  default since 2026-10-13; FLUIDUM_DELTA_PIPI=0 restores plain IS); no tau_pipi, no lambda_piPi.
+  The reference below follows the switch; the two delta_pipi values differ by ~20 % in pi^eta_eta on
+  the state reached below, so the agreement pins which one the kernel carries.
 
 THE CORRECTED MATRIX IS THE DEFAULT (since 2026-09-03; set `FLUIDUM_2D_DERIVED=0` only to reproduce
 something older).  The legacy generated matrix has ten
@@ -72,7 +73,8 @@ function rhs!(du, U, p, tau)
     eta = F.viscosity(T, th, PAR.shear);      taupi = F.τ_shear(T, th, PAR.shear)
     zet = F.bulk_viscosity(T, th, PAR.bulk);  tauPi = F.τ_bulk(T, th, PAR.bulk)
     du[1] = (-(ene(T) + F.pressure(T, EOS) + Pi + pieta)/tau)/(T*dst(T))   # de/dT = T d2P/dT2
-    du[2] = (-pieta - 4eta/(3tau))/taupi
+    # theta = 1/tau on Bjorken; delta_pipi = Fluidum.DELTA_PIPI[] * (4/3) tau_pi, as the kernel runs
+    du[2] = (-pieta - 4eta/(3tau) - F.DELTA_PIPI[]*(4/3)*taupi*pieta/tau)/taupi
     du[3] = (-Pi - zet/tau)/tauPi
 end
 ref = solve(ODEProblem(rhs!, [T0, 0.0, 0.0], (TAU0, TAUF)), Tsit5(); reltol = 1e-12, abstol = 1e-14)
@@ -89,7 +91,7 @@ sp = maximum(abs, u[1,2:33,2:33] .- u[1,ic,ic])/u[1,ic,ic]
 mv = maximum(abs, u[2,2:33,2:33]) + maximum(abs, u[3,2:33,2:33])
 @printf("\n  transverse spread of T  %.2e  (a uniform state must stay uniform)\n", sp)
 @printf("  max |u|                 %.2e  (a uniform state must stay at rest)\n", mv)
-@printf("  |delta_pipi| would have moved pi^eta_eta by ~%.0f %% here — it is absent\n",
+@printf("  delta_pipi/tau = (4/3) tau_pi/tau = %.0f %% here (on unless FLUIDUM_DELTA_PIPI=0)\n",
         100*(4/3)*F.τ_shear(ref(TAUF)[1], thermodynamic(ref(TAUF)[1], EOS), PAR.shear)/TAUF)
 
 taus = range(TAU0, TAUF; length = 200)

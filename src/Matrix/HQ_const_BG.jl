@@ -16,7 +16,15 @@
 #
 # ⛔ The symbols `:HQ_const_BG*` are written into stored artifacts as `evo_mode`; renaming them
 # would orphan every .jld2 that carries one. The name stays; this note is the fix.
-# the convention here are T, ur,  \[Pi]phiphi, \[Pi]etaeta, \[Pi]B, mu, nur
+#
+# FIELDS: phi = (alpha, nu^r) -- two fields, the charm first moment only (the medium is the closure
+# `background_fields`).  Until 2026-10-13 this line listed the 7-field layout of
+# 1d_viscous_HQ_cilindrical_fugacity.jl, copied with the code.
+# EQUATIONS: Nabla.(n u + nu) = 0;  tau_n Delta D nu + nu + kappa Delta grad(alpha) = 0 (the shipped,
+# grad-alpha-only closure).  GATED against a covariant derivation, read out of this file: gate M-BG of
+# Julia/tools/derive_1d_matrices.wls (raw entries, symbolically) and J-BG of
+# Projects/FluidumValidation/gate_matrices_1d.jl (in programme.jl check); also H-G4 of
+# derive_hq_2p1d.wls and G3 of Tex/MaxEntHydro/diag_hq_consistent_gates.jl.
 
 
 
@@ -27,7 +35,11 @@ end
 
 
 #THIS IS THE MATRIX THAT DID NOT CREATE PROBLEMS WITH THE BUMP (GUBSER)
-function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-10,background_fields= nothing, α_max=200.0)
+# dmn_eps: 1e-6 in BOTH methods since 2026-10-13. The direct method defaulted to 1e-10 while the
+# closure above (the only route production takes: every mode-registry and driver call builds the
+# closure, and the closure always passes its own value through) defaulted to 1e-6 -- so 1e-10 was
+# reachable only by calling this method by hand without the keyword. No production output changes.
+function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background_fields= nothing, α_max=200.0)
 
     T,ur,dtT,drT,drur,dtur = background_fields(tau,X[1])
 
@@ -39,10 +51,10 @@ function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-10,backgroun
     dn_dmu+= dmn_eps
 
     κ = diffusion_hadron(T,α_safe,params.eos,params.diffusion) #diffusion coefficient for hadrons
-    tauDiffusion=τ_diffusion_hadron(T,α_safe,params.eos,params.diffusion) #tau diffusion for hadrons
+    # τ_n with the diagnostic knobs (HQ_TAUN_SCALE, FLUIDUM_HQ_MOMENTUM_DIMS) applied, as in every
+    # charm matrix (hq_taun, 2026-10-13; this file ignored both before). Production: bare τ_n.
+    tauDiffusion=hq_taun(T,α_safe,params.eos,params.diffusion)
 
-    #actually our equations don t depend on p: we can just put as entry dpt instead, in any case it will not be used (but in the future maybe it will be )
-    #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only(ϕ,tau,X[1],ur,dtT,drT,drur,dtur,n,dn_dmu,dn_dT,tauDiffusion,κ)
 
         
@@ -59,7 +71,7 @@ function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-10,backgroun
 
 
 function one_d_viscous_matrix_fugacity_BG_only(X,tau,r,ur,dtT,drT,drur,dtur,n,dn_dmu,dn_dT,tauDiffusion,κ)
-    #these are the matrices from 1d viscous hydro
+    # the charm first moment on a prescribed medium, every row multiplied by u^tau^3 r tau
     At=SMatrix{2,2}(((1  .+ ur .^2) .^2 .*r .*tau .*dn_dmu,
 
 κ .*ur .*(1  .+ ur .^2) .^2 .*r .*tau,

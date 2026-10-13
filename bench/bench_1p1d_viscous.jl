@@ -32,8 +32,10 @@
 #   `piphiphi` and `pietaeta` are MIXED components: π^η_η = τ²π^{ηη}, π^φ_φ = r²π^{φφ}. Same mixed
 #   convention `viscous_2d` uses for `piyy`/`pizz`. Navier–Stokes fixed points on Bjorken:
 #       π^η_η → −4η/(3τ),   π^φ_φ → +2η/(3τ),   Π → −ζ/τ.
-#   The relaxation is PLAIN ISRAEL–STEWART — no δ_ππ, no τ_ππ, no λ_πΠ. B1 pins that to 1e-13; a
-#   δ_ππ = (4/3)τ_π of the kind FiVoHydro carries would move π^η_η by ~20 % on the state reached.
+#   The relaxation is ISRAEL–STEWART + δ_ππ π θ, δ_ππ = (4/3)τ_π by default and 0 under
+#   FLUIDUM_DELTA_PIPI=0 (2026-10-13, RS; until then plain IS) — no τ_ππ, no λ_πΠ. B1 pins that to
+#   1e-9 against the ODE for whichever value the switch holds; the two values differ by ~20 % in
+#   π^η_η on the state reached.
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 using Fluidum, LinearAlgebra, Printf, OrdinaryDiffEq
 const F    = Fluidum
@@ -189,14 +191,15 @@ section("B · Bjorken — a radially uniform state IS the 0+1D Israel–Stewart 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # The one configuration with a closed-form answer. A state with no radial dependence and u^r = 0
 # must integrate
-#   de/dτ = −(e + p + Π + π^η_η)/τ ;  τ_π Dπ^η_η = −π^η_η − 4η/(3τ) ;  τ_Π DΠ = −Π − ζ/τ
+#   de/dτ = −(e + p + Π + π^η_η)/τ ;  τ_π Dπ^η_η = −π^η_η − 4η/(3τ) − δ_ππ π^η_η/τ ;  τ_Π DΠ = −Π − ζ/τ
+# (θ = 1/τ; δ_ππ = Fluidum.DELTA_PIPI[]·(4/3)τ_π, the value the kernel is running with)
 # and π^φ_φ = −π^η_η/2 must EMERGE from two independently evolved rows rather than be imposed.
 function bjorken_reference(T0, τ0, τf)
     function rhs!(du, U, p, τ)
         T, peta, PiB = U
         η, τπ, ζ, τΠ = coeffs(T)
         du[1] = (-(ene(T) + prs(T) + PiB + peta)/τ)/(T*dst(T))       # de/dT = T d²p/dT²
-        du[2] = (-peta - 4η/(3τ))/τπ
+        du[2] = (-peta - 4η/(3τ) - F.DELTA_PIPI[]*(4/3)*τπ*peta/τ)/τπ
         du[3] = (-PiB  - ζ/τ)/τΠ
     end
     solve(ODEProblem(rhs!, [T0, 0.0, 0.0], (τ0, τf)), Tsit5(); reltol = 1e-12, abstol = 1e-14)
@@ -217,7 +220,7 @@ function gate_B()
     ep  = abs(petan - petar)/max(abs(petar), 1e-30)
     eB  = abs(PiBn - PiBr)/max(abs(PiBr), 1e-30)
     gate("B1", eT < 1e-10 && ep < 1e-9 && eB < 1e-9,
-        @sprintf("a uniform state integrates the 0+1D MIS equations: T %.2e, π^η_η %.2e, Π %.2e (relative)", eT, ep, eB))
+        @sprintf("a uniform state integrates the 0+1D MIS equations (δ_ππ = %g·(4/3)τ_π): T %.2e, π^η_η %.2e, Π %.2e (relative)", F.DELTA_PIPI[], eT, ep, eB))
     note(@sprintf("state reached: T = %.5f, π^η_η = %.5e, Π = %.5e, |π^η_η|/e = %.3f",
                   Tn, petan, PiBn, abs(petan)/ene(Tn)))
 

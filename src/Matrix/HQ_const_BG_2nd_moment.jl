@@ -1,3 +1,36 @@
+# ==============================================================================
+# ⛔⛔ RETRACTED 2026-10-13 (RS decision) — ROWS 3-5 OF THIS MATRIX ARE WRONG. ⛔⛔
+#
+# The second-moment rows (pi_Q^r, pi_Q^perp, Pi_Q) of
+# `one_d_viscous_matrix_fugacity_BG_only_second_moment` — and therefore the driver
+# `matrix1d_visc_HQ_BG_second_moment!` and the DPM modes :HQ_const_BG_second_moment and
+# :HQ_const_BG_second_moment_NR built on it — are not the second-moment equation:
+#
+#   (1) the sigma_(nu) drive enters with the OPPOSITE SIGN: every nu-derivative coefficient is
+#       exactly minus the covariant one (mostly-minus notebook heritage, the W0/C0 family);
+#   (2) they carry coordinate-transport couplings among (pi_l, pi_phi, Pi_Q) that the
+#       parallel-transported basis shows to be absent from Delta-projected D pi;
+#   (3) entries such as tauM*(2+tau^4)/3 and etaM*(-6+r^4+tau^4)/3 add tau^4 and r^4 to pure
+#       numbers — dimensionally inconsistent. The moment block of A_t equals tauM*u^tau*Identity
+#       only at tau = r = 1; at tau = 0.4, r = 10 its entries are ~ -3333 and 6667 tauM-units.
+#
+# (1)-(2) were measured 2026-09-02 by rotating these rows into the triad basis
+# (Projects/LangevinPaper1/diagnostics/m2_derivation/diag_shipped_row_content.jl), recorded in
+# HQ_const_BG_consistent_m2.jl's header ("WHY legacy IS A DELEGATION") and in
+# Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md §A.4; its kinetic validation (§8) finds the
+# nabla-nu-only rows wrong-signed over most of the window. Rows 1-2 (alpha, nu^r) are the shipped
+# first moment, which is not what is retracted.
+#
+# THE CORRECT ROUTE: `matrix1d_visc_HQ_BG_consistent_m2_5f!` (HQ_const_BG_consistent_m2.jl,
+# DPM mode :HQ_const_BG_consistent_m2_5f), gated by Tex/MaxEntHydro/diag_hq_m2_symbolic_gates.jl.
+#
+# The file and its code are KEPT, unchanged in substance, so that old artifacts can be reproduced:
+# the driver refuses to run unless forced with `allow_retracted = true` (closure keyword) or
+# FLUIDUM_ALLOW_RETRACTED=1 in the environment. `one_d_viscous_matrix_fugacity_BG_only_second_moment`
+# itself stays callable: the consistent 5f mode and the consistent_m2 :legacy control delegate to it
+# ON PURPOSE, as the record of what the production payloads contain.
+# ==============================================================================
+#
 # ⚠ "const_BG" IS A MISNOMER, AND THE NAME IS KEPT ONLY BECAUSE IT IS ON DISK.
 # The background here is NOT constant. `background_fields(tau, X[1])` returns
 #     T, ur, dtT, drT, drur, dtur
@@ -16,13 +49,27 @@
 #
 # ⛔ The symbols `:HQ_const_BG*` are written into stored artifacts as `evo_mode`; renaming them
 # would orphan every .jld2 that carries one. The name stays; this note is the fix.
-function matrix1d_visc_HQ_BG_second_moment!(;dmn_eps=1e-6, background_fields, α_max=200.0, use_NR_tauM::Bool=false)
-    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG_second_moment!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields, α_max=α_max, use_NR_tauM=use_NR_tauM)
+
+function _refuse_retracted_second_moment(allow::Bool)
+    allow && return nothing
+    error("matrix1d_visc_HQ_BG_second_moment! is RETRACTED (2026-10-13): its second-moment rows 3-5 " *
+          "carry a flipped sigma_(nu) drive sign, spurious coordinate-transport couplings and " *
+          "dimensionally inconsistent tau^4/r^4 entries (header of Matrix/HQ_const_BG_2nd_moment.jl). " *
+          "Use matrix1d_visc_HQ_BG_consistent_m2_5f! (DPM mode :HQ_const_BG_consistent_m2_5f). " *
+          "To REPRODUCE an old artifact only, pass allow_retracted = true or set FLUIDUM_ALLOW_RETRACTED=1.")
+end
+
+function matrix1d_visc_HQ_BG_second_moment!(;dmn_eps=1e-6, background_fields, α_max=200.0, use_NR_tauM::Bool=false,
+                                            allow_retracted::Bool = ALLOW_RETRACTED[])
+    _refuse_retracted_second_moment(allow_retracted)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG_second_moment!(A_i, Source, ϕ, tau, X, params;dmn_eps=dmn_eps,background_fields=background_fields, α_max=α_max, use_NR_tauM=use_NR_tauM, allow_retracted=true)
 end
 
 
 #THIS IS THE MATRIX THAT DID NOT CREATE PROBLEMS WITH THE BUMP (GUBSER)
-function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background_fields= nothing, α_max=200.0, use_NR_tauM::Bool=false)
+function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background_fields= nothing, α_max=200.0, use_NR_tauM::Bool=false,
+                                            allow_retracted::Bool = ALLOW_RETRACTED[])
+    _refuse_retracted_second_moment(allow_retracted)
 
     T,ur,dtT,drT,drur,dtur = background_fields(tau,X[1])
 
@@ -54,37 +101,28 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
     #         consistent across both branches: etaM_rel → T·D_s z/2 = T·taun/2 in the NR limit z→∞).
     # The derivation defines τ_n AND τ_M in the SAME convention, so the RATIO is what is physical:
     #   τ_M/τ_n = ½·K4K2/K3² (≈ 0.550 at z = m_c/T_fo = 9.615).
-    # PRODUCTION therefore ties both to `taun` — the bare Eq.(30) τ_n of line 29 — so the convention is
+    # PRODUCTION therefore ties both to `taun` — the bare Eq.(30) τ_n above — so the convention is
     # automatic and cannot drift when τ_n's normalisation is audited again:
     #   τ_M = taun·½·K4K2/K3²  (exact),   η_M = T·taun/2  (exact NR limit of the same tie).
-    # The `_rel` forms below rebuild τ_M from the STANDALONE `Ds` of line 19 instead, which is only
+    # The `_rel` forms below rebuild τ_M from the STANDALONE `Ds` above instead, which is only
     # consistent with a τ_n built from that same `Ds`; against the actual bare τ_n they give
     # τ_M/τ_n ≈ 14.1 rather than 0.550, i.e. 25.7× the tied value (4.28× after the historical ÷g_hq).
     # They are a diagnostic branch, NOT an alternative convention. Env FIVO_IS2_TAUM_BARE=1 selects them.
     # (An earlier version of this comment claimed τ_diffusion_hadron is degeneracy-weighted and that
-    # τ_M/η_M must carry a matching ÷g_hq. That is false since 2026-07-21 — see line 22 — and the ÷g_hq
+    # τ_M/η_M must carry a matching ÷g_hq. That is false since 2026-07-21 — see the τ_n note above — and the ÷g_hq
     # form is not what either branch computes. Do not reinstate it.)
     tauM_rel = Ds / (2) * (6 *z *besselk(1, z) + (z^2 + 24) * besselk(2, z))/(z*besselk(1,z) + 4 *besselk(2, z))
     etaM_rel = (Ds*T/2) * (4 + z *besselk(1, z)/besselk(2, z))
     tauM_deg = taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
     etaM_deg = T * taun / 2
-    _tauM_bare = get(ENV, "FIVO_IS2_TAUM_BARE", "0") == "1"
+    _tauM_bare = HQ_TAUM_BARE_DIAG[]          # env FIVO_IS2_TAUM_BARE, read once in __init__
 
     tauM = use_NR_tauM ? taun / 2     : (_tauM_bare ? tauM_rel : tauM_deg)
     etaM = use_NR_tauM ? T * taun / 2 : (_tauM_bare ? etaM_rel : etaM_deg)
 
-    # ── FLUIDUM_HQ_MOMENTUM_DIMS=2 (2026-08-21): match the charm sector in the TWO-dimensional momentum
-    # measure. The Langevin ensembles of LangevinPaper1 evolve transverse momenta only, so their
-    # equilibrium is the 2-D Jüttner p dp e^{-E/T} and their ℓ-th moment relaxes at λ_ℓ(2D)·η_D, not at
-    # the 3-D λ_ℓ = K_{ℓ+1}/K_{ℓ+2} that τ_n = D_s z K₃/K₂ and τ_M = D_s z K₄/(2K₃) encode. In that
-    # measure every moment ∫_M^∞ E^n e^{-E/T} dE is an incomplete Gamma of integer order, so the ratios
-    # are closed forms (checked against quadrature to 1e-9 at z = 2…20):
-    #     λ₁(2D) = z(z+1)/(z²+3z+3),      λ₂(2D) = z(z²+3z+3)/(z³+6z²+15z+15),
-    # and τ_n^{2D} = τ_n·(K₂/K₃)/λ₁(2D)  (5–12 % shorter over z = 3.5–10),  τ_M^{2D} = τ_M·(K₃/K₄)/λ₂(2D).
-    # η_M stays tied to τ_n (η_M = T τ_n/2); κ = D_s n is dimension-independent. The 5/3 shear/bulk
-    # tie and the tensor structure of the matrix are NOT switched (they are the 3-spatial-dimension
-    # projection the solver is written in). Default "3" ⇒ production, bit-identical. DIAGNOSTIC knob:
-    # it is a process-wide env read per call, so set it before the solve, never mid-run.
+    # FLUIDUM_HQ_MOMENTUM_DIMS=2 (2026-08-21): the 2-D-momentum-measure diagnostic. Its derivation now
+    # lives with `hq_transport` (EquationOfState/heavyquark.jl), which every live charm matrix uses;
+    # this frozen copy is the same arithmetic.
     if HQ_MOMENTUM_DIMS[] == 2
         λ1_2d = z * (z + 1) / (z^2 + 3z + 3)
         λ2_2d = z * (z^2 + 3z + 3) / (z^3 + 6z^2 + 15z + 15)
@@ -93,10 +131,9 @@ function matrix1d_visc_HQ_BG_second_moment!(A_i,Source,ϕ,tau,X,params;dmn_eps=1
         etaM  = T * taun / 2
     end
 
-    # c_M = D_s/T is the rigorous 1st↔2nd-moment back-coupling (was hard-set to 0). Env-selectable so both
-    # the no-backreaction (c_M=0) and the physical (c_M=D_s/T) cases can be compared:
-    #   HQ_CM_BACKREACTION=0 → c_M=0 ;  otherwise (default) → c_M=D_s/T.
-    cM   = get(ENV, "HQ_CM_BACKREACTION", "1") == "0" ? zero(Ds) : Ds / T
+    # c_M: 0 by default (HQ_CM_BACKREACTION unset or "0"); D_s/T with HQ_CM_BACKREACTION=1. Until
+    # 2026-10-13 the default was D_s/T and only the literal "0" gave zero. Read once in __init__.
+    cM   = HQ_CM_BACKREACTION[] ? Ds / T : zero(Ds)
 
     #(At,Ax, source)=one_d_viscous_HQ_matrix(ϕ,t,X[1],dpt,dpt,dptt,zeta,etaVisc,tauS,tauB,n,dtn,dmn,tauDiff,Ds)
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only_second_moment(ϕ,tau,X[1],ur,T,dtT,drT,drur,dtur,n,dn_dalpha,dn_dT,taun,kappa,tauM,etaM,mq,cM)

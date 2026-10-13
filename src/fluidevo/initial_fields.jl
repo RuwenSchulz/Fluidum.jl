@@ -48,13 +48,20 @@ end
 """
     HQ_const_BG_second_moment_init()
 
-[`HQ_const_BG_init`](@ref) plus the charm SECOND MOMENT: `(alpha, nu^r, Pi_Q^r, Pi_Q^perp, Pi_Q)`
-on a prescribed background (`matrix1d_visc_HQ_BG_second_moment!`). In radial symmetry the moment
-is diagonal in the parallel-transported triad `(l, phihat, etahat)`, so two traceless channels plus
-the trace `Pi_Q` are all there is. The 2-D twin is [`HQ_2p1d_BG_m2_init`](@ref), which needs four
-stored components because the transverse block is no longer diagonal.
+[`HQ_const_BG_init`](@ref) plus the charm SECOND MOMENT: `(alpha, nu^r, piQ^l, piQ^phi, Pi_Q)`
+(field names `:PiQr, :PiQperp, :PiQ`) on a prescribed background. In radial symmetry the moment is
+diagonal in the parallel-transported triad `(l, phihat, etahat)`, so two traceless channels plus
+the trace `Pi_Q` are all there is (`piQ^eta = -(piQ^l + piQ^phi)`). The 2-D twin is
+[`HQ_2p1d_BG_m2_init`](@ref), which needs four stored components because the transverse block is
+no longer diagonal.
 
-⚠ Its default `c_M = D_s/T` is the ELLIPTIC branch — see `FLUIDUM_ATTRACTOR_AUDIT.md` section 3.
+The layout of `matrix1d_visc_HQ_BG_consistent_m2_5f!` (the correct second moment),
+`matrix1d_visc_HQ_BG_consistent_5f!`, and the RETRACTED (2026-10-13)
+`matrix1d_visc_HQ_BG_second_moment!`. Field 5 is the TRACE `Pi_Q`; the project-side alias `Meta`
+for it (and `Mr`, `Mperp` for fields 3, 4) is a legacy name, not M^eta_eta.
+
+c_M = 0 by default (`HQ_CM_BACKREACTION`); c_M = D_s/T is the ELLIPTIC branch — see
+`FLUIDUM_ATTRACTOR_AUDIT.md` section 3.
 """
 @inline function HQ_const_BG_second_moment_init()
     return Fields(
@@ -91,8 +98,10 @@ piQ^eta_eta, Pi_Q) on a prescribed background.
 Cartesian transverse grid, so every boundary is a plain ghost -- there is no
 symmetry axis to impose a parity on, exactly as for `HQ_2p1d_BG_init`. The
 second-moment components are ordinary scalars on this grid; the ONE constraint
-they carry (tracelessness) is algebraic, not a boundary condition, and is
-restored by `hq2d_piQ_eta` after each step rather than imposed here.
+they carry (tracelessness) is algebraic, not a boundary condition. There is no
+post-step projection: `matrix2d_HQ_BG_m2!` holds `piQ^eta_eta` on its
+tracelessness value `hq2d_piQ_eta(...)` by a stiff relaxation in the RHS (rate
+100/fm, which stability-caps an explicit integrator's step near ~0.03 fm).
 """
 @inline function HQ_2p1d_BG_m2_init()
     return Fields(
@@ -519,6 +528,8 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
         Fluidum.set_array!(phi, x -> init_fun_dict[:PiQ](x), :PiQ, disc_fields)
     catch
         try
+            # legacy key: `:Meta` here means field 5 = the TRACE Pi_Q, NOT M^eta_eta. A Langevin
+            # M^eta_eta handed in under this key would be silently mis-assigned; use :PiQ.
             Fluidum.set_array!(phi, x -> init_fun_dict[:Meta](x), :PiQ, disc_fields)
         catch
         end
@@ -607,3 +618,180 @@ function initialize_fields(x::TabulatedData{A,B}, y::TabulatedData{C,D}, cent1::
 return DiscreteInitialFields(disc,disc_fields,phi)
 end
 
+
+# ══ Field layouts of the conformal set and the TWO-WAY system (2026-10-13, P3b of
+# Projects/FluidumValidation/MATRICES_PROGRAMME.md; closures in Matrix/two_way.jl) ═══════════
+# Parities as everywhere in 1+1D: u^r and nu^r ODD at the axis, every scalar and every diagonal
+# tensor component EVEN. 2+1D: plain ghosts. The S3/S4 1+1D layouts are the existing
+# `HQ_const_BG_init` / `HQ_const_BG_second_moment_init`, the S3 2+1D one `HQ_2p1d_BG_init`, the
+# generic-EOS S2 ones `viscous_1d` / `viscous_2d`.
+
+"""
+    tw_ideal_1d()
+
+1+1D ideal hydro (`tw_ideal_1p1d!`): `(T, u^r)`.
+"""
+@inline function tw_ideal_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur)
+    )
+end
+
+"""
+    tw_viscous_conformal_1d()
+
+1+1D viscous hydro with a CONFORMAL medium (`tw_viscous_1p1d!` with `ConformalEOS`; no bulk):
+`(T, u^r, pi^phi_phi, pi^eta_eta)`, mixed components as in `viscous_1d`.
+"""
+@inline function tw_viscous_conformal_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur),
+    NDField((:even,),(:ghost,),:piphiphi),
+    NDField((:even,),(:ghost,),:pietaeta)
+    )
+end
+
+"""
+    two_way_1d()
+
+The 1+1D TWO-WAY system, generic medium EOS (`two_way_1p1d!`), 10 fields:
+`(T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r, p_l, p_phi, Pi_Q)`.
+Medium as `viscous_1d`; charm as `HQ_const_BG_second_moment_init` (p_l, p_phi on the
+parallel-transported triad, p_eta = -(p_l + p_phi)). Charm energy-momentum is IN T^{mu nu}_total.
+"""
+@inline function two_way_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur),
+    NDField((:even,),(:ghost,),:piphiphi),
+    NDField((:even,),(:ghost,),:pietaeta),
+    NDField((:even,),(:ghost,),:piB),
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:PiQr),
+    NDField((:even,),(:ghost,),:PiQperp),
+    NDField((:even,),(:ghost,),:PiQ)
+    )
+end
+
+"""
+    two_way_conformal_1d()
+
+[`two_way_1d`](@ref) with a CONFORMAL medium (no bulk), 9 fields:
+`(T, u^r, pi^phi_phi, pi^eta_eta, alpha, nu^r, p_l, p_phi, Pi_Q)`.
+"""
+@inline function two_way_conformal_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur),
+    NDField((:even,),(:ghost,),:piphiphi),
+    NDField((:even,),(:ghost,),:pietaeta),
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:PiQr),
+    NDField((:even,),(:ghost,),:PiQperp),
+    NDField((:even,),(:ghost,),:PiQ)
+    )
+end
+
+"""
+    tw_ideal_2d()
+
+2+1D ideal hydro (`tw_ideal_2p1d!`): `(T, u^x, u^y)`.
+"""
+@inline function tw_ideal_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy)
+    )
+end
+
+"""
+    tw_viscous_conformal_2d()
+
+2+1D viscous hydro with a CONFORMAL medium (no bulk): `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy})`
+(`pizz` = the mixed pi^eta_eta, as in `viscous_2d`).
+"""
+@inline function tw_viscous_conformal_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy)
+    )
+end
+
+"""
+    HQ_2p1d_BG_m2_7f_init()
+
+2+1D charm with the consistent second moment on a prescribed background, SEVEN fields
+(`tw_hq_m2_bg_2p1d!`): `(alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
+piQ^eta_eta is ELIMINATED algebraically (tracelessness + u-orthogonality), not stored and
+relaxed as in the 8-field [`HQ_2p1d_BG_m2_init`](@ref) (TWO_WAY_DERIVATION Q7).
+"""
+@inline function HQ_2p1d_BG_m2_7f_init()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxx),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:PiQ)
+    )
+end
+
+"""
+    two_way_2d()
+
+The 2+1D TWO-WAY system, generic medium EOS (`two_way_2p1d!`), 14 fields:
+`(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi, alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
+Medium as `viscous_2d`, charm as [`HQ_2p1d_BG_m2_7f_init`](@ref).
+"""
+@inline function two_way_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxx),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:PiQ)
+    )
+end
+
+"""
+    two_way_conformal_2d()
+
+[`two_way_2d`](@ref) with a CONFORMAL medium (no bulk), 13 fields:
+`(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
+"""
+@inline function two_way_conformal_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxx),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQxy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pQyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:PiQ)
+    )
+end

@@ -21,9 +21,16 @@
 # Convention: source-on-the-LHS, A_t d_tau phi + A_x d_x phi + A_y d_y phi + src = 0,
 # as every matrix in this directory.
 #
-# Gates (the generator prints them): C1 the cylindrical reduction reproduces
-# Fluidum's own 1-D consistent source; C2 the at-rest NS limit is the closed form
-# above; C3/C5 consistent - shipped is exactly the four named terms.
+# Gates (the generator prints them, prefixed HC-): C1 the cylindrical reduction
+# reproduces Fluidum's own 1-D consistent source; C2 the at-rest NS limit is the closed
+# form above; C3/C5 consistent - shipped is exactly the four named terms.
+#
+# NOTE 2026-10-13 -- THE kappa-REGULATOR LEAK (decision pending, RS): kappa enters these
+# rows as Ds*dn_da, and the caller (HQ_2p1d_BG_m2.jl) passes dn_da AFTER `+= dmn_eps`,
+# so the dn/dalpha regulator leaks into kappa -- the same leak as the 1-D consistent
+# rows (HQ_const_BG_consistent.jl). Measured on the 1-D LP1 consistent-m2 solve
+# (Projects/FluidumValidation/MATRICES_PROGRAMME.md, P1 Log): |d alpha| 4.1e-6 where
+# n > 1e-2 n_max, 2.1e-2 where n > 1e-6 n_max; nu^r 6.8e-4 pointwise. NOT changed.
 # ============================================================================
 
 """

@@ -19,13 +19,15 @@
 # ==============================================================================
 # HQ_const_BG_consistent.jl — THE THERMODYNAMICALLY CONSISTENT CHARM SECTOR.
 #
-# NEW FILE (2026-08-23). NOT included by src/Fluidum.jl — nothing shipped
-# changes. Drivers load it into the module at runtime:
+# Written 2026-08-23; part of the package build (src/Fluidum.jl) since 2026-10-13.
+# Drivers that still load it at run time,
 #
 #     Base.include(Fluidum, joinpath(<repo>, "Julia", "Fluidum.jl", "src",
 #                                    "Matrix", "HQ_const_BG_consistent.jl"))
 #
-# and register it as evolution mode :HQ_const_BG_consistent themselves.
+# keep working — the file defines only functions, so that merely redefines them
+# identically. Drivers register the evolution modes (:HQ_const_BG_consistent,
+# :HQ_const_BG_consistent_5f) themselves.
 #
 # WHAT IT IS. The first-moment system for phi = (alpha, nu^r) derived from the
 # Delta-projected covariant divergence of the charm energy-momentum tensor of
@@ -63,7 +65,7 @@
 #     persistent — visibly over-draining the dilute edge in the linear-D_sT
 #     solve.
 #
-# All four are SOURCE terms (background gradients x fields): A_t and A_x are
+# All five are SOURCE terms (background gradients x fields): A_t and A_x are
 # the shipped ones with kappa -> D_s * (dn/dalpha). Gates:
 # Tex/MaxEntHydro/diag_hq_consistent_gates.jl (reference points from the .wls,
 # plus the tie to the shipped one_d_viscous_matrix_fugacity_BG_only).
@@ -71,34 +73,43 @@
 # CONVENTIONS. Source-on-the-LHS (A_t d_tau phi + A_x d_r phi + src = 0), the
 # same as every matrix in this directory; the returned system is divided by
 # A_t^{-1} by the caller exactly as in HQ_const_BG.jl. tau_n is the SHIPPED
-# tau_diffusion_hadron (Eq. 30 of 2205.07692) — the consistent equation has
-# the same relaxation time by construction (tau_n = D_s h/T defines h).
+# tau_diffusion_hadron (Eq. 30 of 2205.07692, with the diagnostic knobs of
+# `hq_taun`) — the consistent equation has the same relaxation time by
+# construction (tau_n = D_s h/T defines h).
 #
 # SCOPE. First moment only; unit-charm-charge Boltzmann lists (P0 = nT needs
-# Q_c = 1 per species — asserted). Second moments: see the 5-field variant
-# below, which keeps the shipped rows 3-5 and is provided so the consistent
-# run can carry the passive diagnostics; their sources are NOT corrected here
-# (that correction is the divergence-form NS target, measured additively in
-# Tex/MaxEntHydro/diag_lp1_deltacm.jl).
+# Q_c = 1 per species — NOT asserted in code; an earlier header said it was). Second moments: the 5-field variant below carries the
+# SHIPPED rows 3-5 passively — the rows RETRACTED on 2026-10-13 (header of
+# HQ_const_BG_2nd_moment.jl). They are kept here because the
+# charm_hydro_consistent payloads were made with them; at c_M = 0 they do not
+# feed rows 1-2. The correct second moment is HQ_const_BG_consistent_m2.jl.
 # ==============================================================================
 
 """
     hqc_enthalpy_per_particle(T, α, eos, diffusion)
 
 h = tau_n * T / D_s in GeV — the enthalpy per particle the shipped tau_n
-encodes (tau_n = D_s h / T). Uses the same tau_diffusion_hadron / DsT calls as
-the production matrices, including HQ_TAUN_SCALE and the HQ_MOMENTUM_DIMS=2
-diagnostic branch, so the tie tau_n = D_s h/T is exact under every knob.
+encodes (tau_n = D_s h / T), with tau_n = `hq_taun` (both diagnostic knobs
+applied), so the tie tau_n = D_s h/T is exact under every knob. Returns
+(h, tau_n, D_s); `hq_transport(...)` returns the same three plus tau_M, eta_M.
 """
 function hqc_enthalpy_per_particle(T, α, eos, diffusion)
-    taun = τ_diffusion_hadron(T, α, eos, diffusion) * HQ_TAUN_SCALE[]
-    if HQ_MOMENTUM_DIMS[] == 2
-        z = diffusion.mass / T
-        λ1 = z * (z + 1) / (z^2 + 3z + 3)
-        taun *= (besselk(2, z) / besselk(3, z)) / λ1
-    end
+    taun = hq_taun(T, α, eos, diffusion)
     Ds = DsT(diffusion, T) / T / fmGeV
     return taun * T / Ds, taun, Ds
+end
+
+"""
+    hqc_dh_dT(T, α, eos, diffusion)
+
+dh/dT by a central difference through `hqc_enthalpy_per_particle`, step
+max(1e-4, 1e-3 T) — EoS-agnostic (the closed form m K3'/K2' would silently break
+for multi-species lists). The one h' every consistent charm matrix uses.
+"""
+function hqc_dh_dT(T, α, eos, diffusion)
+    δ = max(1e-4, 1e-3 * T)
+    return (hqc_enthalpy_per_particle(T + δ, α, eos, diffusion)[1] -
+            hqc_enthalpy_per_particle(T - δ, α, eos, diffusion)[1]) / (2δ)
 end
 
 """
@@ -114,7 +125,14 @@ function hqc_matrices(X, tau, r, ur, T, dtT, drT, drur, dtur,
                       n, dn_dT, dn_dmu, taun, Ds, h, hp; consistent::Bool = true)
     uτ  = sqrt(1 + ur^2)
     ν   = X[2]
-    κc  = consistent ? Ds * dn_dmu : Ds * n     # the alpha-drive coefficient
+    # the alpha-drive coefficient. ⚠ `dn_dmu` arrives REGULATED (+dmn_eps, by the
+    # drivers), so the regulator leaks into kappa = D_s dn/dalpha. Measured
+    # 2026-10-13 (FluidumValidation/MATRICES_PROGRAMME.md, Log): moving kappa before
+    # the regulator changes a production-like LP1 consistent-m2 solve by
+    # |dalpha| = 4e-6 where n > 1e-2 n_max, 3e-3 where n > 1e-4 n_max, and nu^r by
+    # 7e-4 pointwise even where n > 0.1 n_max — NOT negligible, so NOT changed;
+    # every product carries the leak. A decision for RS, not a cleanup.
+    κc  = consistent ? Ds * dn_dmu : Ds * n
 
     At = SMatrix{2,2}(
         uτ * dn_dmu,        # (1,1)  d_tau alpha  in row 1
@@ -137,7 +155,7 @@ function hqc_matrices(X, tau, r, ur, T, dtT, drT, drur, dtur,
     src2 = ν * (1 - taun * (dtur * ur / uτ + drur * ur^2 / uτ^2))
 
     if consistent
-        # … plus the four derived terms (verbatim from derive_hq_consistent.wls):
+        # … plus the five derived terms (verbatim from derive_hq_consistent.wls):
         #   pressure-gradient T channel + inertial   (field-independent sources)
         src2 += (Ds / T) * (drur * h * n * ur + dtur * h * n * uτ +
                             dtT * n * ur * uτ + dtT * dn_dT * T * ur * uτ +
@@ -171,11 +189,7 @@ function matrix1d_visc_HQ_BG_consistent!(A_i, Source, ϕ, tau, X, params;
     dn_dmu += dmn_eps
 
     h, taun, Ds = hqc_enthalpy_per_particle(T, α_safe, params.eos, params.diffusion)
-    # dh/dT by central difference through the SAME pipeline (EoS-agnostic; the
-    # closed form m K3'/K2' would silently break for multi-species lists)
-    δ  = max(1e-4, 1e-3 * T)
-    hp = (hqc_enthalpy_per_particle(T + δ, α_safe, params.eos, params.diffusion)[1] -
-          hqc_enthalpy_per_particle(T - δ, α_safe, params.eos, params.diffusion)[1]) / (2δ)
+    hp = hqc_dh_dT(T, α_safe, params.eos, params.diffusion)
 
     (At, Ax, source) = hqc_matrices(ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
                                     n, dn_dT, dn_dmu, taun, Ds, h, hp; consistent = true)
@@ -200,22 +214,23 @@ end
 #   zeta = piQr + PiQ.
 #
 # The last two terms -- the HOOP-STRESS divergence and the tau-redshift -- are
-# MISSING from the notebook/Fluidum coupling (its basis-indexed CovD drops all
-# geometric pieces; gate C0). Production always ran cM = 0, so nothing shipped
-# is affected; any future cM != 0 run of the shipped matrix would be.
+# MISSING from the notebook/Fluidum coupling of the retracted shipped matrix
+# (its basis-indexed CovD drops all geometric pieces; gate C0).
 #
-# cM defaults to D_s/T (the physical back-coupling); HQ_CM_BACKREACTION=0
-# gives the passive-diagnostic variant (rows 3-5 evolve, nothing feeds back),
-# whose (alpha, nu) MUST equal the 2-field consistent solve -- the run-level
-# control gate.
+# cM = 0 by DEFAULT (since 2026-10-13; HQ_CM_BACKREACTION unset or "0"): the
+# passive variant, rows 3-5 evolve and nothing feeds back, so (alpha, nu) MUST
+# equal the 2-field consistent solve -- the run-level control gate. Every
+# existing product is cM = 0. HQ_CM_BACKREACTION=1 gives cM = D_s/T, the
+# elliptic branch.
 # ==============================================================================
 
 """
-    hqc_cm_row2(X, tau, r, ur, dtur, drur, cM) -> (at3, at5, ax3, ax5, src)
+    hqc_cm_row2(X, tau, r, ur, dtur, drur, cM) -> (at, ax, src)
 
-The c_M force's row-2 pieces: coefficients of d_tau piQr / d_tau PiQ,
-d_r piQr / d_r PiQ, and the source (everything with no field derivative).
-piQperp has NO derivative entries (the coupling carries none).
+The c_M force's row-2 pieces: `at` is the coefficient of BOTH d_tau piQr and
+d_tau PiQ, `ax` that of both d_r piQr and d_r PiQ (the force acts on
+zeta = piQr + PiQ), and `src` everything with no field derivative. piQperp has
+NO derivative entries (the coupling carries none).
 """
 function hqc_cm_row2(X, tau, r, ur, dtur, drur, cM)
     uτ = sqrt(1 + ur^2)
@@ -227,6 +242,48 @@ function hqc_cm_row2(X, tau, r, ur, dtur, drur, cM)
                 uτ^2 * (piQr - piQperp) / r +
                 ur * uτ * (2 * piQr + piQperp) / tau)
     return at, ax, src
+end
+
+"""
+    hqc_first_moment_block(ϕ, tau, r, params, bg, dmn_eps, α_max, use_NR_tauM)
+
+Everything the two 5-field consistent drivers (`matrix1d_visc_HQ_BG_consistent_5f!`
+and `matrix1d_visc_HQ_BG_consistent_m2_5f!`) share, given the background
+`bg = background_fields(tau, r)` = (T, ur, dtT, drT, drur, dtur): the charm thermodynamics (dn/dalpha regulated by `dmn_eps`), the transport
+coefficients of `hq_transport`, h', rows 1-2 of the consistent first moment and
+the c_M force's row-2 pieces. One body, so the two drivers' rows 1-2 cannot drift
+apart (they were two copies until 2026-10-13).
+
+c_M = D_s/T if `HQ_CM_BACKREACTION[]`, else 0 (the default), damped by
+n/(n + `HQC_CM_NFLOOR[]`): the c_M force is not proportional to n, so in the
+charm-free vacuum tail it drives nu >> n and collapses the implicit integrator's
+dt on physics that carries no charm. The floor (default 1e-6) sits ~three orders
+below n_fo ~ 8e-4, so at the freeze-out surface the suppression is < 0.2 %.
+"""
+@inline function hqc_first_moment_block(ϕ, tau, r, params, bg,
+                                        dmn_eps, α_max, use_NR_tauM::Bool)
+    # ⚠ the drivers evaluate `background_fields` THEMSELVES and pass the tuple: a
+    # Function handed through a keyword-argument body without being called there is
+    # not specialised on, and the dynamic call costs ~3.6 kB per cell.
+    T, ur, dtT, drT, drur, dtur = bg
+    α_safe = clamp(ϕ[1], -α_max, α_max)
+
+    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
+    n = thermo.pressure
+    dn_dT, dn_dmu = thermo.pressure_derivative
+    dn_dmu += dmn_eps
+
+    tr = hq_transport(T, α_safe, params.eos, params.diffusion; use_NR_tauM = use_NR_tauM)
+    hp = hqc_dh_dT(T, α_safe, params.eos, params.diffusion)
+
+    At2, Ax2, src2 = hqc_matrices(ϕ, tau, r, ur, T, dtT, drT, drur, dtur,
+                                  n, dn_dT, dn_dmu, tr.taun, tr.Ds, tr.h, hp; consistent = true)
+    cM = HQ_CM_BACKREACTION[] ? tr.Ds / T : zero(tr.Ds)
+    cM *= n / (n + HQC_CM_NFLOOR[])
+    atc, axc, csrc = hqc_cm_row2(ϕ, tau, r, ur, dtur, drur, cM)
+    return (T = T, ur = ur, dtT = dtT, drT = drT, drur = drur, dtur = dtur,
+            n = n, dn_dT = dn_dT, dn_dmu = dn_dmu, tr = tr, hp = hp,
+            At2 = At2, Ax2 = Ax2, src2 = src2, atc = atc, axc = axc, csrc = csrc)
 end
 
 function matrix1d_visc_HQ_BG_consistent_5f!(; dmn_eps = 1e-6, background_fields,
@@ -241,51 +298,26 @@ function matrix1d_visc_HQ_BG_consistent_5f!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
         use_NR_tauM::Bool = false)
 
-    T, ur, dtT, drT, drur, dtur = background_fields(tau, X[1])
-    α_safe = clamp(ϕ[1], -α_max, α_max)
+    b = hqc_first_moment_block(ϕ, tau, X[1], params, background_fields(tau, X[1]),
+                               dmn_eps, α_max, use_NR_tauM)
 
-    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
-    n = thermo.pressure
-    dn_dT, dn_dmu = thermo.pressure_derivative
-    dn_dmu += dmn_eps
-
-    h, taun, Ds = hqc_enthalpy_per_particle(T, α_safe, params.eos, params.diffusion)
-    δ  = max(1e-4, 1e-3 * T)
-    hp = (hqc_enthalpy_per_particle(T + δ, α_safe, params.eos, params.diffusion)[1] -
-          hqc_enthalpy_per_particle(T - δ, α_safe, params.eos, params.diffusion)[1]) / (2δ)
-
-    # rows 3-5: the shipped relaxation, with ITS cM hard-zeroed (its coupling
-    # entries are the defective basis-route ones; ours replace them in row 2)
-    z = params.diffusion.mass / T
-    kappa = Ds * n
-    tauM = use_NR_tauM ? taun / 2 : taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
-    etaM = T * taun / 2
+    # rows 3-5: the shipped (RETRACTED) relaxation, with ITS cM hard-zeroed (its
+    # coupling entries are the defective basis-route ones; ours replace them in row 2)
     Ats, Axs, srcs = one_d_viscous_matrix_fugacity_BG_only_second_moment(
-        ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
-        n, dn_dmu, dn_dT, taun, kappa, tauM, etaM, params.diffusion.mass, zero(Ds))
+        ϕ, tau, X[1], b.ur, b.T, b.dtT, b.drT, b.drur, b.dtur,
+        b.n, b.dn_dmu, b.dn_dT, b.tr.taun, b.tr.Ds * b.n, b.tr.tauM, b.tr.etaM,
+        params.diffusion.mass, zero(b.tr.Ds))
 
     # rows 1-2: consistent first moment + the correct c_M force
-    At2, Ax2, src2 = hqc_matrices(ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
-                                  n, dn_dT, dn_dmu, taun, Ds, h, hp; consistent = true)
-    cM = get(ENV, "HQ_CM_BACKREACTION", "1") == "0" ? zero(Ds) : Ds / T
-    # DIAGNOSTIC REGULATOR (documented, scale-separated): the c_M force is not
-    # proportional to n, so in the charm-free vacuum tail it drives nu >> n and
-    # collapses the implicit integrator's dt on physics that carries no charm.
-    # Damp it by n/(n + n_floor) with n_floor (HQC_CM_NFLOOR, default 1e-6)
-    # ~three orders below n_fo ~ 8e-4: at the freeze-out surface the
-    # suppression is < 0.2% and every diagnostic here reads the surface.
-    nfloor = parse(Float64, get(ENV, "HQC_CM_NFLOOR", "1e-6"))
-    cM *= n / (n + nfloor)
-    at3, ax3, csrc = hqc_cm_row2(ϕ, tau, X[1], ur, dtur, drur, cM)
-
+    At2, Ax2, src2 = b.At2, b.Ax2, b.src2
     At = MMatrix{5,5,Float64}(Ats); Ax = MMatrix{5,5,Float64}(Axs)
     src = MVector{5,Float64}(srcs)
     At[1, 1] = At2[1, 1]; At[1, 2] = At2[1, 2]; At[1, 3] = 0.0; At[1, 4] = 0.0; At[1, 5] = 0.0
-    At[2, 1] = At2[2, 1]; At[2, 2] = At2[2, 2]; At[2, 3] = at3; At[2, 4] = 0.0; At[2, 5] = at3
+    At[2, 1] = At2[2, 1]; At[2, 2] = At2[2, 2]; At[2, 3] = b.atc; At[2, 4] = 0.0; At[2, 5] = b.atc
     Ax[1, 1] = Ax2[1, 1]; Ax[1, 2] = Ax2[1, 2]; Ax[1, 3] = 0.0; Ax[1, 4] = 0.0; Ax[1, 5] = 0.0
-    Ax[2, 1] = Ax2[2, 1]; Ax[2, 2] = Ax2[2, 2]; Ax[2, 3] = ax3; Ax[2, 4] = 0.0; Ax[2, 5] = ax3
+    Ax[2, 1] = Ax2[2, 1]; Ax[2, 2] = Ax2[2, 2]; Ax[2, 3] = b.axc; Ax[2, 4] = 0.0; Ax[2, 5] = b.axc
     src[1] = src2[1]
-    src[2] = src2[2] + csrc
+    src[2] = src2[2] + b.csrc
 
     Ainv = inv(SMatrix{5,5}(At))
     A_mul_B!(A_i[1], Ainv, SMatrix{5,5}(Ax))

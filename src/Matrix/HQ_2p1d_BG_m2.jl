@@ -15,9 +15,12 @@
 #
 # which is the convention of every matrix in this directory.
 #
-# NOT INCLUDED BY src/Fluidum.jl.  Drivers load it at runtime after
-# HQ_2p1d_BG.jl and register their own mode, the same pattern
-# HQ_const_BG_consistent_m2.jl uses in 1-D.
+# Part of the package build since 2026-10-13 (src/Fluidum.jl includes it after
+# HQ_const_BG_consistent.jl and HQ_2p1d_BG.jl). It needs `hq_transport`
+# (EquationOfState/heavyquark.jl), `hqc_dh_dT` / `hqc_enthalpy_per_particle`
+# (HQ_const_BG_consistent.jl) and `hq2d_matrices[_consistent]` (the two generated
+# 2-D files). Drivers that still `Base.include` it at run time keep working (the
+# file defines only functions) and register their own mode.
 #
 # ------------------------------------------------------------------------------
 # WHY THE FIELDS LOOK LIKE THIS
@@ -26,7 +29,8 @@
 # leaving tau tau, tau x, tau y, xx, xy, yy, eta eta = seven, cut by three
 # orthogonality relations (u_mu piQ^{mu nu} = 0) and one trace condition to THREE
 # independent dofs.  They are stored as FOUR, with piQ^eta_eta redundant and
-# restored by projection — the same storage the medium shear uses in
+# held on the tracelessness constraint by a stiff relaxation in the RHS (row 7 of
+# the driver) — the same storage the medium shear uses in
 # Matrix/2d_viscous.jl and in FiVo's src2d/shear2d.jl.  The tau-row is DERIVED
 # from the transverse block, never stored, so orthogonality holds by construction.
 #
@@ -102,18 +106,42 @@
 
 The consistent second moment's scalar coefficients — identical closed forms to
 the 1-D `hqc_m2_rows` block, because they are built from the EoS and nothing
-about them is chart-dependent.
+about them is chart-dependent. These are the SINGLE-QUARK forms at m = `mq`; for a
+multi-species list the driver uses the method below (2026-10-13: the single-quark
+A/B, d ln C/d ln T, C and A are 2–37 % off for the 77-state production list —
+heavyquark.jl `hq_m2_mixture`).
 """
 function hq2d_m2_coeffs(T, n, taun, Ds, h, mq)
     z  = mq / T
     K2 = besselk(2, z); K3 = besselk(3, z); K4 = besselk(4, z)
     K5 = K3 + 8 * K4 / z
     dlnC_dlnT = z * ((K3 + K5) / (2 * K4) - (K2 + K4) / (2 * K3))
+    ηbar = taun * n * T / 2
     return (dlnC_dlnT = dlnC_dlnT,
-            ηbar = taun * n * T / 2,              # tau_n P0/2, P0 = nT
+            ηbar = ηbar,                          # tau_n P0/2, P0 = nT
+            ηbarα = ηbar,                         # the D alpha coefficient, eta_bar d_alpha ln I31
             λa   = Ds * (mq^2 + 6 * T * h) / (2 * T),
             Aco  = mq^2 + 5 * T * h,              # A = I41/P0
             ABr  = 5 + z * K2 / K3)               # A/B = dln I31/dln T
+end
+
+"""
+    hq2d_m2_coeffs(T, n, taun, Ds, h, mq, mix) -> NamedTuple
+
+The same block for a MULTI-SPECIES charm list, `mix = hq_m2_mixture(T, α, list, mq)`
+(EquationOfState/heavyquark.jl, 2026-10-13): A/B, d ln C/d ln T and the m² of A from
+the list's species sums, and the D α coefficient η̄ ∂_α ln I31 — the coefficients the
+two-way wrappers use. The single-quark method above is the pre-2026-10-13 code, bit
+for bit, and what a one-species list of mass `mq` gets.
+"""
+function hq2d_m2_coeffs(T, n, taun, Ds, h, mq, mix)
+    ηbar = taun * n * T / 2
+    return (dlnC_dlnT = mix.dlnC_dlnT,
+            ηbar = ηbar,
+            ηbarα = ηbar * mix.aI31,
+            λa   = Ds * (mix.m2bar + 6 * T * h) / (2 * T),
+            Aco  = mix.m2bar + 5 * T * h,
+            ABr  = mix.ABr)
 end
 
 """
@@ -316,7 +344,10 @@ end
 """
     hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
                  dtux, dxux, dyux, dtuy, dxuy, dyuy,
-                 dta, dtnx, dtny, n, taun, Ds, h, hp, tauM, etaM, mq)
+                 dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
+                 n, taun, Ds, h, hp, tauM, etaM, mq;
+                 projector = true, vorticity = false,
+                 cf = hq2d_m2_coeffs(T, n, taun, Ds, h, mq))
         -> (dpxx, dpxy, dpyy, dPiQ)
 
 `d_tau` of the transverse second-moment block and the trace, under the CONSISTENT
@@ -325,8 +356,12 @@ relax diagonally (`tau_M u^tau d_tau X + src = 0`) and carry no derivative
 couplings among themselves — the same structure the 1-D `hqc_m2_rows` has, where
 `at3[i, 2+i] = tau_M u^tau` and the moment block is diagonal.
 
-`piQ^eta_eta` is NOT returned: it is redundant and is restored from the
-transverse block by `hq2d_piQ_eta` after the update.
+`piQ^eta_eta` is NOT returned: it is redundant. The driver keeps it on the
+tracelessness value `hq2d_piQ_eta(...)` by a stiff relaxation in the RHS (its
+row 7, rate 100/fm) — there is no post-step projection.
+
+`cf` is the scalar coefficient block; the driver computes it once per cell and
+passes it to all ten of its calls (it costs three Bessel functions).
 
 `X = (alpha, nu^x, nu^y, pxx, pxy, pyy, peta, PiQ)`.
 
@@ -346,7 +381,8 @@ function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
                       dtux, dxux, dyux, dtuy, dxuy, dyuy,
                       dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
                       n, taun, Ds, h, hp, tauM, etaM, mq;
-                      projector::Bool = true, vorticity::Bool = false)
+                      projector::Bool = true, vorticity::Bool = false,
+                      cf = hq2d_m2_coeffs(T, n, taun, Ds, h, mq))
     uT = sqrt(1 + ux^2 + uy^2)
     nux = X[2]; nuy = X[3]
     pxx = X[4]; pxy = X[5]; pyy = X[6]; pet = X[7]; PiQ = X[8]
@@ -354,7 +390,6 @@ function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
 
     ηQ = etaM
     ζQ = (5//3) * ηQ
-    cf = hq2d_m2_coeffs(T, n, taun, Ds, h, mq)
 
     # kinematics of the background
     ax = uT*dtux + ux*dxux + uy*dyux
@@ -418,7 +453,8 @@ function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
     ngT = nux*gTx + nuy*gTy - ((nux*ux + nuy*uy)*(gTx*ux + gTy*uy))/d
     SB  = PiQ + ζQ*thnu + geo*PiQ + (2//3)*tauM*πσ +
           cf.ηbar*(cf.ABr*DlnT + (5//3)*theta) +
-          (Ds*cf.Aco/(3*T))*adn + (5//6)*(Ds/T)*ngT + cf.ηbar*Dα
+          (Ds*cf.Aco/(3*T))*adn + (5//6)*(Ds/T)*ngT +
+          (hasproperty(cf, :ηbarα) ? cf.ηbarα : cf.ηbar)*Dα
 
     den = tauM * uT
     return (-Sxx/den, -Sxy/den, -Syy/den, -SB/den)
@@ -441,26 +477,36 @@ moment, matching `matrix2d_HQ_BG!`'s signature. Returns the
 
 ⚠ ROWS 4-8 ARE PASSIVE AT c_M = 0, WHICH IS THE ONLY CASE THIS DRIVER SUPPORTS.
 The second moments read the current and the background but feed back into
-neither, so the 8×8 is BLOCK TRIANGULAR: rows 1-3 are exactly
-`matrix2d_HQ_BG!`'s, unchanged, and rows 4-8 hang off them. That is what makes it
-safe to reuse the first-moment block verbatim rather than re-deriving it, and it
-is the same structure the 1-D `matrix1d_visc_HQ_BG_consistent_m2_5f!` has with
-`HQ_CM_BACKREACTION=0`.
+neither, so the 8×8 is BLOCK TRIANGULAR: rows 1-3 are a 3-field first moment,
+unchanged, and rows 4-8 hang off them. Rows 1-3 are `hq2d_matrices_consistent`
+(the full-grad-P row, the 2-D twin of `hqc_matrices`) by default, and
+`hq2d_matrices` — exactly `matrix2d_HQ_BG!`'s shipped grad-alpha-only row — with
+`consistent_fm = false`. It is the same structure the 1-D
+`matrix1d_visc_HQ_BG_consistent_m2_5f!` has at its default c_M = 0.
+
+τ_n, τ_M, η_M, h and D_s come from `hq_transport`, so `HQ_TAUN_SCALE` and
+`FLUIDUM_HQ_MOMENTUM_DIMS` act on this driver exactly as on the 1-D ones.
 """
 function matrix2d_HQ_BG_m2!(; dmn_eps = 1e-6, background_fields, α_max = 200.0,
                               consistent_fm::Bool = true,
-                              projector::Bool = true, vorticity::Bool = false)
+                              projector::Bool = true, vorticity::Bool = false,
+                              mixture::Bool = HQ_M2_MIXTURE[])
     (A_i, Source, ϕ, tau, X, params) -> matrix2d_HQ_BG_m2!(
         A_i, Source, ϕ, tau, X, params;
         dmn_eps = dmn_eps, background_fields = background_fields,
         α_max = α_max, consistent_fm = consistent_fm,
-        projector = projector, vorticity = vorticity)
+        projector = projector, vorticity = vorticity, mixture = mixture)
 end
 
+# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a MULTI-SPECIES charm list
+# τ_M, d ln C/d ln T, A/B and A come from the list's species sums (`hq_m2_mixture`) — the coefficients the
+# two-way wrappers use. false, or a one-species list of mass diffusion.mass: the single-quark forms
+# (pre-2026-10-13, bit for bit).
 function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
         consistent_fm::Bool = true,
-        projector::Bool = true, vorticity::Bool = false)
+        projector::Bool = true, vorticity::Bool = false,
+        mixture::Bool = HQ_M2_MIXTURE[])
 
     T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy =
         background_fields(tau, X[1], X[2])
@@ -473,30 +519,23 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     dn_dT, dn_da = thermo.pressure_derivative
     dn_da += dmn_eps
 
-    κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
-    taun = τ_diffusion_hadron(T, α_safe, params.eos, params.diffusion) * HQ_TAUN_SCALE[]
+    κ  = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
+    # τ_n, τ_M, η_M, h, D_s — ONE τ_n for both moments (until 2026-10-13 this driver
+    # paired an un-rescaled τ_n with an h built from the rescaled one, which broke
+    # τ_n = D_s h/T under FLUIDUM_HQ_MOMENTUM_DIMS=2).
+    tr   = hq_transport(T, α_safe, params.eos, params.diffusion)
+    taun = tr.taun; tauM0 = tr.tauM; etaM = tr.etaM; h = tr.h; Ds = tr.Ds
+    hp   = hqc_dh_dT(T, α_safe, params.eos, params.diffusion)
 
-    # ── rows 1-3: the first moment, VERBATIM from the 3-field driver ──────────
-    # h, h' and D_s are needed by BOTH the consistent first moment and the second
-    # moment, so they are built before either.
-    h, taun_h, Ds = hqc_enthalpy_per_particle(T, α_safe, params.eos, params.diffusion)
-    δ  = max(1e-4, 1e-3 * T)
-    hp = (hqc_enthalpy_per_particle(T + δ, α_safe, params.eos, params.diffusion)[1] -
-          hqc_enthalpy_per_particle(T - δ, α_safe, params.eos, params.diffusion)[1]) / (2δ)
-
-    # 🔴 2026-09-09. `consistent_fm` used to be accepted and NEVER READ -- the name
-    # appeared in this signature and nowhere in the body -- so every 2-D run was
-    # silently on the SHIPPED (grad-alpha-only) row whatever the caller asked for.
-    # Measured against a closed-form at-rest reference, the shipped row returns 0.0
-    # for the temperature-gradient channel, and on a real Pb+Pb cell that channel is
-    # 1.8x the alpha-drive: the DOMINANT term. See
-    # Projects/FiVoFluidumComparison/COMPARISON_2P1D.md section 12.
-    #
-    # `hq2d_matrices_consistent` is the full-grad-P row,
+    # ── rows 1-3: the first moment ─────────────────────────────────────────────
+    # `hq2d_matrices_consistent` (default) is the full-grad-P row,
     #     (D_s/T) Delta^mu_lambda Nabla_nu T_Q^{nu lambda} + nu^mu = 0,
     # generated by Julia/tools/derive_hq_consistent_2p1d.wls (15/15 gates: the
     # cylindrical reduction reproduces Fluidum's own 1-D consistent source, and the
-    # at-rest limit is the closed form to 2.2e-16).
+    # at-rest limit is the closed form to 2.2e-16). `consistent_fm = false` gives the
+    # shipped grad-alpha-only row, whose temperature-gradient channel is 0 — on a
+    # real Pb+Pb cell that channel is 1.8x the alpha drive (COMPARISON_2P1D.md §12;
+    # until 2026-09-09 the flag was accepted and never read).
     At3, Ax3, Ay3, src3 = consistent_fm ?
         hq2d_matrices_consistent(α_safe, ϕ[2], ϕ[3], tau, T, ux, uy,
                                  dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy,
@@ -510,9 +549,15 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     # carry no derivative couplings among themselves, so the block is
     # At[4:8,4:8] = tau_M u^tau I, Ax = tau_M u^x I, Ay = tau_M u^y I, and every
     # other dependence -- on alpha, on nu, on the background -- lands in `src`.
-    z    = params.diffusion.mass / T
-    tauM = taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
-    etaM = T * taun / 2
+    # The scalar coefficients are the same for all ten calls below: built once.
+    # (tauM and cf assigned ONCE: the m2rate closure below captures them, and a captured variable
+    # assigned on two paths is boxed — 17 kB per cell)
+    tauM, cf = if mixture && !hq_m2_single(params.eos.hadron_list, params.diffusion.mass)
+        mix = hq_m2_mixture(T, α_safe, params.eos.hadron_list, params.diffusion.mass)
+        (tauM0 * mix.Cratio, hq2d_m2_coeffs(T, n, taun, Ds, h, params.diffusion.mass, mix))
+    else
+        (tauM0, hq2d_m2_coeffs(T, n, taun, Ds, h, params.diffusion.mass))
+    end
 
     # ⚠ THE alpha AND nu GRADIENTS GO IN THE MATRIX, NOT THE SOURCE. Rows 4-8
     # depend on d_tau alpha, d_i alpha and d nu -- in this convention those are
@@ -532,7 +577,7 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
                      dtux, dxux, dyux, dtuy, dxuy, dyuy,
                      dxa, dya, dta, dtnx, dxnx, dynx, dtny, dxny, dyny,
                      n, taun, Ds, h, hp, tauM, etaM, params.diffusion.mass;
-                     projector = projector, vorticity = vorticity)
+                     projector = projector, vorticity = vorticity, cf = cf)
 
     Z = ntuple(_ -> zero(T), 9)
     r0 = m2rate(Z...)
@@ -552,9 +597,6 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         At[k,k] = tauM * uT; Ax[k,k] = tauM * ux; Ay[k,k] = tauM * uy
     end
     # LHS sources: At[k,k] * (explicit rate) = -src[k]  =>  src[k] = -At[k,k]*rate.
-    # Row 7 (piQ^eta_eta) is the REDUNDANT dof: it is not evolved independently,
-    # it is reconstructed from the transverse block by tracelessness. Relaxing it
-    # toward that value keeps it consistent without adding a constraint equation.
     # rows 4-8 at zero (alpha, nu) gradients -> the source; the gradient
     # dependence -> the matrix columns. `cols[k]` is the derivative of the four
     # rates w.r.t. gradient k, ordered
@@ -572,25 +614,19 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         Ay[k,3] = -(tauM*uT) * cols[9][a]
     end
     # Row 7 (piQ^eta_eta) is the REDUNDANT dof: not evolved independently, but
-    # reconstructed from the transverse block by tracelessness. Relaxing it toward
-    # that value keeps it consistent without adding a constraint equation.
-    # 🔴 2026-09-09. This used to read
-    #     src[7] = phi[7] - hq2d_piQ_eta(...);  At[7,7] = 1
-    # i.e. d_tau piQ^eta_eta = -(piQ^eta_eta - target), a relaxation with a time
-    # constant of ONE fm/c. Tracelessness is an ALGEBRAIC constraint, not a slow
-    # mode: over a 0.4 fm run that relaxation cannot reach its target, and measured
-    # on the physical IC it did not -- piQ^eta/(pxx+pyy) came out -0.343 against the
-    # -1 the constraint demands (FiVo, which imposes it, gives -0.995). The lag
-    # feeds straight back through pi:sigma and the trace, and it is what froze the
-    # cross-code difference at ~40% in pi_Q^xx and ~100% in Pi_Q REGARDLESS OF
-    # RESOLUTION -- the signature of a constraint violation rather than a
-    # discretisation error.
+    # relaxed toward its tracelessness value `hq2d_piQ_eta(...)`, which keeps it on
+    # the constraint without adding a constraint equation. Tracelessness is
+    # ALGEBRAIC, not a slow mode: until 2026-09-09 the rate was 1/fm, the field
+    # lagged (piQ^eta/(pxx+pyy) = -0.343 against -1), and the lag froze the
+    # cross-code difference at ~40 % in pi_Q^xx regardless of resolution.
     #
     # `RELAX_RATE` sets how fast the constraint is enforced. It must be fast
     # compared with tau_M (the physical relaxation of the moments themselves), so
-    # that row 7 tracks the transverse block instead of lagging it. 1/(0.05 fm) is
-    # ~25x faster than a typical tau_M ~ 0.25 fm here and still finite, which keeps
-    # the system an ODE rather than a DAE.
+    # that row 7 tracks the transverse block instead of lagging it. 100/fm =
+    # 1/(0.01 fm) is ~25x faster than a typical tau_M ~ 0.25 fm here and still
+    # finite, which keeps the system an ODE rather than a DAE. It is a STIFF term
+    # of the RHS, not a post-step projection: an explicit integrator's step is
+    # stability-capped near ~0.03 fm by it (production runs dtmax = 0.01 anyway).
     RELAX_RATE = 100.0
     src[7] = RELAX_RATE * (ϕ[7] - hq2d_piQ_eta(ux, uy, uT, ϕ[4], ϕ[5], ϕ[6]))
     At[7,7] = one(T); Ax[7,7] = zero(T); Ay[7,7] = zero(T)

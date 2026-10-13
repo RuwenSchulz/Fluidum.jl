@@ -207,3 +207,7 @@ end
 # pi^{xy} row breaks, and the Bjorken limit.  Heavy version: Fluidum.jl/bench/bench_2p1d_viscous.jl
 include("test_1p1d_viscous.jl")
 include("test_2p1d_viscous.jl")
+# the charm second moment: retraction, c_M default, one transport helper, passivity, 2-D -> 1-D, allocations
+include("test_hq_moments.jl")
+# the conformal set + the two-way medium + charm system (fast subset of FluidumValidation/gate_two_way.jl)
+include("test_two_way.jl")

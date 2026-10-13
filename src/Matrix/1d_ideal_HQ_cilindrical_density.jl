@@ -3,13 +3,21 @@
 # The current is on the EOS of the fluid, i.e. no back reaction of the current, no back feeding of the HQ pressure
 # The fields are stored in the order : T, ur, n 
 #
+# Equations: ideal Nabla_m T^{mn} = 0 and Nabla.(n u) = 0 (no diffusion current). Row 3 has d_tau T
+# and d_tau u^r eliminated with rows 1-2. GATED 2026-10-13: M-I3n of Julia/tools/derive_1d_matrices.wls
+# (solved form, exact rational arithmetic) and J-In of Projects/FluidumValidation/gate_matrices_1d.jl.
+# Mode :ideal_HQ_density; nothing in production runs it.
+#
+# `dmn_eps` is ACCEPTED AND IGNORED: the mode registry calls every closure as `(; dmn_eps = ...)`,
+# and this matrix has no dn/dalpha to regularise (n is the field). The unused `free` keyword the
+# direct method carried was removed 2026-10-13 (no caller passed it).
 
 function matrix1d_ideal_HQ_density!(;dmn_eps=1e-6)
-    (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_density!(A_i, Source, ϕ, tau, X, params;free=true)
+    (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_density!(A_i, Source, ϕ, tau, X, params)
 end
 
 
-function matrix1d_ideal_HQ_density!(A_i, Source, ϕ, t, X, params;free=true)
+function matrix1d_ideal_HQ_density!(A_i, Source, ϕ, t, X, params)
 
     #@show t, ϕ
     dP_dT = pressure_derivative(ϕ[1], Val(1), params.eos) #entropy

@@ -9,7 +9,8 @@
 # the convention of every matrix in this directory.
 #
 # The same generator reproduces Fluidum's shipped 1-D cylindrical HQ_const_BG matrix
-# entry by entry (gate G4), which is why this chart is trusted.
+# entry by entry (gate H-G4, and H-G4src against the file itself), which is why this
+# chart is trusted.  Gate names carry the prefix H- since 2026-10-13.
 # ============================================================================
 
 """

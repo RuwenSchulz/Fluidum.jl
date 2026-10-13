@@ -73,6 +73,11 @@ carries would move `pi^eta_eta` by ~20 % on the state it reaches, and it is meas
 difference is why a Fluidum-vs-FiVoHydro comparison must be run with FiVo's `delta_pipi` switched
 off to be like-for-like (`Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md` §3).
 
+> **2026-10-13:** the relaxation now carries **δ_ππ = (4/3) τ_π** by default (RS; the DNMR value, which the
+> production `:MIS` kernel always had), behind `FLUIDUM_DELTA_PIPI` (`0` = the plain Israel–Stewart described
+> above, bit for bit). Example 01's reference follows the switch; a FiVoHydro comparison now runs FiVo at its
+> default `deltaShear_factor = 4/3` (`Projects/FluidumValidation/MATRICES_PROGRAMME.md`, P2b).
+
 ## The three things that bite hardest here
 
 1. **`r = 0` is a SYMMETRY AXIS, not a boundary.** `viscous_1d` declares `ur` **odd** there and

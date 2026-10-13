@@ -4,10 +4,10 @@ Charm on a boost-invariant Milne background `(tau, x, y, eta_s)`, transverse Car
 
 ## ⛔ First: the file you must NOT use
 
-`src/Matrix/2d_viscous_fugacity.jl` (`matrix2d_visc_HQ_!`) is **RETRACTED** (2026-09-04) and kept
+`src/Matrix/2d_viscous_fugacity.jl` (`matrix2d_visc_HQ!`) is **RETRACTED** (2026-09-04) and kept
 only because this repository preserves its wrong turns. Measured over the physical state lattice:
 
-| | retracted `matrix2d_visc_HQ_!` | live `matrix2d_visc_HQ_BG!` |
+| | retracted `matrix2d_visc_HQ!` | live `matrix2d_visc_HQ_BG!` |
 |---|---|---|
 | `max\|Im λ\|` | **3.02** | 3.07e-16 |
 | `max\|Re λ\|` | **36.5 c** (superluminal) | 0.962 |
@@ -80,6 +80,39 @@ Two different zeros, do not confuse them:
 how `T` and `u` evolve; the charm reads that through columns 1,2,3. Measured: `mis` vs `ideal` on
 the same event move `max|nu^x|` by **15 %** at tau = 4 (gate P6c).
 
+## Case (a) with the second moment: `matrix2d_HQ_BG_m2!`
+
+`HQ_2p1d_BG_m2.jl` (in the package build since 2026-10-13) adds the consistent charm SECOND
+MOMENT to case (a). Field layout `HQ_2p1d_BG_m2_init()`, eight fields:
+
+```
+  1  2    3    4     5     6     7          8
+  α  νx   νy   pQxx  pQxy  pQyy  pQeta(η_η)  PiQ
+```
+
+```julia
+m = Fluidum.matrix2d_HQ_BG_m2!(; background_fields = bg,   # same 12-tuple contract as matrix2d_HQ_BG!
+                                 dmn_eps = 1e-6, α_max = 200.0,
+                                 consistent_fm = true,      # rows 1-3: full-grad-P (default) | false: shipped grad-alpha row
+                                 projector = true,          # the Delta-projection of D pi (belongs in the equation)
+                                 vorticity = false)         # the DNMR corotation term (off: FiVo parity)
+```
+
+* **Rows 1-3** are a first moment, `hq2d_matrices_consistent` by default (the 2-D twin of the 1-D
+  `hqc_matrices`), `hq2d_matrices` with `consistent_fm = false`.
+* **Rows 4-6, 8** relax diagonally at `tau_M`; every alpha/nu GRADIENT they depend on is a matrix
+  column (1-3), every other dependence is source. The rows are `hq2d_m2_rows`.
+* **Row 7** (`piQ^eta_eta`) is redundant: it is held on tracelessness by a stiff relaxation in the
+  RHS (rate 100/fm), not by a post-step projection. That caps an explicit step near ~0.03 fm.
+* **c_M = 0 only.** Rows 4-8 do not feed rows 1-3, so the 8×8 is block triangular.
+* τ_n, τ_M, η_M, h, D_s come from `hq_transport` (EquationOfState/heavyquark.jl), the same helper
+  the 1-D charm matrices use, so `HQ_TAUN_SCALE` and `FLUIDUM_HQ_MOMENTUM_DIMS` act identically.
+
+Gates: `Projects/FiVoFluidumComparison/gate_2p1d_m2.jl` (N1 axisymmetric reduction to the 1-D
+`hqc_m2_rows`, N2 rotational covariance, N3 FiVo, N4 the live driver, N5 the two switches) and
+`gate_2p1d_m2_newterms.jl` (the projector and vorticity terms on genuinely 2-D states); N1 and the
+driver's zero-allocation property are also in `test/test_hq_moments.jl`.
+
 ## The settings that decide whether it runs at all
 
 Measured on a real MC-Glauber Pb+Pb 0-5 % event (`ic2d_00-05_ev01`), gates P1-P5:
@@ -109,6 +142,9 @@ dies with `DomainError` BEFORE its first step), and **re-derive alpha when you d
   underflows too.
 * **`dmn_mode = :freeze` hangs** — a hard on/off switch makes the RHS discontinuous and the adaptive
   step collapses. FiVo's vacuum ramp is SMOOTH for exactly this reason.
+* Both options were REMOVED from the hot path on 2026-10-13: `matrix2d_visc_HQ_BG!(; dmn_mode = …)`
+  now errors for anything but `:absolute`, with the reason above. The code that ran them is at
+  Fluidum commit `0cb60e3`.
 
 ## 🔑 The caveat to carry into any physics
 
@@ -123,9 +159,24 @@ P5). Mask on `n`.
 
 | | what | where |
 |---|---|---|
-| 16/16 | the symbolic derivation, incl. reproducing the shipped 1-D matrix entry by entry | `Julia/tools/derive_hq_2p1d.wls` |
+| 17/17 | the symbolic derivation, incl. reproducing the shipped 1-D matrix entry by entry (H-G4, and H-G4src against the file itself; ids prefixed H- since 2026-10-13) | `Julia/tools/derive_hq_2p1d.wls` |
+| J-H2, J-HL, J-HC | the generated routines evaluated at the generators' exported reference states, raw — in `programme.jl check` | `Projects/FluidumValidation/gate_fluidum_matrices.jl` |
 | 10/10 | the matrix: isotropy, hyperbolicity, subluminality, the equivalences | `Projects/FluidumValidation/bench_fluidum_2p1d.jl` |
 | 13/13 | the PRODUCTION PATH: a real event to freeze-out, and every knob above | `Projects/FluidumValidation/bench_fluidum_2p1d_production.jl` |
 
-The generated file reproduces byte-for-byte from the generator (same SHA-256), so the code and the
-derivation cannot drift apart silently.
+The generated file reproduces byte-for-byte from the generator (same SHA-256; re-confirmed
+2026-10-13 for all three generated files of this directory), and `gate_fluidum_matrices.jl` checks
+the Julia against the derivation on every `programme.jl check`, so the code and the derivation cannot
+drift apart silently.
+
+⚠ The medium block of case (b) is the 2-D viscous matrix: plain Israel–Stewart, **δ_ππ = 0**. The 1-D
+production medium (`matrix1d_visc_HQ!`, mode `:MIS`) carries **δ_ππ = 4/3 τ_π** (derived 2026-10-13,
+`Julia/tools/derive_1d_matrices.wls`), so a 2-D run and a 1-D `:MIS` background are not the same
+medium equations — compare against `matrix1d_visc!` (δ_ππ = 0) instead.
+
+> **2026-10-13 (P2b, `Projects/FluidumValidation/MATRICES_PROGRAMME.md`) — superseded.** RS: δ_ππ = 4/3 τ_π
+> everywhere. `two_d_viscous_matrix_derived` (rows 1-7 of case (b) by default) and the 5-field
+> `matrix1d_visc!` now carry **δ_ππ = 4/3 τ_π** behind one switch, `FLUIDUM_DELTA_PIPI` (read in `__init__`
+> into `Fluidum.DELTA_PIPI`; default `1`; `0` = plain IS, pre-10-13 output bit for bit). At the default the
+> 2-D medium, the 5-field 1-D medium and the `:MIS` medium are the same equations (gates V-G4m, M-V5=V7m,
+> J-dpp1); the legacy `two_d_viscous_matrix` (`FLUIDUM_2D_DERIVED=0`) stays plain IS.

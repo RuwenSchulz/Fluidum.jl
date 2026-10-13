@@ -9,8 +9,8 @@
 # The matrices come from Julia/tools/derive_hq_2p1d.wls and live in
 # HQ_2p1d_BG_generated.jl.  That generator earns its trust by reproducing
 # Fluidum's shipped 1-D cylindrical `one_d_viscous_matrix_fugacity_BG_only`
-# ENTRY BY ENTRY from the same routine (its gate G4) before it is asked for the
-# Cartesian chart.
+# ENTRY BY ENTRY from the same routine (its gate H-G4; "G4" until 2026-10-13, renamed
+# because three different gates were called G4) before it is asked for the Cartesian chart.
 #
 # BACKGROUND CONTRACT.  `background_fields(tau, x, y)` returns the 12-tuple
 #
@@ -38,21 +38,35 @@ function matrix2d_HQ_BG!(; dmn_eps = 1e-6, background_fields, α_max = 200.0)
         dmn_eps = dmn_eps, background_fields = background_fields, α_max = α_max)
 end
 
+"""
+    hq2d_charm_coefficients(T, α, params, dmn_eps, α_max) -> (α_safe, n, dn_dT, dn_da, κ, τ_n)
+
+The charm thermodynamics and transport both 2-D wrappers feed their generated rows: α clamped to
+±α_max, the charm-quark density n (charm_HRG.jl) and its derivatives, dn/dα REGULATED by
+`+ dmn_eps` (the absolute regulator the 1-D matrices carry), κ = D_s·χ/T, and τ_n with both
+diagnostic knobs (`hq_taun`). One function since 2026-10-13; it was a copied block in each wrapper.
+
+⚠ κ is built from χ, not from the regulated dn/dα, so here (unlike the consistent rows of
+HQ_2p1d_BG_consistent_generated.jl, where κ = D_s·dn_da) the regulator does not leak into κ.
+"""
+@inline function hq2d_charm_coefficients(T, α, params, dmn_eps, α_max)
+    α_safe = clamp(α, -α_max, α_max)
+    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
+    n = thermo.pressure                       # the charm-quark density (see charm_HRG.jl)
+    dn_dT, dn_da = thermo.pressure_derivative
+    dn_da += dmn_eps                          # the same regulator the 1-D matrices carry
+    κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
+    taun = hq_taun(T, α_safe, params.eos, params.diffusion)   # both diagnostic knobs (2026-10-13)
+    return α_safe, n, dn_dT, dn_da, κ, taun
+end
+
 function matrix2d_HQ_BG!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0)
 
     T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy =
         background_fields(tau, X[1], X[2])
 
-    α_safe = clamp(ϕ[1], -α_max, α_max)
-
-    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
-    n = thermo.pressure                       # the charm-quark density (see charm_HRG.jl)
-    dn_dT, dn_da = thermo.pressure_derivative
-    dn_da += dmn_eps                          # the same regulator the 1-D matrices carry
-
-    κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
-    taun = τ_diffusion_hadron(T, α_safe, params.eos, params.diffusion) * HQ_TAUN_SCALE[]
+    α_safe, n, dn_dT, dn_da, κ, taun = hq2d_charm_coefficients(T, ϕ[1], params, dmn_eps, α_max)
 
     At, Ax, Ay, src = hq2d_matrices(α_safe, ϕ[2], ϕ[3], tau, T, ux, uy,
                                     dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy,
@@ -105,8 +119,9 @@ end
 #
 #   phi = (T, u^x, u^y, pi^yy, pi^zz, pi^xy, Pi_B, alpha, nu^x, nu^y)
 #
-# Rows 1-7 are the EXISTING 2-D viscous hydro (`two_d_viscous_matrix`, the block
-# `matrix2d_visc!` already evolves).  Rows 8-10 are the charm equations of
+# Rows 1-7 are the EXISTING 2-D viscous hydro (`two_d_viscous_matrix_active`, the block
+# `matrix2d_visc!` evolves: the derived matrix by default, the legacy one under
+# FLUIDUM_2D_DERIVED=0 -- see Matrix/2d_viscous.jl).  Rows 8-10 are the charm equations of
 # `hq2d_live_rows`, i.e. the same three equations as the background mode with the
 # medium promoted from a closure to fields (gates G6a/G6b of derive_hq_2p1d.wls).
 #
@@ -121,22 +136,28 @@ end
 # unreferenced, rather than deleted — this repo keeps wrong turns, dated.
 #
 # Transport coefficients are taken through the SCALAR-entropy calls
-# (`viscosity(T, dpt, shear)`) the 1-D `matrix1d_visc_HQ!` uses, not the
-# `Thermodynamic`-object calls of `matrix2d_visc!` — the latter MethodError with
-# `QGPViscosity`, the shear model every production run uses.
+# (`viscosity(T, dpt, shear)`) the 1-D `matrix1d_visc_HQ!` uses. (This said the `Thermodynamic`-object
+# calls of `matrix2d_visc!` MethodError with `QGPViscosity`; that was repaired 2026-09-02 and
+# `matrix2d_visc!` runs with it -- the scalar calls are kept because they are what this block was
+# validated with, gate L4 of bench_fluidum_2p1d.jl.)
 # ==============================================================================
 
 """
     matrix2d_visc_HQ_BG!(; dmn_eps = 1e-6, α_max = 200.0)
 
 The 10-field 2+1D viscous hydro + passive charm system.  `X = (x, y)`; `A_i` is a
-2-tuple of 10×10 matrices.
+2-tuple of 10×10 matrices.  `dmn_mode` accepts only `:absolute` (see the note below).
 """
 function matrix2d_visc_HQ_BG!(; dmn_eps = 1e-6, α_max = 200.0,
-                               dmn_mode::Symbol = :absolute, n_freeze = 1e-8)
+                               dmn_mode::Symbol = :absolute, n_freeze = nothing)
+    dmn_mode === :absolute || error("matrix2d_visc_HQ_BG!: dmn_mode = :$dmn_mode was REMOVED 2026-10-13. " *
+        "Both alternatives were measured to fail on a real event (2026-09-10, ic2d_00-05_ev01): :relative " *
+        "loses its reference scale where n_eq underflows and is singular at every strength tried; :freeze " *
+        "makes the RHS discontinuous and the adaptive step collapses (a run hung 3.5 h). Only :absolute works. " *
+        "See the note above this method in Matrix/HQ_2p1d_BG.jl.")
+    n_freeze === nothing || error("matrix2d_visc_HQ_BG!: n_freeze belonged to the removed dmn_mode = :freeze")
     (A_i, Source, ϕ, tau, X, params) -> matrix2d_visc_HQ_BG!(
-        A_i, Source, ϕ, tau, X, params; dmn_eps = dmn_eps, α_max = α_max,
-        dmn_mode = dmn_mode, n_freeze = n_freeze)
+        A_i, Source, ϕ, tau, X, params; dmn_eps = dmn_eps, α_max = α_max)
 end
 
 const _HQ2D_COL = (1, 2, 3, 8, 9, 10)   # where hq2d_live_rows' six columns land
@@ -153,7 +174,9 @@ const _HQ2D_COL = (1, 2, 3, 8, 9, 10)   # where hq2d_live_rows' six columns land
 #      cells have n < 1e-6.  There the absolute regulator IS the coefficient, not a perturbation:
 #      varying dmn_eps over a factor 100 moves ν by 32-85 % while T and u move by 1e-13.
 #
-#  `dmn_mode` selects what to do about it:
+#  `dmn_mode` USED TO select what to do about it (the three options below). Since 2026-10-13 only
+#  :absolute exists: the other two were documented as failing yet still branched on in the hot path,
+#  and no caller anywhere selected them. The closure constructor now refuses them with this reason.
 #
 #    :absolute  `dn_da += dmn_eps`.  The shipped behaviour.  Inert on the smooth and elliptic ICs
 #               `compare_2p1d.jl` runs, where n never gets small; NOT inert on a real event.
@@ -167,8 +190,8 @@ const _HQ2D_COL = (1, 2, 3, 8, 9, 10)   # where hq2d_live_rows' six columns land
 #               ∂_τ(α, ν) = 0 there and nothing is regularised because nothing evolves.  This is
 #               structurally what FiVo's vacuum ramp does, and why FiVo has no such failure.
 #
-#  ⛔ MEASURED OUTCOMES (2026-09-10, ic2d_00-05_ev01, 128², τ → 10).  Kept as options so the record
-#  is reproducible; the default is unchanged and bitwise the shipped behaviour.
+#  ⛔ MEASURED OUTCOMES (2026-09-10, ic2d_00-05_ev01, 128², τ → 10).  They were kept as options so
+#  the record stayed reproducible; to reproduce them now, use the code at Fluidum commit 0cb60e3.
 #
 #    :absolute  1e-8 SINGULAR · 1e-6 and 1e-4 reach τ = 10.  T and u move by 1e-13 across that
 #               range; ν moves 32-85 %.  Works, but ν is regulator-dominated on a real event.
@@ -180,8 +203,7 @@ const _HQ2D_COL = (1, 2, 3, 8, 9, 10)   # where hq2d_live_rows' six columns land
 #               crosses `n_freeze`, and the adaptive Tsit5 step collapses there.  FiVo's vacuum
 #               weight is a SMOOTH ramp for exactly this reason; a freeze needs one too.
 # ══════════════════════════════════════════════════════════════════════════════════════════════
-function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, α_max = 200.0,
-                              dmn_mode::Symbol = :absolute, n_freeze = 1e-8)
+function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, α_max = 200.0)
     T  = ϕ[1]
     dpt  = pressure_derivative(T, Val(1), params.eos)     # entropy
     dptt = pressure_derivative(T, Val(2), params.eos)
@@ -198,19 +220,7 @@ function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, �
     Ath, Axh, Ayh, srch = two_d_viscous_matrix_active(uh, tau, pressure(T, params.eos), dpt, dptt, ζ, η, τS, τB)
 
     # rows 8-10: the charm, reading the live medium
-    α_safe = clamp(ϕ[8], -α_max, α_max)
-    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
-    n = thermo.pressure
-    dn_dT, dn_da = thermo.pressure_derivative
-    if dmn_mode === :relative
-        # n_eq(T) = n·e^{-α}; in LOGS so the exponential never overflows at the α clamp
-        n_eq = n > 0.0 ? exp(log(n) - α_safe) : 1.0
-        dn_da += dmn_eps * n_eq
-    else
-        dn_da += dmn_eps
-    end
-    κ    = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
-    taun = τ_diffusion_hadron(T, α_safe, params.eos, params.diffusion) * HQ_TAUN_SCALE[]
+    α_safe, n, dn_dT, dn_da, κ, taun = hq2d_charm_coefficients(T, ϕ[8], params, dmn_eps, α_max)
     AtL, AxL, AyL, srcL = hq2d_live_rows(α_safe, ϕ[9], ϕ[10], tau, T, ϕ[2], ϕ[3],
                                          n, dn_dT, dn_da, taun, κ)
 
@@ -231,18 +241,6 @@ function matrix2d_visc_HQ_BG!(A_i, Source, ϕ, tau, X, params; dmn_eps = 1e-6, �
         end
     end
     @inbounds for i in 1:3; src[7+i] = srcL[i]; end
-
-    # :freeze — HOLD the charm sector where there is no charm to speak of. Rows 8-10 become the
-    # identity in ∂_τ and nothing else, so ∂_τ(α, ν^x, ν^y) = 0 in that cell. Nothing is
-    # regularised because nothing evolves, and the medium (rows 1-7) is untouched — charm is a
-    # passive tracer, so freezing it cannot feed back. The analogue of FiVo's vacuum ramp.
-    if dmn_mode === :freeze && n < n_freeze
-        @inbounds for j in 1:10, i in 8:10
-            At[i,j] = (i == j) ? 1.0 : 0.0
-            Ax[i,j] = 0.0; Ay[i,j] = 0.0
-        end
-        @inbounds for i in 8:10; src[i] = 0.0; end
-    end
 
     Ainv = inv(SMatrix{10,10}(At))
     A_mul_B!(A_i[1], Ainv, SMatrix{10,10}(Ax))

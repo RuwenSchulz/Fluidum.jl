@@ -101,8 +101,9 @@ end
 
 # ── THE TWO ASSERTIONS THAT WOULD HAVE CAUGHT THE pi^{xy} DEFECT FROM COLD ──────────────────────
 # Both are sub-millisecond and need no PDE solve. They are stated against the DERIVED matrix, which
-# is the statement about the physics; the shipped matrix fails both, which is why
-# `FLUIDUM_2D_DERIVED=1` is recommended for new 2+1D work (see the note atop src/Matrix/2d_viscous.jl).
+# is the statement about the physics; the legacy matrix fails both, which is why the derived one has
+# been the DEFAULT since 2026-09-03 (`FLUIDUM_2D_DERIVED` unset or 1; 0 restores the legacy matrix for
+# reproducing older runs only -- see the note atop src/Matrix/2d_viscous.jl).
 @testset "2+1D viscous -- isotropy and the symmetric sigma^{xy} (derived matrix)" begin
     had = Fluidum.VISC_2D_DERIVED[]
     try
@@ -121,40 +122,55 @@ end
     end
 end
 
-@testset "2+1D viscous -- Bjorken is the 0+1D Israel-Stewart system" begin
+@testset "2+1D viscous -- Bjorken is the 0+1D Israel-Stewart (+ delta_pipi) system" begin
     # A transversely uniform state has no transverse gradient, so the 2-D solver must integrate
-    #   De = -(e + P + Pi + pi^eta_eta)/tau,  tau_pi D pi^eta_eta = -pi^eta_eta - 4 eta/(3 tau),
+    #   De = -(e + P + Pi + pi^eta_eta)/tau,
+    #   tau_pi D pi^eta_eta = -pi^eta_eta - 4 eta/(3 tau) - delta_pipi pi^eta_eta/tau,
     #   tau_Pi D Pi = -Pi - zeta/tau
-    # written here from the physics rather than from the matrix. This is what pins the conventions:
-    # pi^{zz} is the MIXED pi^eta_eta = tau^2 pi^{eta eta}, and the relaxation is PLAIN
-    # Israel-Stewart -- a delta_pipi term of FiVoHydro's size would show at the 10 % level.
+    # written here from the physics rather than from the matrix (theta = 1/tau on Bjorken; the same
+    # form is gate V-G5 of Julia/tools/derive_2p1d_viscous.wls). This is what pins the conventions:
+    # pi^{zz} is the MIXED pi^eta_eta = tau^2 pi^{eta eta}. delta_pipi = (4/3) tau_pi by default and 0
+    # under FLUIDUM_DELTA_PIPI=0 (2026-10-13; until then the 2-D medium was plain IS). Both values are
+    # asserted against their own ODE, and each must MISS the other's by more than 5 %.
     tau0, tau1, T0 = 0.4, 3.0, 0.35
-    function rhs!(du, U, p, tau)
-        T, pe, PB = U
-        eta, taupi, zeta, tauPi = _coeffs(T)
-        du[1] = (-(_ene(T,_EOS) + _prs(T,_EOS) + PB + pe)/tau)/(T*_dst(T,_EOS))
-        du[2] = (-pe - 4eta/(3tau))/taupi
-        du[3] = (-PB - zeta/tau)/tauPi
+    function bjref(fac)
+        function rhs!(du, U, p, tau)
+            T, pe, PB = U
+            eta, taupi, zeta, tauPi = _coeffs(T)
+            du[1] = (-(_ene(T,_EOS) + _prs(T,_EOS) + PB + pe)/tau)/(T*_dst(T,_EOS))
+            du[2] = (-pe - 4eta/(3tau) - fac*(4/3)*taupi*pe/tau)/taupi
+            du[3] = (-PB - zeta/tau)/tauPi
+        end
+        solve(ODEProblem(rhs!, [T0,0.0,0.0], (tau0,tau1)), Tsit5(); reltol=1e-12, abstol=1e-14)(tau1)
     end
-    ref = solve(ODEProblem(rhs!, [T0,0.0,0.0], (tau0,tau1)), Tsit5(); reltol=1e-12, abstol=1e-14)(tau1)
 
     d = DiscreteFields(Fluidum.viscous_2d(),
         CartesianDiscretization(Fluidum.SymmetricInterval(24, 12.0),
                                 Fluidum.SymmetricInterval(24, 12.0)), Float64)
-    phi = set_array((x,y)->T0, :temperature, d)
-    for f in (:ux,:uy,:piyy,:pizz,:pixy,:piB); set_array!(phi, (x,y)->0.0, f, d); end
-    u = Fluidum.oneshoot(d, Fluidum.matrix2d_visc!, _PAR, phi, (tau0,tau1);
-                         reltol=1e-11, abstol=1e-13)(tau1)
     ic = 13
-    @test u[1,ic,ic] ≈ ref[1] rtol=1e-10
-    @test u[5,ic,ic] ≈ ref[2] rtol=1e-10
-    @test u[7,ic,ic] ≈ ref[3] rtol=1e-10
-    # tracelessness is DYNAMICAL: pi^{yy} and pi^{zz} are advanced by separate rows
-    @test u[4,ic,ic] ≈ -u[5,ic,ic]/2 rtol=1e-11
-    # a uniform state must stay uniform and at rest
-    @test maximum(abs, u[1,2:25,2:25] .- u[1,ic,ic])/u[1,ic,ic] < 1e-13
-    @test maximum(abs, u[2,2:25,2:25]) < 1e-13
-    @test maximum(abs, u[3,2:25,2:25]) < 1e-13
+    had = Fluidum.DELTA_PIPI[]
+    try
+        for fac in (1.0, 0.0)
+            Fluidum.DELTA_PIPI[] = fac
+            ref = bjref(fac)
+            phi = set_array((x,y)->T0, :temperature, d)
+            for fl in (:ux,:uy,:piyy,:pizz,:pixy,:piB); set_array!(phi, (x,y)->0.0, fl, d); end
+            u = Fluidum.oneshoot(d, Fluidum.matrix2d_visc!, _PAR, phi, (tau0,tau1);
+                                 reltol=1e-11, abstol=1e-13)(tau1)
+            @test u[1,ic,ic] ≈ ref[1] rtol=1e-10
+            @test u[5,ic,ic] ≈ ref[2] rtol=1e-10
+            @test u[7,ic,ic] ≈ ref[3] rtol=1e-10
+            @test abs(u[5,ic,ic]/bjref(1.0 - fac)[2] - 1) > 0.05
+            # tracelessness is DYNAMICAL: pi^{yy} and pi^{zz} are advanced by separate rows
+            @test u[4,ic,ic] ≈ -u[5,ic,ic]/2 rtol=1e-11
+            # a uniform state must stay uniform and at rest
+            @test maximum(abs, u[1,2:25,2:25] .- u[1,ic,ic])/u[1,ic,ic] < 1e-13
+            @test maximum(abs, u[2,2:25,2:25]) < 1e-13
+            @test maximum(abs, u[3,2:25,2:25]) < 1e-13
+        end
+    finally
+        Fluidum.DELTA_PIPI[] = had
+    end
 
     # and with viscosity off, tau*s is conserved on the Bjorken solution
     phi = set_array((x,y)->T0, :temperature, d)

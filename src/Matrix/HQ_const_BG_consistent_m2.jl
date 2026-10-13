@@ -19,18 +19,14 @@
 # ==============================================================================
 # HQ_const_BG_consistent_m2.jl — THE THERMODYNAMICALLY CONSISTENT SECOND MOMENT.
 #
-# NEW FILE (2026-09-02). NOT included by src/Fluidum.jl — nothing shipped
-# changes. Drivers load it into the module at runtime AFTER
-# HQ_const_BG_consistent.jl (whose hqc_matrices / hqc_cm_row2 /
-# hqc_enthalpy_per_particle this file calls):
+# Written 2026-09-02; part of the package build (src/Fluidum.jl, after
+# HQ_const_BG_consistent.jl, whose hqc_first_moment_block / hqc_matrices /
+# hqc_cm_row2 this file calls) since 2026-10-13. Drivers that still
+# `Base.include` both files at run time keep working (functions only). Drivers
+# register :HQ_const_BG_consistent_m2_5f themselves.
 #
-#     Base.include(Fluidum, ".../Matrix/HQ_const_BG_consistent.jl")
-#     Base.include(Fluidum, ".../Matrix/HQ_const_BG_consistent_m2.jl")
-#
-# and register :HQ_const_BG_consistent_m2_5f themselves.
-#
-# WHAT IT IS. Rows 1-2 (alpha, nu^r) are BYTE-IDENTICAL in structure to
-# :HQ_const_BG_consistent_5f (same hqc_matrices call, same cM plumbing). Rows
+# WHAT IT IS. Rows 1-2 (alpha, nu^r) are IDENTICAL to :HQ_const_BG_consistent_5f
+# (one shared body, hqc_first_moment_block). Rows
 # 3-5 replace the shipped nabla-nu-only second-moment relaxation with the
 # thermodynamically consistent equations of
 # Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md (Sec. 4, delta-M-extension
@@ -85,9 +81,21 @@
 # For a multi-species hadron list, h and n are the list's aggregates (exactly as
 # rows 1-2 and the shipped tau_M plumbing) while the m^2 terms use
 # params.diffusion.mass — the same convention tau_M itself has always used.
+# 🔴 2026-10-13: THAT CONVENTION WAS WRONG FOR A LIST, and it is no longer the default.
+# The derivation's A, A/B, C, D ln C are moments of the charm distribution; for a list
+# they are its species sums, not single-quark Bessel forms at diffusion.mass. Against
+# a direct momentum quadrature over the 77-state production list (T 0.156–0.45 GeV):
+# A/B −22…−26 %, d ln C/d ln T −24…+26 %, C (so tau_M) +1.6…+6.6 %, A −27…−37 %.
+# Now `hq_m2_mixture` (EquationOfState/heavyquark.jl) supplies them — the SAME helper
+# the two-way wrappers use (gate_two_way.jl T3e/T3g: drivers ≡ wrappers 3e-10, helper ≡
+# quadrature 1e-13). keyword `mixture` / FLUIDUM_HQ_M2_MIXTURE=0 = the old forms bit for
+# bit. A one-species list of mass diffusion.mass (LP1/O+O charm.data) takes the old
+# code path at both settings — every LP1/O+O product is unchanged (measured: an LP1
+# production-like solve is bit-identical, MATRICES_PROGRAMME.md Log 2026-10-13).
 #
-# THE SOURCE SWITCH — env LP1_M2_SOURCES, read per call (like
-# HQ_CM_BACKREACTION) so no const-capture can pin it at include time:
+# THE SOURCE SWITCH — env LP1_M2_SOURCES, read ONCE in Fluidum.__init__ into
+# HQ_M2_SOURCES[] (per call until 2026-10-13), overridable per closure with the
+# keyword `sources`:
 #
 #   "consistent" (default)  the equations above, all completion terms on.
 #   "legacy"                rows 3-5 delegated VERBATIM to the shipped
@@ -120,9 +128,9 @@
 # the drive-sign repair and the transport cleanup ON TOP of classes ii-iv.
 # nabla_nu exists precisely to attribute the split.
 #
-# c_M SEMANTICS UNCHANGED: rows 3-5 are PASSIVE (production runs
-# HQ_CM_BACKREACTION=0 ⇒ cM = 0, and rows 3-5 carry no cM entries of their
-# own); the row-2 coupling is hqc_cm_row2 exactly as in the first-moment file.
+# c_M: rows 3-5 are PASSIVE at the default cM = 0 (rows 3-5 carry no cM
+# entries of their own); the row-2 coupling is hqc_cm_row2 exactly as in the
+# first-moment file.
 #
 # Derivation + validation: Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md
 # (symbolic .wls identity exact; manufactured-field FD residual 1.5e-11;
@@ -133,35 +141,50 @@
 # the At^-1 Ax / At^-1 src equivalence test in legacy mode.
 # ==============================================================================
 
-"""
-    hqc_m2_sources() -> Symbol
-
-The LP1_M2_SOURCES switch, read per call: :consistent (default), :legacy
-(shipped rows verbatim — the G1 control) or :nabla_nu (consistent minus the
-new terms). Anything else is an error — a misspelled control is a wrong
-physics run.
-"""
-function hqc_m2_sources()
-    s = get(ENV, "LP1_M2_SOURCES", "consistent")
+function _parse_m2_sources(s::AbstractString)
     s == "consistent" && return :consistent
     s == "legacy" && return :legacy
     s == "nabla_nu" && return :nabla_nu
     error("LP1_M2_SOURCES must be \"consistent\", \"legacy\" or \"nabla_nu\", got \"$s\"")
 end
+function _parse_m2_sources(s::Symbol)
+    s in (:consistent, :legacy, :nabla_nu) ||
+        error("LP1_M2_SOURCES / sources must be :consistent, :legacy or :nabla_nu, got :$s")
+    return s
+end
+
+"""
+    hqc_m2_sources() -> Symbol
+
+The LP1_M2_SOURCES switch as this process read it (Fluidum.__init__):
+:consistent (default), :legacy (shipped rows verbatim — the G1 control) or
+:nabla_nu (consistent minus the new terms). Anything else is an error at load
+time — a misspelled control is a wrong physics run. Assign
+`Fluidum.HQ_M2_SOURCES[]` (or pass `sources =` to the closure constructor) to
+change it in-process.
+"""
+hqc_m2_sources() = HQ_M2_SOURCES[]
 
 """
     hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
-                n, taun, Ds, h, hp, tauM, etaM, mq; sources = :consistent)
+                n, taun, Ds, h, hp, tauM, etaM, mq; sources = :consistent, mix = nothing)
 
 Rows 3-5 of the consistent-second-moment system: returns
 (at3, ax3, src3) as 3x5 SMatrix rows / length-3 source, in the
 source-on-the-LHS convention. `sources = :nabla_nu` zeroes exactly the new
 terms; `:legacy` is handled one level up (verbatim shipped rows — see the
 file header).
+
+`mix = nothing` (default): the EOS coefficients A/B, d ln C/d ln T and the m² of
+A = I41/P0 are the SINGLE-QUARK closed forms at m = `mq` (the pre-2026-10-13 code,
+bit for bit). `mix = hq_m2_mixture(T, α, list, mq)` (what the driver passes for a
+multi-species list): the list's species sums, and the D α coefficient becomes
+η̄·∂_α ln I31 — the same coefficients as the two-way wrappers. `tauM` is the
+caller's (the driver multiplies it by `mix.Cratio`).
 """
 function hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
                      n, taun, Ds, h, hp, tauM, etaM, mq;
-                     sources::Symbol = :consistent)
+                     sources::Symbol = :consistent, mix = nothing)
     uτ  = sqrt(1 + ur^2)
     ν   = X[2]
     p_l = X[3]; p_φ = X[4]; Π = X[5]
@@ -214,18 +237,27 @@ function hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
 
     sources == :legacy && error("hqc_m2_rows: :legacy is handled by the caller (verbatim shipped rows)")
     if sources == :consistent
-        z  = mq / T
-        K2 = besselk(2, z); K3 = besselk(3, z); K4 = besselk(4, z)
-        K5 = K3 + 8 * K4 / z
-        dlnC_dlnT = z * ((K3 + K5) / (2 * K4) - (K2 + K4) / (2 * K3))
+        if mix === nothing      # single-quark closed forms at m = mq (pre-2026-10-13, bit for bit)
+            z  = mq / T
+            K2 = besselk(2, z); K3 = besselk(3, z); K4 = besselk(4, z)
+            K5 = K3 + 8 * K4 / z
+            dlnC_dlnT = z * ((K3 + K5) / (2 * K4) - (K2 + K4) / (2 * K3))
+            m2  = mq^2
+            ABr = 5 + z * K2 / K3                        # A/B = dln I31/dln T
+            aα  = one(T)                                 # d_alpha ln I31
+        else                    # the list's species sums (hq_m2_mixture)
+            dlnC_dlnT = mix.dlnC_dlnT
+            m2  = mix.m2bar
+            ABr = mix.ABr
+            aα  = mix.aI31
+        end
         DlnT = (uτ * dtT + ur * drT) / T
         DlnC = dlnC_dlnT * DlnT
         DlTh = (h + T * hp) * (ur * dtT + uτ * drT)     # D_l(Th)
 
         ηbar = taun * n * T / 2                          # tau_n P0 / 2
-        λa   = Ds * (mq^2 + 6 * T * h) / (2 * T)         # (Ds/2T)(A+B)
-        Aco  = mq^2 + 5 * T * h                          # A = I41/P0
-        ABr  = 5 + z * K2 / K3                           # A/B = dln I31/dln T
+        λa   = Ds * (m2 + 6 * T * h) / (2 * T)           # (Ds/2T)(A+B)
+        Aco  = m2 + 5 * T * h                            # A = I41/P0
         rank1 = 2 * λa * a_l * ν_l + (Ds / T) * ν_l * DlTh   # class-(iv) traceless bracket
 
         πσ = p_l * s_l + p_φ * s_φ + p_η * s_η
@@ -241,84 +273,83 @@ function hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
                   ηbar * (ABr * DlnT + (5.0 / 3.0) * θ) +
                   (Ds * Aco / (3 * T)) * aν + (5.0 / 6.0) * (Ds / T) * ν_l * DlTh
         # the D alpha of D ln I31 — matrix entries in column 1 of the trace row
-        at3[3, 1] = ηbar * uτ
-        ax3[3, 1] = ηbar * ur
+        if mix === nothing
+            at3[3, 1] = ηbar * uτ
+            ax3[3, 1] = ηbar * ur
+        else
+            at3[3, 1] = ηbar * aα * uτ
+            ax3[3, 1] = ηbar * aα * ur
+        end
     end
 
     return SMatrix{3,5}(at3), SMatrix{3,5}(ax3), SVector{3}(src)
 end
 
 function matrix1d_visc_HQ_BG_consistent_m2_5f!(; dmn_eps = 1e-6, background_fields,
-                                               α_max = 200.0, use_NR_tauM::Bool = false)
+                                               α_max = 200.0, use_NR_tauM::Bool = false,
+                                               sources::Symbol = HQ_M2_SOURCES[],
+                                               mixture::Bool = HQ_M2_MIXTURE[])
+    src_mode = _parse_m2_sources(sources)
     (A_i, Source, ϕ, tau, X, params) -> matrix1d_visc_HQ_BG_consistent_m2_5f!(
         A_i, Source, ϕ, tau, X, params;
         dmn_eps = dmn_eps, background_fields = background_fields,
-        α_max = α_max, use_NR_tauM = use_NR_tauM)
+        α_max = α_max, use_NR_tauM = use_NR_tauM, sources = src_mode, mixture = mixture)
 end
 
+# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a MULTI-SPECIES charm list
+# the second-moment EOS coefficients (τ_M ∝ C, d ln C/d ln T, A/B, A) are the list's species sums
+# (`hq_m2_mixture`, heavyquark.jl) — the same numbers the two-way wrappers use. false, or a one-species
+# list of mass diffusion.mass (LP1/O+O charm.data), or use_NR_tauM: the single-quark forms (pre-2026-10-13,
+# bit for bit). Not used by :legacy (the verbatim shipped rows).
 function matrix1d_visc_HQ_BG_consistent_m2_5f!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
-        use_NR_tauM::Bool = false)
+        use_NR_tauM::Bool = false, sources::Symbol = HQ_M2_SOURCES[],
+        mixture::Bool = HQ_M2_MIXTURE[])
 
-    T, ur, dtT, drT, drur, dtur = background_fields(tau, X[1])
-    α_safe = clamp(ϕ[1], -α_max, α_max)
+    _parse_m2_sources(sources)       # a misspelled control is a wrong physics run
+    # rows 1-2 and the c_M row-2 pieces: the SAME body as matrix1d_visc_HQ_BG_consistent_5f!
+    b  = hqc_first_moment_block(ϕ, tau, X[1], params, background_fields(tau, X[1]),
+                                dmn_eps, α_max, use_NR_tauM)
+    tr = b.tr
 
-    thermo = thermodynamic(T, α_safe, params.eos.hadron_list)
-    n = thermo.pressure
-    dn_dT, dn_dmu = thermo.pressure_derivative
-    dn_dmu += dmn_eps
-
-    h, taun, Ds = hqc_enthalpy_per_particle(T, α_safe, params.eos, params.diffusion)
-    δ  = max(1e-4, 1e-3 * T)
-    hp = (hqc_enthalpy_per_particle(T + δ, α_safe, params.eos, params.diffusion)[1] -
-          hqc_enthalpy_per_particle(T - δ, α_safe, params.eos, params.diffusion)[1]) / (2δ)
-
-    z = params.diffusion.mass / T
-    tauM = use_NR_tauM ? taun / 2 : taun * besselk(4, z) * besselk(2, z) / (2 * besselk(3, z)^2)
-    etaM = T * taun / 2
-
-    # rows 3-5: the consistent second moment; under LP1_M2_SOURCES=legacy the
-    # VERBATIM shipped rows (gate G1's control — see the header on why the
-    # shipped rows are not the nabla_nu limit); under nabla_nu the clean
-    # covariant nabla-nu-only forms.
-    src_mode = hqc_m2_sources()
+    # rows 3-5: the consistent second moment; under :legacy the VERBATIM shipped
+    # (retracted) rows (gate G1's control — see the header on why the shipped rows
+    # are not the nabla_nu limit); under :nabla_nu the clean covariant
+    # nabla-nu-only forms.
     local at3, ax3, src3
-    if src_mode == :legacy
-        kappa = Ds * n
+    if sources == :legacy
         Ats, Axs, srcs = one_d_viscous_matrix_fugacity_BG_only_second_moment(
-            ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
-            n, dn_dmu, dn_dT, taun, kappa, tauM, etaM, params.diffusion.mass, zero(Ds))
-        at3 = SMatrix{3,5,Float64}(ntuple(k -> Ats[3 + (k - 1) % 3, 1 + (k - 1) ÷ 3], 15))
-        ax3 = SMatrix{3,5,Float64}(ntuple(k -> Axs[3 + (k - 1) % 3, 1 + (k - 1) ÷ 3], 15))
+            ϕ, tau, X[1], b.ur, b.T, b.dtT, b.drT, b.drur, b.dtur,
+            b.n, b.dn_dmu, b.dn_dT, tr.taun, tr.Ds * b.n, tr.tauM, tr.etaM,
+            params.diffusion.mass, zero(tr.Ds))
+        at3 = SMatrix{3,5,Float64}(ntuple(k -> Ats[3 + (k - 1) % 3, 1 + (k - 1) ÷ 3], Val(15)))
+        ax3 = SMatrix{3,5,Float64}(ntuple(k -> Axs[3 + (k - 1) % 3, 1 + (k - 1) ÷ 3], Val(15)))
         src3 = SVector{3,Float64}(srcs[3], srcs[4], srcs[5])
+    elseif !mixture || use_NR_tauM || hq_m2_single(params.eos.hadron_list, params.diffusion.mass)
+        at3, ax3, src3 = hqc_m2_rows(ϕ, tau, X[1], b.ur, b.T, b.dtT, b.drT, b.drur, b.dtur,
+                                     b.n, tr.taun, tr.Ds, tr.h, b.hp, tr.tauM, tr.etaM,
+                                     params.diffusion.mass; sources = sources)
     else
-        at3, ax3, src3 = hqc_m2_rows(ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
-                                     n, taun, Ds, h, hp, tauM, etaM, params.diffusion.mass;
-                                     sources = src_mode)
+        mix = hq_m2_mixture(b.T, clamp(ϕ[1], -α_max, α_max), params.eos.hadron_list,
+                            params.diffusion.mass)
+        at3, ax3, src3 = hqc_m2_rows(ϕ, tau, X[1], b.ur, b.T, b.dtT, b.drT, b.drur, b.dtur,
+                                     b.n, tr.taun, tr.Ds, tr.h, b.hp, tr.tauM * mix.Cratio, tr.etaM,
+                                     params.diffusion.mass; sources = sources, mix = mix)
     end
 
-    # rows 1-2: consistent first moment + the correct c_M force — byte-identical
-    # in structure to matrix1d_visc_HQ_BG_consistent_5f! (HQ_CM_BACKREACTION=0
-    # in production keeps rows 3-5 passive)
-    At2, Ax2, src2 = hqc_matrices(ϕ, tau, X[1], ur, T, dtT, drT, drur, dtur,
-                                  n, dn_dT, dn_dmu, taun, Ds, h, hp; consistent = true)
-    cM = get(ENV, "HQ_CM_BACKREACTION", "1") == "0" ? zero(Ds) : Ds / T
-    nfloor = parse(Float64, get(ENV, "HQC_CM_NFLOOR", "1e-6"))
-    cM *= n / (n + nfloor)
-    at3c, ax3c, csrc = hqc_cm_row2(ϕ, tau, X[1], ur, dtur, drur, cM)
-
+    At2, Ax2, src2 = b.At2, b.Ax2, b.src2
     At = zeros(MMatrix{5,5,Float64}); Ax = zeros(MMatrix{5,5,Float64})
     src = zeros(MVector{5,Float64})
     At[1, 1] = At2[1, 1]; At[1, 2] = At2[1, 2]
-    At[2, 1] = At2[2, 1]; At[2, 2] = At2[2, 2]; At[2, 3] = at3c; At[2, 5] = at3c
+    At[2, 1] = At2[2, 1]; At[2, 2] = At2[2, 2]; At[2, 3] = b.atc; At[2, 5] = b.atc
     Ax[1, 1] = Ax2[1, 1]; Ax[1, 2] = Ax2[1, 2]
-    Ax[2, 1] = Ax2[2, 1]; Ax[2, 2] = Ax2[2, 2]; Ax[2, 3] = ax3c; Ax[2, 5] = ax3c
+    Ax[2, 1] = Ax2[2, 1]; Ax[2, 2] = Ax2[2, 2]; Ax[2, 3] = b.axc; Ax[2, 5] = b.axc
     for j in 1:5, i in 1:3
         At[2 + i, j] = at3[i, j]
         Ax[2 + i, j] = ax3[i, j]
     end
     src[1] = src2[1]
-    src[2] = src2[2] + csrc
+    src[2] = src2[2] + b.csrc
     src[3] = src3[1]; src[4] = src3[2]; src[5] = src3[3]
 
     Ainv = inv(SMatrix{5,5}(At))

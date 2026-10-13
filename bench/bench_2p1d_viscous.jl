@@ -46,11 +46,12 @@
 # CONVENTIONS, pinned by B1 and used throughout
 # ─────────────────────────────────────────────
 #   π^{zz} is the MIXED Milne component π^η_η = τ²π^{ηη}; π^{yy} = π^y_y.  Same mixed convention as
-#   `viscous_1d`'s `piphiphi`/`pietaeta` (checked in A0).  The relaxation is PLAIN ISRAEL–STEWART:
-#   no δ_ππ, no τ_ππ, no λ_πΠ.  Navier–Stokes fixed points on a Bjorken background:
+#   `viscous_1d`'s `piphiphi`/`pietaeta` (checked in A0).  The relaxation is ISRAEL–STEWART +
+#   δ_ππ π θ, δ_ππ = (4/3)τ_π by default and 0 under FLUIDUM_DELTA_PIPI=0 (2026-10-13; until then
+#   plain IS); no τ_ππ, no λ_πΠ.  Navier–Stokes fixed points (δ_ππ = 0) on a Bjorken background:
 #       π^η_η → −4η/(3τ),   π^y_y → +2η/(3τ),   Π → −ζ/τ.
-#   B1 pins that to 1e-13 on a state carrying |π^η_η| ≳ e/2, which is the sharpest statement
-#   available: a δ_ππ of the size FiVoHydro carries (δ_ππ = (4/3)τ_π) would show at the 10 % level.
+#   B1 pins the relaxation, for whichever δ_ππ the switch holds, to 1e-10 on a state carrying
+#   |π^η_η| ≳ e/2, which is the sharpest statement available: the two δ_ππ values differ at the 10 % level.
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 using Fluidum, LinearAlgebra, Printf, OrdinaryDiffEq
 const F    = Fluidum
@@ -279,15 +280,16 @@ section("B · Bjorken — the nonlinear viscous sector, exactly")
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # A transversely uniform state has no transverse gradient, so the 2-D solver must integrate the
 # 0+1D Israel–Stewart system.  That system is written here from the physics, not from the matrix:
-#   De = −(e + P + Π + π^η_η)/τ ,  τ_π Dπ^η_η = −π^η_η − 4η/(3τ) ,  τ_Π DΠ = −Π − ζ/τ
-# and de/dT = T d²P/dT².  This is the ONLY gate that tests the shear sector nonlinearly against a
+#   De = −(e + P + Π + π^η_η)/τ ,  τ_π Dπ^η_η = −π^η_η − 4η/(3τ) − δ_ππ π^η_η/τ ,  τ_Π DΠ = −Π − ζ/τ
+# (θ = 1/τ; δ_ππ = Fluidum.DELTA_PIPI[]·(4/3)τ_π, as the kernel runs) and de/dT = T d²P/dT².
+# This is the ONLY gate that tests the shear sector nonlinearly against a
 # reference written independently of the solver, and it is what pins the conventions.
 function bjorken_ref(T0, τ0, τ1; par = PAR)
     function rhs!(du, U, p, τ)
         T, pe, PB = U
         η, τπ, ζ, τΠ = coeffs(T, par)
         du[1] = (-(ene(T) + prs(T) + PB + pe)/τ)/(T*dst(T))
-        du[2] = (-pe - 4η/(3τ))/τπ
+        du[2] = (-pe - 4η/(3τ) - F.DELTA_PIPI[]*(4/3)*τπ*pe/τ)/τπ
         du[3] = (-PB - ζ/τ)/τΠ
     end
     solve(ODEProblem(rhs!, [T0,0.0,0.0], (τ0,τ1)), Tsit5(); reltol=1e-12, abstol=1e-14)(τ1)
@@ -304,9 +306,9 @@ function gate_B()
     ez  = abs(u[5,ic,jc] - r[2])/abs(r[2])
     eB  = abs(u[7,ic,jc] - r[3])/abs(r[3])
     gate("B1", max(eT,ez,eB) < 1e-10,
-        @sprintf("a uniform state integrates the 0+1D MIS equations: T %.2e, π^η_η %.2e, Π %.2e (relative)", eT, ez, eB))
+        @sprintf("a uniform state integrates the 0+1D MIS equations (δ_ππ = %g·(4/3)τ_π): T %.2e, π^η_η %.2e, Π %.2e (relative)", F.DELTA_PIPI[], eT, ez, eB))
     note(@sprintf("at τ = %.1f: T = %.8f, π^η_η = %.8f (= %.2f×e), Π = %.8f", τ1, r[1], r[2], r[2]/ene(r[1]), r[3]))
-    note(@sprintf("a δ_ππ = (4/3)τ_π term of FiVoHydro's size would move π^η_η by ≈ %.1f %% on this state — it is absent",
+    note(@sprintf("δ_ππ/τ = (4/3)τ_π/τ = %.1f %% on this state — the size of the switch FLUIDUM_DELTA_PIPI (on unless 0)",
                   100*abs((4/3)*coeffs(r[1])[2]/τ1)))
     # B2 — tracelessness is DYNAMICAL here: π^{yy} and π^{zz} are evolved by separate rows
     tr = abs(u[4,ic,jc] + u[5,ic,jc]/2)/abs(u[5,ic,jc])

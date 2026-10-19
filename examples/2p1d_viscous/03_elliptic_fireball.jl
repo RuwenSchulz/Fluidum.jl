@@ -2,46 +2,36 @@
 #=
 03 — an elliptic fireball: what each dissipative sector does, and the causal envelope you are in.
 
-The production-shaped run. An almond-shaped initial condition converts spatial eccentricity into a
-momentum anisotropy, and the sectors are switched on one at a time so the change is attributable.
+An almond-shaped initial condition converts spatial eccentricity into a momentum anisotropy. The
+sectors are switched on one at a time so each change can be attributed.
 
-TWO THINGS THIS FILE CHECKS THAT A FIREBALL SCRIPT USUALLY DOES NOT
+1. The causal envelope. Israel-Stewart is hyperbolic and subluminal only inside a bounded region of
+   (pi, Pi), and Fluidum carries no regulator: nothing clips pi or Pi, and nothing warns. So the
+   run has to be checked against the envelope afterwards. The envelope is measured here from the
+   characteristic matrix (as in M5 of bench/bench_2p1d_viscous.jl) and the trajectory is compared
+   against it. For eta/s = 0.1 and the Lorentzian zeta, bulk is the binding constraint, narrowest
+   at the peak of zeta(T); shear alone stays subluminal to |pi|/e >= 1.0.
 
-1. THE CAUSAL ENVELOPE.  Israel-Stewart is hyperbolic and subluminal only inside a bounded region of
-   (pi, Pi), and Fluidum carries no regulator: nothing clips pi or Pi, and nothing warns.  So the
-   run has to be checked against the envelope AFTERWARDS.  The envelope is measured here from the
-   characteristic matrix (the same measurement as gate M5 of bench/bench_2p1d_viscous.jl) and the
-   trajectory is compared against it.
-   For eta/s = 0.1 and the Lorentzian zeta, the binding constraint is BULK at low temperature:
-   |Pi|/e ~ 0.46 at T = 0.15 GeV, against >= 1.0 for shear alone.
+2. Where the run leaves it. Over the whole grid |pi|/e can exceed the envelope; over T > 0.12 GeV
+   it does not. The difference is the dilute tail, where e -> 0 and any fixed pi is a large ratio.
+   That is a reason to mask observables at a temperature cut; it does not make the tail physical.
+   Both numbers are printed.
 
-2. WHERE THE VIOLATION ACTUALLY LIVES.  Measured over the whole grid, |pi|/e exceeds the envelope;
-   measured over T > 0.12 GeV it does not.  The difference is entirely the dilute tail, where e -> 0
-   and any fixed pi is a large ratio.  That is an argument for masking observables at a temperature
-   cut -- NOT an argument that the tail is fine.  Both numbers are printed, deliberately.
-
-⚠ THIS RUN USES THE CORRECTED MATRIX, which is the DEFAULT since 2026-09-03 (`FLUIDUM_2D_DERIVED=0`
-restores the legacy one).  An elliptic fireball started from rest is very nearly
-irrotational, so the shipped matrix's pi^{xy} defect is small here -- but "very nearly" is not
-"exactly", and this file prints the vorticity it develops so the size of the exposure is visible.
+This run uses the default (derived) 2+1D matrix. An elliptic fireball started from rest is nearly
+irrotational, so the legacy matrix's one-sided pi^{xy} row would differ little here; the vorticity
+the run develops is printed so the size of that difference is visible.
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, Plots
-# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
-# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
-# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
-# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+# Figure style: dpi 200 and larger fonts keep the figures legible when a README scales them down.
 gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
                titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
                foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
                left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
-               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
-                                             # tick labels on every map panel (measured on ex10)
+               colorbar_titlefontsize = 8,   # at 10 pt the colorbar title overlaps its tick labels
                top_margin = 2Plots.mm)
-# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
-# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
-# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
-# all three panels and reappeared only once the margins were set.
+# The margins are needed: at these font sizes GR otherwise drops the axis labels and clips the
+# y-label off the left edge.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -94,7 +84,7 @@ function fractions(u)
     end
     (a, b, A, B)
 end
-"transverse vorticity omega_xy = (1/2)(d_x u^y - d_y u^x), the part the shipped pi^{xy} row gets wrong"
+"transverse vorticity omega_xy = (1/2)(d_x u^y - d_y u^x), the part the legacy pi^{xy} row gets wrong"
 function vorticity(u)
     h = 2LBOX/N; w = 0.0; s = 0.0
     for i in 2:N-1, j in 2:N-1
@@ -106,13 +96,11 @@ function vorticity(u)
 end
 """the dissipative fraction at which the characteristic matrix first turns acausal, at rest.
 
-What crosses is the LIGHT CONE, not hyperbolicity: max|Im lambda| stays at round-off (9.4e-18)
-across the whole scan, and only the BULK sector crosses |Re lambda| = 1, only on the negative
-(expanding) side. Verified independently on the re-derived matrix, which agrees to the digit
-because the bulk and conservation rows are among the ones the shipped matrix gets right.
-The distinction matters: the failure mode is superluminal propagation, NOT the complex-characteristic
-ill-posedness that bit the charm sector (FLUIDUM_ATTRACTOR_AUDIT.md), so "refine it and watch it get
-worse" is not the diagnostic to reach for here, and N-independence would not vindicate the sector."""
+What is crossed is the light cone, not hyperbolicity: max|Im lambda| stays at round-off across the
+whole scan, and only the bulk sector crosses |Re lambda| = 1, only on the negative (expanding) side.
+Both 2+1D matrices agree here, since they share the bulk and conservation rows. The failure mode is
+superluminal propagation, not complex characteristics, so refining the grid is not the diagnostic
+for it, and N-independence would not show the sector is safe."""
 function envelope(T; mode = :bulk)
     e = ene(T); A = [zeros(7,7), zeros(7,7)]; S = zeros(7)
     par = props(; shear = true, bulk = true)
@@ -128,12 +116,11 @@ function envelope(T; mode = :bulk)
 end
 using LinearAlgebra
 
-# ⚠ THE eps2 = 0 CONTROL DOES NOT RETURN ZERO HERE, AND THAT IS NOT A BUG.  A Cartesian grid is not
-# rotationally symmetric, and this scheme is first-order upwind, so an axisymmetric profile picks up
-# a grid anisotropy that converges away only as O(dx).  The control therefore measures the FLOOR on
-# any anisotropy this solver can report -- run it, and read the elliptic numbers against it.  (For
-# scale: FiVoHydro's equivalent control returns 1.4e-15, because its scheme is second order and its
-# reconstruction is symmetrised.  Different schemes, same physics.)
+# The eps2 = 0 control does not return zero, and that is expected. A Cartesian grid is not
+# rotationally symmetric and this scheme is first-order upwind, so an axisymmetric profile picks up
+# a grid anisotropy that converges away only as O(dx). The control measures the floor on any
+# anisotropy this solver can report; read the elliptic numbers against it. A second-order scheme
+# with symmetrised reconstruction returns ~1e-15 for the same control.
 println("\n  eps2 = 0 CONTROL — the floor set by the grid's own anisotropy, not zero:")
 s0, _ = run_case(; shear = true, bulk = true, eps2 = 0.0)
 a0 = anisotropy(s0(TAUF))
@@ -161,33 +148,20 @@ for (lab, sh, bu) in (("ideal", false, false), ("shear", true, false),
 end
 savefig(plt, joinpath(FIG, "ex03_elliptic_fireball.png"))
 
-# ── the bulk-only row above is anomalous: the trigger is the SURFACE, not the grid ───────────────
-# The bulk-only anisotropy at zeta/s = 0.083 is 0.004 against an ideal 0.203 -- a factor 50, from a
-# bulk pressure that is only 6 % of the energy density anywhere it matters.  Four explanations were
-# tested and three were killed:
-#
-#   * NOT a causality violation.  The Israel-Stewart envelope, evaluated at THIS run's own zeta/s
-#     and at each cell's own boost, is not crossed by a single cell at any zeta/s: worst margin over
-#     the whole grid -0.95 to -0.53.  (What crosses it, when anything does, is the light cone and
-#     not hyperbolicity -- max|Im lambda| stays at round-off.)
-#   * NOT the flow dying.  max|u| and the cell count barely move; <w u_y^2> changes by -3 % while
-#     <w u_x^2> drops 23 %.
-#   * NOT the grid in absolute terms.  A DIFFERENT initial condition -- same solver, same box, same
-#     N, same zeta/s -- shows no collapse at all and bulk moving the anisotropy slightly UP.
-#   * IT IS CELLS PER SURFACE THICKNESS.  Holding N fixed and changing ONLY the Woods-Saxon surface
-#     width a_surf turns the collapse on and off; the ideal control is flat across the same sweep.
+# ── the bulk-only row above is a resolution artefact ───────────────────────────────────────────
+# The bulk-only anisotropy at zeta/s = 0.083 is 0.004 against an ideal 0.203, from a bulk pressure
+# that is only 6 % of the energy density anywhere it matters. It is not a causality violation (no
+# cell crosses the envelope at its own temperature and boost), and not the flow dying (max|u| barely
+# moves). A different initial condition on the same grid shows no collapse. Holding N fixed and
+# changing only the Woods-Saxon surface width a_surf turns the collapse on and off; the ideal
+# control is flat across the same sweep.
 #
 # The ladder below scans a_surf and N together so both routes to the same a_surf/dx are visible.
-# THE PRACTICAL RULE, which "use N >= 144" was not, because it transfers to other boxes and profiles:
+# Rule of thumb: resolve the profile's surface with at least ~3 cells before trusting the bulk
+# sector. For this +-14 fm box and a_surf = 0.6 fm that is N >= 140; for a 0.3 fm surface, N >= 280.
 #
-#       resolve the profile's surface with at least ~3 cells before trusting the bulk sector.
-#
-# For this +-14 fm box and a_surf = 0.6 fm that is N >= 140.  For a 0.3 fm surface it would be
-# N >= 280, and "we used a fine grid" would not save you unless someone checked the ratio.
-#
-# ⚠ AND IT IS NOT TRACKED BY THE SIZE OF Pi.  max|Pi|/e over the measured region is 0.061 / 0.064 /
-# 0.065 at N = 64 / 96 / 144 while the anisotropy swings 0.110 -> 0.004 -> 0.188.  The natural reader
-# assumption -- that a dissipative artefact scales with the dissipative field -- is wrong here.
+# The artefact is not tracked by the size of Pi: max|Pi|/e over the measured region is 0.061 /
+# 0.064 / 0.065 at N = 64 / 96 / 144 while the anisotropy goes 0.110 -> 0.004 -> 0.188.
 println("\n  the trigger is a_surf/dx, not N.  bulk zeta/s = 0.083 against its own ideal control:")
 @printf("  %8s %6s %9s %11s %11s %9s %10s\n", "a_surf", "N", "a_surf/dx", "ideal", "bulk", "ratio", "max|u|")
 function surf_run(asurf, Nr, zs)
@@ -218,7 +192,7 @@ println("     doing the work.  The ratio recovers to ~0.95 by a_surf/dx ~ 3 and 
 println("  ⚠ BELOW the threshold the error is NOT a function of a_surf/dx alone: a_surf/dx = 2.06 is")
 println("     reached both at (0.6, N=96) and at (0.9, N=64), giving ratios 0.021 and 0.60 -- a factor")
 println("     29 apart.  Only the RECOVERY is single-valued; the failure is not, which is why two")
-println("     resolutions both below the threshold certified a convincing 'converged' collapse.")
+println("     resolutions both below the threshold show a convincing but spurious 'converged' collapse.")
 println("  ⚠ and a_surf/dx is the right control variable only to a couple of per cent.  Reaching a")
 println("     given ratio by REFINING sits systematically ~1.5-2 % below reaching it by WIDENING the")
 println("     surface (3.09: 0.932 vs ~0.947 interpolated; 4.46: 0.967 vs ~0.985).  Refining N also")
@@ -226,11 +200,10 @@ println("     refines everything else in the problem.  Use it as a lower bound, 
 
 println("\n  the causal envelope, from the characteristic matrix at rest:")
 @printf("  %-10s %14s %14s\n", "T [GeV]", "shear only", "bulk only")
-# ⚠ SPAN THE LORENTZIAN PEAK.  zeta/s is Lorentzian in T with its maximum at 0.175 and a width of
-# 0.024, and the threshold tracks zeta/(w tau_Pi) inversely -- so the envelope is NARROWEST at 0.175
-# and widens on BOTH sides.  A table sampled only at 0.15, 0.20, 0.30, 0.45 rises monotonically and
-# invites exactly the wrong reading ("bulk binds at low T"), which is the reading that produced the
-# wrong diagnosis of the ladder above.
+# Span the Lorentzian peak. zeta/s is Lorentzian in T with its maximum at 0.175 and a width of
+# 0.024, and the threshold tracks zeta/(w tau_Pi) inversely, so the envelope is narrowest at 0.175
+# and widens on both sides. A table sampled only at 0.15, 0.20, 0.30, 0.45 rises monotonically and
+# suggests, wrongly, that bulk binds at low T.
 for T in (0.03, 0.05, 0.10, 0.12, 0.15, 0.175, 0.20, 0.25, 0.30, 0.45, 0.60)
     @printf("  %-10.3f %14.3f %14.3f\n", T, envelope(T; mode = :shear), envelope(T; mode = :bulk))
 end
@@ -245,8 +218,8 @@ println("""
     The "bulk" row on its own is NOT that small effect -- it is a coarse-grid artefact, which the
     resolution ladder below identifies and which refinement removes. Do not read it as physics.
     Compare the two |pi|/e columns against the envelope table -- but compare each cell against the
-    threshold AT ITS OWN TEMPERATURE. Doing it against a single number is how this file first got
-    the ladder above wrong: the largest |Pi|/e sits in the coldest cells, where the threshold is
+    threshold AT ITS OWN TEMPERATURE. Against a single number the ladder above is misread: the
+    largest |Pi|/e sits in the coldest cells, where the threshold is
     ~0.635, not at the ~0.41 of the Lorentzian peak. Checked cell by cell, at its own temperature
     and its own boost, no cell in any of these runs is superluminal.
     The unmasked and masked |pi|/e columns still differ by a factor ~10, and that is still a reason

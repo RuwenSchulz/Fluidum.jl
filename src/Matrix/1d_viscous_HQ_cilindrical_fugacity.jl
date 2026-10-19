@@ -1,29 +1,16 @@
-# 1+1D cylindrical viscous hydro + passive charm, 7 fields -- the kernel of mode :MIS, which
-# generates every production 1-D background (generate_background_splines.jl, LP1, AttractorHydro, ...).
-#
-# Fields phi = (T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r)  (field 6 is alpha = mu/T; the old
-# line here called it "mu").  The equations, as DERIVED and GATED on 2026-10-13:
+# 1+1D cylindrical viscous hydro + passive charm, 7 fields (mode :MIS).
+# Fields phi = (T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r), alpha = mu/T.
 #   medium   Nabla_m T^{mn} = 0
 #            tauS Delta D pi + pi + 2 eta sigma + (4/3) tauS pi theta = 0      <-- delta_pipi = 4/3 tau_pi
 #            tauB D Pi + Pi + zeta theta = 0
 #   charm    Nabla.(n u + nu) = 0;  tau_n Delta D nu + nu + kappa Delta grad(alpha) = 0   (passive: c_M = 0)
 #
-# 🔴 THE MEDIUM IS NOT PLAIN ISRAEL-STEWART. It carries the DNMR term delta_pipi = (4/3) tau_pi -- the
-# `(visc - 2*tauS*u[3])` and `(visc + tauS*u[3])` factors in the shear rows -- which the 5-field
-# `one_d_viscous_matrix` (1d_viscous_cilindrical.jl) and both 2-D matrices do NOT have. Six medium
-# entries differ from the 5-field matrix; rows 1, 2, 5 are identical. Proven entry by entry, with
-# delta_pipi SOLVED FOR rather than assumed: gates M-V7m / M-V7m-dpp of Julia/tools/derive_1d_matrices.wls.
-# The repo said until today that "Fluidum has no delta_pipi" (FiVo comparisons set FiVo's
-# deltaShear_factor = 0 to match) -- true of matrix1d_visc! and the 2-D code, false of this kernel.
-# [2026-10-13, P2b: RS -- delta_pipi = 4/3 tau_pi everywhere. The 5-field kernel and the 2-D derived
-# medium now carry it too (FLUIDUM_DELTA_PIPI, default on), so at the default this medium block and
-# `one_d_viscous_matrix` are the same equations (derive_1d_matrices.wls M-V5=V7m, raw). This kernel is
-# unchanged and ignores the switch: it carries 4/3 tau_pi at FLUIDUM_DELTA_PIPI=0 too.]
-#
-# Rows 6-7 had d_tau T and d_tau u^r ELIMINATED with the medium rows (hence the long shared
-# denominators), so they cannot be compared entry by entry; the solved form A_t^-1 A_r, A_t^-1 src is
-# compared EXACTLY (rational arithmetic) to the derivation: gate M-V7c; and numerically at 24 exported
-# states by J-V7 of Projects/FluidumValidation/gate_matrices_1d.jl (programme.jl check).
+# The DNMR term delta_pipi = (4/3) tau_pi enters through the `(visc - 2*tauS*u[3])` and
+# `(visc + tauS*u[3])` factors in the shear rows. This kernel always carries it and ignores
+# FLUIDUM_DELTA_PIPI. At the default of that switch its medium block and `one_d_viscous_matrix` are
+# the same equations.
+# Rows 6-7 have d_tau T and d_tau u^r eliminated with the medium rows (hence the long shared
+# denominators). The solved form A_t^-1 A_r, A_t^-1 src agrees exactly with the covariant derivation.
 
 function matrix1d_visc_HQ!(;dmn_eps=1e-6)
     (A_i, Source, ϕ, t, X, params) -> matrix1d_visc_HQ!(A_i, Source, ϕ, t, X, params;dmn_eps=dmn_eps)

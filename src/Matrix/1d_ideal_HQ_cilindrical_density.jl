@@ -4,13 +4,10 @@
 # The fields are stored in the order : T, ur, n 
 #
 # Equations: ideal Nabla_m T^{mn} = 0 and Nabla.(n u) = 0 (no diffusion current). Row 3 has d_tau T
-# and d_tau u^r eliminated with rows 1-2. GATED 2026-10-13: M-I3n of Julia/tools/derive_1d_matrices.wls
-# (solved form, exact rational arithmetic) and J-In of Projects/FluidumValidation/gate_matrices_1d.jl.
-# Mode :ideal_HQ_density; nothing in production runs it.
+# and d_tau u^r eliminated with rows 1-2. The solved form agrees exactly with the covariant derivation.
 #
-# `dmn_eps` is ACCEPTED AND IGNORED: the mode registry calls every closure as `(; dmn_eps = ...)`,
-# and this matrix has no dn/dalpha to regularise (n is the field). The unused `free` keyword the
-# direct method carried was removed 2026-10-13 (no caller passed it).
+# `dmn_eps` is accepted and ignored, so the closure has the same keyword as the other modes; this
+# matrix has no dn/dalpha to regularise (n is the field).
 
 function matrix1d_ideal_HQ_density!(;dmn_eps=1e-6)
     (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_density!(A_i, Source, ϕ, tau, X, params)

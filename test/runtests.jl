@@ -16,9 +16,6 @@ using DifferentiationInterface
     @test length(thermodynamic(10,IdealQCD(1,0)).pressure_derivative)==1
     @test length(thermodynamic(10,IdealQCD(1,0)).pressure_hessian)==1
 
-    # `free_charm` was renamed `free_hadron(T,μ,deg,q; m)` in 471c28c (Apr 2026) and the old name
-    # stayed in the export list only.  This @test therefore threw UndefVarError and, because a
-    # failing testset rethrows at its end, aborted runtests.jl before testsets 2-7 ever ran.
     @test isfinite(free_hadron(1,0,1,1; m=1.5)[1])
     @test all(isfinite, free_hadron(0.3,0.0,6,1; m=1.5))
     @test round(pressure(1,Heavy_Quark(readresonancelist(), ccbar)), sigdigits=10)==round(pressure(1,FluiduMEoS()), sigdigits=10)
@@ -187,12 +184,9 @@ end
     tspan = (0.4,10);
     field_results_Ds = Fluidum.oneshoot_debug(disc_fields, Fluidum.matrix1d_visc_HQ!, params_Ds, phi, tspan; reltol = 1e-8);
 
-    # 2026-09-02: this line was a bare expression — the testset ran the (expensive) solve and then
-    # ASSERTED NOTHING, so "causality check | 0 total".  `oneshoot_debug` returns 0 when no
-    # eigenvalue of the characteristic pencil is complex or superluminal.
-    # NOTE it diagnoses `one_d_viscous_matrix_fugacity` REGARDLESS of the matrix it is handed, so it
-    # cannot check the HQ_const_BG* charm systems this branch exists for — those are covered by
-    # Projects/FluidumValidation/bench_fluidum_attractor.jl §H.
+    # `oneshoot_debug` returns 0 when no eigenvalue of the characteristic pencil is complex or
+    # superluminal. It always diagnoses `one_d_viscous_matrix_fugacity`, whatever matrix it is
+    # handed, so it does not check the HQ_const_BG* charm systems.
     @test iszero(field_results_Ds)
 
 end
@@ -203,11 +197,11 @@ end
 end
 
 
-# the 2+1D viscous solver: closed-form characteristic speeds, the isotropy the shipped
-# pi^{xy} row breaks, and the Bjorken limit.  Heavy version: Fluidum.jl/bench/bench_2p1d_viscous.jl
+# 1+1D and 2+1D viscous solvers: closed-form characteristic speeds, isotropy, the Bjorken limit.
+# Longer versions: bench/bench_1p1d_viscous.jl, bench/bench_2p1d_viscous.jl
 include("test_1p1d_viscous.jl")
 include("test_2p1d_viscous.jl")
-# the charm second moment: retraction, c_M default, one transport helper, passivity, 2-D -> 1-D, allocations
+# charm second moment: c_M default, transport helper, passivity, 2-D -> 1-D, allocations
 include("test_hq_moments.jl")
-# the conformal set + the two-way medium + charm system (fast subset of FluidumValidation/gate_two_way.jl)
+# conformal set and the two-way medium + charm system
 include("test_two_way.jl")

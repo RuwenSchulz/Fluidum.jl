@@ -1,53 +1,39 @@
 #!/usr/bin/env julia
 #=
-02 — how fine a transverse grid do I need?  The honest answer is set by NUMERICAL viscosity.
+02 — how fine a transverse grid do I need? The answer is set by numerical viscosity.
 
-The spatial scheme is first-order upwind.  A first-order upwind scheme does not merely converge
-slowly, it adds a diffusivity of its own, and in a VISCOUS hydrodynamics code that diffusivity is
-indistinguishable from the physics you are trying to measure.  This file measures it, on the one
-configuration where the exact answer is available in closed form.
+The spatial scheme is first-order upwind. It adds a diffusivity of its own, and in a viscous
+hydrodynamics code that diffusivity is indistinguishable from the physics you are trying to
+measure. This file measures it on a configuration with a closed-form answer.
 
-THE MEASUREMENT.  Linearising Israel-Stewart about a static uniform state gives, for a plane sound
-wave along x,
+Linearising Israel-Stewart about a static uniform state gives, for a plane sound wave along x,
 
     omega^2 = k^2 c_s^2 - i omega k^2 Z(omega)/w,   Z = (4/3) eta/(1 - i omega tau_pi) + zeta/(1 - i omega tau_Pi)
 
-with w = e + P.  Seeding the exact right-moving eigenvector and fitting the decay of the amplitude
-gives Im omega.  Whatever exceeds the exact root is the scheme's own dissipation, and this file
-shows it is FIRST ORDER in Delta x, which is what identifies it as numerical rather than as a
-missing term in the equations.
+with w = e + P. Seeding the right-moving eigenvector and fitting the decay of the amplitude gives
+Im omega. Whatever exceeds the exact root is the scheme's own dissipation. It is first order in
+Delta x, which identifies it as numerical rather than a missing term in the equations.
 
-THE ANSWER, for eta/s = 0.1 at T = 0.3 GeV:  D_num ~ 0.75 Delta x, against a physical
-Gamma_s = ((4/3) eta + zeta)/(e+P) = 0.090 fm.  The two are EQUAL at Delta x ~ 0.12 fm.  Above that
-the transport in the run is mostly the grid.
+For eta/s = 0.1 at T = 0.3 GeV: D_num ~ 0.75 Delta x, against a physical
+Gamma_s = ((4/3) eta + zeta)/(e+P) = 0.090 fm. The two are equal at Delta x ~ 0.12 fm. Above that
+the transport in the run is mostly the grid. A code-to-code comparison should therefore be run at
+several resolutions and report the convergence, not a single-resolution number.
 
-⚠ THIS IS WHY A CODE-TO-CODE COMPARISON MUST BE RUN AT SEVERAL RESOLUTIONS.  The Fluidum-vs-FiVo
-2+1D comparison (Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md) took its finest grid at
-Delta x = 0.15 fm, i.e. just inside the regime where this solver's numerical viscosity exceeds its
-physical one.  Its conclusion — first-order convergence of the two codes to each other — is exactly
-the right form of statement to make there, and a single-resolution number would not have been.
-
-⚠ TAU_0 = 200 fm/c IS DELIBERATE.  The Milne source terms go as 1/tau; at tau = 200 they are ~0.5 %
-of omega, so the measurement is of the flat-space dispersion relation.  The amplitude is taken from
-the DIFFERENCE of a perturbed and an unperturbed run, which removes the residual background drift.
+tau_0 = 200 fm/c is deliberate. The Milne source terms go as 1/tau; at tau = 200 they are ~0.5 %
+of omega, so the measurement is of the flat-space dispersion relation. The amplitude is taken from
+the difference of a perturbed and an unperturbed run, which removes the residual background drift.
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, Plots
-# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
-# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
-# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
-# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+# Figure style: dpi 200 and larger fonts keep the figures legible when a README scales them down.
 gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
                titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
                foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
                left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
-               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
-                                             # tick labels on every map panel (measured on ex10)
+               colorbar_titlefontsize = 8,   # at 10 pt the colorbar title overlaps its tick labels
                top_margin = 2Plots.mm)
-# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
-# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
-# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
-# all three panels and reappeared only once the margins were set.
+# The margins are needed: at these font sizes GR otherwise drops the axis labels and clips the
+# y-label off the left edge.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -152,4 +138,4 @@ println("""
     discrepancy follows the grid or stays put.
     Practical consequence: at dx >= 0.12 fm this solver's effective eta/s at T = 0.3 GeV is roughly
     DOUBLE the one you asked for. Either refine, or quote the resolution alongside every transport
-    coefficient, or -- best -- report the convergence, as the code-to-code comparison did.""")
+    coefficient, or -- best -- report the convergence.""")

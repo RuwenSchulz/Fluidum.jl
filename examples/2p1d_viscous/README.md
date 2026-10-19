@@ -7,100 +7,86 @@ boost-invariant Milne solver for
 phi = (T, u^x, u^y, pi^{yy}, pi^{zz}, pi^{xy}, Pi)
 ```
 
-Each produces a figure in `figures/`. They are written to be **copied and edited**.
+Each produces a figure in `figures/`. They are written to be copied and edited.
+
+The examples need `Plots` in the active environment; it is not a dependency of Fluidum. From the
+package root:
 
 ```sh
-julia --project=Julia Julia/Fluidum.jl/examples/2p1d_viscous/01_first_run.jl
-julia --project=Julia Julia/Fluidum.jl/examples/2p1d_viscous/02_resolution_and_numerical_viscosity.jl
-julia --project=Julia Julia/Fluidum.jl/examples/2p1d_viscous/03_elliptic_fireball.jl
+julia --project=. examples/2p1d_viscous/01_first_run.jl
+julia --project=. examples/2p1d_viscous/02_resolution_and_numerical_viscosity.jl
+julia --project=. examples/2p1d_viscous/03_elliptic_fireball.jl
 ```
 
 | | what it shows |
 |---|---|
-| **01** the first run | the whole API, and the one configuration with a closed-form answer: a uniform state must integrate the 0+1D Israel–Stewart equations, which it does to 1e-13 |
-| **02** resolution and numerical viscosity | the sound attenuation against the *exact* MIS dispersion relation, and the measurement that the first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx` — comparable to the physical `Γ_s` at production resolution |
-| **03** an elliptic fireball | the sector ladder on a deformed Woods–Saxon, the causal envelope measured from the characteristic matrix, and where the run actually leaves it |
+| **01** the first run | the whole API, and the one configuration with a closed-form answer: a uniform state must integrate the 0+1D Israel–Stewart equations |
+| **02** resolution and numerical viscosity | the sound attenuation against the MIS dispersion relation, and the measurement that the first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx`, comparable to the physical `Γ_s` at typical resolutions |
+| **03** an elliptic fireball | the sector ladder on a deformed Woods–Saxon, the causal envelope measured from the characteristic matrix, and where the run leaves it |
 
 ### 01 — the first run
 
-A transversely uniform state must integrate the 0+1D Israel–Stewart equations, and does, to 1e-13.
+A transversely uniform state must integrate the 0+1D Israel–Stewart equations.
 
 ![the Bjorken limit](figures/ex01_bjorken.png)
 
 ### 02 — resolution and numerical viscosity
 
-The sound attenuation against the *exact* MIS dispersion relation, and the measurement that the
-first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx` — comparable to the physical `Γ_s`
-at production resolution. This is the figure to look at before choosing a grid.
+The sound attenuation against the MIS dispersion relation, and the measurement that the
+first-order upwind scheme's own diffusivity is `D_num ≈ 0.75 Δx`, comparable to the physical `Γ_s`
+at typical resolutions. This is the figure to look at before choosing a grid.
 
 ![resolution and numerical viscosity](figures/ex02_numerical_viscosity.png)
 
 ### 03 — an elliptic fireball
 
 The sector ladder on a deformed Woods–Saxon, the causal envelope measured from the characteristic
-matrix, and where the run actually leaves it.
+matrix, and where the run leaves it.
 
 ![an elliptic fireball](figures/ex03_elliptic_fireball.png)
 
 ⚠ **Do not read the green `bulk` curve as physics.** It drives the momentum anisotropy to ~0 by
-τ = 6, and that collapse is a RESOLUTION ARTEFACT at this grid, not what bulk viscosity does. The
-mechanism is measured in `Julia/Projects/FluidumValidation/FLUIDUM_2P1D_VISCOUS.md` §8: what controls
-it is the width of the ζ Lorentzian **in x** against `dx` — `FWHM_x(ζ)/dx`, with a threshold near
-1.4 — and `a_surf/dx` was REFUTED as the controlling variable by a pedestal scan. At N = 96 on this
-box the run sits near that threshold. The same artefact is why two entries of the 2+1D cross-code
-convergence table do not converge (`COMPARISON_2P1D.md` §40.2).
+τ = 6. That collapse is a resolution artefact at this grid, not what bulk viscosity does, and
+refinement removes it. The script scans the Woods–Saxon surface width against `dx` (`a_surf/dx`).
+A scan with a temperature pedestal points to the width of the ζ Lorentzian in x against `dx`,
+`FWHM_x(ζ)/dx`, with a threshold near 1.4, as the controlling variable. At N = 96 on this box the
+run sits near that threshold.
 
-## Conventions, and the one that has caught people
+## Conventions
 
-`pi^{zz}` is the **mixed** Milne component `pi^eta_eta = tau^2 pi^{eta eta}`, not `pi^{eta eta}`;
-`pi^{yy}` is the Cartesian `pi^y_y`. Same mixed convention as `viscous_1d`'s
+`pi^{zz}` is the mixed Milne component `pi^eta_eta = tau^2 pi^{eta eta}`, not `pi^{eta eta}`;
+`pi^{yy}` is the Cartesian `pi^y_y`. `viscous_1d` uses the same mixed convention for
 `piphiphi`/`pietaeta`. The Navier–Stokes fixed points on a Bjorken background are
 
 ```
 pi^eta_eta -> -4 eta/(3 tau)      pi^y_y -> +2 eta/(3 tau)      Pi -> -zeta/tau
 ```
 
-and the relaxation is **plain Israel–Stewart** — no `delta_pipi`, no `tau_pipi`, no `lambda_piPi`.
-Example 01 pins all of that to 1e-13; a `delta_pipi = (4/3) tau_pi` term of the kind FiVoHydro
-carries would move `pi^eta_eta` by ~8 % on the state it reaches, and it is measurably absent. That
-difference is why a Fluidum-vs-FiVoHydro comparison must be run with FiVo's `delta_pipi` switched
-off to be like-for-like (`Julia/Projects/FiVoFluidumComparison/COMPARISON_2P1D.md` §3).
+The relaxation is Israel–Stewart plus `delta_pipi pi theta`, with `delta_pipi = (4/3) tau_pi` (the
+DNMR value) by default. `FLUIDUM_DELTA_PIPI=0` gives plain Israel–Stewart. There is no `tau_pipi`
+and no `lambda_piPi`. Example 01's reference follows the switch. When comparing with another code,
+match its `delta_pipi`.
 
-> **2026-10-13:** the relaxation now carries **δ_ππ = (4/3) τ_π** by default (RS; the DNMR value, which the
-> production `:MIS` kernel always had), behind `FLUIDUM_DELTA_PIPI` (`0` = the plain Israel–Stewart described
-> above, bit for bit). Example 01's reference follows the switch; a FiVoHydro comparison now runs FiVo at its
-> default `deltaShear_factor = 4/3` (`Projects/FluidumValidation/MATRICES_PROGRAMME.md`, P2b).
+## The derived matrix
 
-## The derived matrix — ON by default since 2026-09-03
+By default `matrix2d_visc!` and the 10-field `matrix2d_visc_HQ_BG!` use the matrix generated by
+`deriv/derive_2p1d_viscous.wls`. `FLUIDUM_2D_DERIVED=0` selects the legacy hand-written matrix (with
+a warning), to reproduce older results only. The legacy matrix has ten wrong entries in its two
+shear rows: its `pi^{xy}` row is driven by the one-sided velocity gradient `-2 eta d_x u^y` where
+Israel–Stewart asks for `-2 eta sigma^{xy} = -eta (d_x u^y + d_y u^x)`. As a result it
 
-The shipped generated matrix has ten wrong entries in its two shear rows: the `pi^{xy}` row is
-driven by the one-sided velocity gradient `-2 eta d_x u^y` where Israel–Stewart asks for
-`-2 eta sigma^{xy} = -eta (d_x u^y + d_y u^x)`. Consequences:
+* agrees with the derived matrix for irrotational transverse flow, so smooth fireballs started from
+  rest are nearly unaffected;
+* is wrong by `-2 eta omega_xy` wherever the flow carries vorticity: a rigid rotation, which must
+  generate no shear, generates `pi^{xy}` at the full Navier–Stokes rate;
+* has an anisotropic characteristic structure: the transverse shear channel propagates at
+  `sqrt(2 C_s)` along x and at 0 along y, instead of `sqrt(C_s)` in every direction.
 
-* it is **exact for irrotational transverse flow**, which is why smooth fireballs started from rest
-  have looked right — including the published code-to-code comparison;
-* it is wrong by `-2 eta omega_xy` wherever the flow carries vorticity: a rigid rotation, which must
-  generate no shear at all, generates `pi^{xy}` at the full Navier–Stokes rate;
-* it makes the characteristic structure **anisotropic** — the transverse shear channel propagates at
-  `sqrt(2 C_s)` along x and at 0 along y.
+The derived matrix is not slower (173 ns against 197 per cell evaluation).
 
-The repaired matrix, re-derived from scratch by `Julia/tools/derive_2p1d_viscous.wls`, routes every
-2+1D kernel including the 10-field `matrix2d_visc_HQ_BG!`. It is not slower (173 ns against 197).
-
-⚠ **It has been the DEFAULT since 2026-09-03** — `__init__` sets
-`VISC_2D_DERIVED[] = get(ENV, "FLUIDUM_2D_DERIVED", "1") != "0"`, so you get the repaired matrix
-unless you ask for the legacy one with `FLUIDUM_2D_DERIVED=0` (which also prints a warning). This
-section said "default **off** only so that results already on disk keep their meaning" until
-2026-09-14; it was written at 10:23 on 2026-09-03 and the flip landed at 13:12 the same day.
-Reproducing a pre-2026-09-03 number is what `FLUIDUM_2D_DERIVED=0` is for.
-Full account: the note at the top of `src/Matrix/2d_viscous.jl`.
-
-## Where the gates live
-
-These are examples, not gates.
+## Tests and benchmarks
 
 | | |
 |---|---|
-| `Julia/Fluidum.jl/test/test_2p1d_viscous.jl` | the fast testset, run by `Pkg.test()` — closed-form characteristic speeds, the isotropy assertions, the Bjorken limit |
-| `Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl` | the solver against closed forms: Bjorken, the exact sound dispersion, ideal Gubser, 2-D against the 1-D cylindrical solver |
-| `Julia/Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl` | the derivation side: which matrix entries are wrong, and the corrected matrix's gates |
+| `test/test_2p1d_viscous.jl` | the fast testset, run by `Pkg.test()`: closed-form characteristic speeds, isotropy, the Bjorken limit |
+| `bench/bench_2p1d_viscous.jl` | the solver against closed forms: Bjorken, the MIS sound dispersion, ideal Gubser, 2-D against the 1-D cylindrical solver |

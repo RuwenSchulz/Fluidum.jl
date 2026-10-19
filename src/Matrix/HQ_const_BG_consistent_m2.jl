@@ -1,41 +1,20 @@
-# ⚠ "const_BG" IS A MISNOMER, AND THE NAME IS KEPT ONLY BECAUSE IT IS ON DISK.
-# The background here is NOT constant. `background_fields(tau, X[1])` returns
-#     T, ur, dtT, drT, drur, dtur
-# at that (tau, r) — a fully time- and space-dependent medium, splined over an r-grid AND a
-# tau-grid (see Projects/LangevinPaper1/generate_background_splines.jl). What "BG" actually means
-# is PRESCRIBED rather than CO-EVOLVED: the medium is supplied to the charm sector instead of being
-# advanced alongside it.
-#
-# 🔑 AND THAT IS NOT AN APPROXIMATION. At c_M = 0 the charm is a PROBE — it does not back-react on
-# the medium. Measured 2026-09-15 (Projects/FiVoFluidumComparison/COMPARISON_1P1D.md §3.2), two ways:
-#   * structure: in the live 7-field matrix1d_visc_HQ!, max|B[1:5, 6:7]| = 0.000e+00 exactly, and no
-#     medium source row references alpha or nu^r;
-#   * behaviour: quadrupling D_s (0.1 -> 0.4) moves nu^r by 62 % and the medium by 6.6e-16 ... 8.6e-15.
-# So prescribing the medium and co-evolving it are the SAME problem, up to discretisation. Solving
-# it in two stages is a choice about scheduling, not about physics.
-#
-# ⛔ The symbols `:HQ_const_BG*` are written into stored artifacts as `evo_mode`; renaming them
-# would orphan every .jld2 that carries one. The name stays; this note is the fix.
 # ==============================================================================
-# HQ_const_BG_consistent_m2.jl — THE THERMODYNAMICALLY CONSISTENT SECOND MOMENT.
+# Thermodynamically consistent charm second moment on a prescribed 1+1D
+# cylindrical background.
 #
-# Written 2026-09-02; part of the package build (src/Fluidum.jl, after
-# HQ_const_BG_consistent.jl, whose hqc_first_moment_block / hqc_matrices /
-# hqc_cm_row2 this file calls) since 2026-10-13. Drivers that still
-# `Base.include` both files at run time keep working (functions only). Drivers
-# register :HQ_const_BG_consistent_m2_5f themselves.
+# The background (T, u) is prescribed, not evolved. `background_fields(tau, r)`
+# returns (T, ur, dtT, drT, drur, dtur), as in HQ_const_BG.jl. This file uses
+# hqc_first_moment_block, hqc_matrices and hqc_cm_row2 from
+# HQ_const_BG_consistent.jl.
 #
-# WHAT IT IS. Rows 1-2 (alpha, nu^r) are IDENTICAL to :HQ_const_BG_consistent_5f
-# (one shared body, hqc_first_moment_block). Rows
-# 3-5 replace the shipped nabla-nu-only second-moment relaxation with the
-# thermodynamically consistent equations of
-# Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md (Sec. 4, delta-M-extension
-# convention — the variant the kinetic validation favours 6-8x over strict-Pi),
-# reduced under the paper's symmetry: boost-invariant, azimuthally symmetric
-# Milne, u = (u^tau, u^r, 0, 0), mostly-plus g = diag(-1, 1, r^2, tau^2).
+# Rows 1-2 (alpha, nu^r) are the same as in matrix1d_visc_HQ_BG_consistent_5f!
+# (one shared body, hqc_first_moment_block). Rows 3-5 are the thermodynamically
+# consistent second-moment equations in the delta-M-extension convention (which
+# agrees better with kinetic simulations than the strict-Pi variant), reduced
+# for boost-invariant, azimuthally symmetric Milne flow, u = (u^tau, u^r, 0, 0),
+# mostly-plus g = diag(-1, 1, r^2, tau^2).
 #
-# FIELD CONVENTION (matches the verified c_M coupling of
-# derive_hq_cm_coupling.wls and the Langevin extraction): the transverse basis
+# Field convention (the same as the c_M coupling): the transverse basis
 # is the PARALLEL-TRANSPORTED orthonormal triad
 #     l    = (u^r, u^tau, 0, 0)          (unit, ⊥u, in the tau-r plane)
 #     phî  = (0, 0, 1/r, 0),   etâ = (0, 0, 0, 1/tau)
@@ -58,7 +37,7 @@
 #     signu_i = (grad nu)_ii - (theta_nu - a.nu)/3        [sigma_(nu) diagonal]
 #
 # Traceless channels i in {l, phi}  (E_eta = -(E_l + E_phi) identically):
-#     tau_M D p_i + p_i + 2 eta_Q signu_i                              (legacy)
+#     tau_M D p_i + p_i + 2 eta_Q signu_i                              (i)
 #       + tau_M [ ((5/3)theta + D ln C) p_i + 2(p_i s_i - (pi:sigma)/3)
 #                 + 2 Pi_Q s_i ]                                       (iii + dM-ext)
 #       + 2 etabar s_i                                                 (ii)
@@ -66,79 +45,54 @@
 #     = 0,          pi:sigma = p_l s_l + p_phi s_phi + p_eta s_eta
 #
 # Trace channel:
-#     tau_M D Pi_Q + Pi_Q + zeta_Q theta_nu                            (legacy)
+#     tau_M D Pi_Q + Pi_Q + zeta_Q theta_nu                            (i)
 #       + tau_M ((5/3)theta + D ln C) Pi_Q + (2/3) tau_M pi:sigma      (iii + dM-ext)
 #       + (tau_n P0/2) [ D alpha + (A/B) D ln T + (5/3) theta ]        (ii)
 #       + (D_s A/3T) a.nu + (5 D_s/6T) nu_l D_l(Th)                    (iv)
 #     = 0
 #
-# COEFFICIENTS (paper values; z = m_q/T, K_n = besselk):
+# Class (i) is the nabla-nu-only relaxation; (ii)-(iv) are the completion terms.
+#
+# COEFFICIENTS (z = m_q/T, K_n = besselk):
 #     tau_M  = tau_n K4 K2 / (2 K3^2)        eta_Q  = T tau_n / 2   (= etaM)
 #     zeta_Q = (5/3) eta_Q                   etabar = tau_n P0 / 2,  P0 = n T
 #     lambda_a = (D_s/2T)(m^2 + 6 T h)       A = m^2 + 5 T h,  A/B = 5 + z K2/K3
 #     D ln C = [z ((K3+K5)/(2K4) - (K2+K4)/(2K3))] D ln T,   K5 = K3 + 8 K4/z
-#     grad(Th) = (h + T h') grad T           (h EOS-agnostic per hqc precedent)
-# For a multi-species hadron list, h and n are the list's aggregates (exactly as
-# rows 1-2 and the shipped tau_M plumbing) while the m^2 terms use
-# params.diffusion.mass — the same convention tau_M itself has always used.
-# 🔴 2026-10-13: THAT CONVENTION WAS WRONG FOR A LIST, and it is no longer the default.
-# The derivation's A, A/B, C, D ln C are moments of the charm distribution; for a list
-# they are its species sums, not single-quark Bessel forms at diffusion.mass. Against
-# a direct momentum quadrature over the 77-state production list (T 0.156–0.45 GeV):
-# A/B −22…−26 %, d ln C/d ln T −24…+26 %, C (so tau_M) +1.6…+6.6 %, A −27…−37 %.
-# Now `hq_m2_mixture` (EquationOfState/heavyquark.jl) supplies them — the SAME helper
-# the two-way wrappers use (gate_two_way.jl T3e/T3g: drivers ≡ wrappers 3e-10, helper ≡
-# quadrature 1e-13). keyword `mixture` / FLUIDUM_HQ_M2_MIXTURE=0 = the old forms bit for
-# bit. A one-species list of mass diffusion.mass (LP1/O+O charm.data) takes the old
-# code path at both settings — every LP1/O+O product is unchanged (measured: an LP1
-# production-like solve is bit-identical, MATRICES_PROGRAMME.md Log 2026-10-13).
+#     grad(Th) = (h + T h') grad T           (h EoS-agnostic, as in rows 1-2)
+# For a multi-species hadron list, h and n are the list's aggregates. A, A/B, C
+# and D ln C are moments of the charm distribution, so for a list they are its
+# species sums; `hq_m2_mixture` (EquationOfState/heavyquark.jl) supplies them, as
+# for the two-way system. The single-quark Bessel forms at diffusion.mass differ
+# from these sums by up to ~37 % for a 77-state charm hadron list. Keyword `mixture`
+# (env FLUIDUM_HQ_M2_MIXTURE=0) selects the single-quark forms; a one-species
+# list of mass diffusion.mass gets them in either case.
 #
-# THE SOURCE SWITCH — env LP1_M2_SOURCES, read ONCE in Fluidum.__init__ into
-# HQ_M2_SOURCES[] (per call until 2026-10-13), overridable per closure with the
-# keyword `sources`:
+# The source switch: env LP1_M2_SOURCES, read once in Fluidum.__init__ into
+# HQ_M2_SOURCES[], overridable per closure with the keyword `sources`:
 #
 #   "consistent" (default)  the equations above, all completion terms on.
-#   "legacy"                rows 3-5 delegated VERBATIM to the shipped
+#   "legacy"                rows 3-5 delegated verbatim to the older rows of
 #                           one_d_viscous_matrix_fugacity_BG_only_second_moment
-#                           (cM = 0), i.e. bit-identical to
-#                           :HQ_const_BG_consistent_5f.  Gate G1's control: an
-#                           LP1_M2_SOURCES=legacy solve must reproduce the
-#                           charm_hydro_consistent payloads at solver roundoff.
-#   "nabla_nu"              the consistent rows with the NEW terms zeroed —
-#                           the paper's nabla-nu-only relaxation
+#                           (cM = 0), i.e. identical to
+#                           matrix1d_visc_HQ_BG_consistent_5f!. Reproduces
+#                           earlier results.
+#   "nabla_nu"              the consistent rows with the completion terms zeroed,
+#                           i.e. the nabla-nu-only relaxation
 #                           tau_M D pi + pi = -2 eta_Q sigma_(nu),
 #                           tau_M D Pi + Pi = -zeta_Q theta_nu
-#                           in the clean covariant reduction (= the derivation
-#                           note's "shipped ODE" curves at the axis).
+#                           in the covariant reduction.
 #
-# 🔴 WHY "legacy" IS A DELEGATION AND NOT THE nabla_nu LIMIT (2026-09-02,
-# measured by rotating the shipped rows into this file's row basis —
-# scratch diag_shipped_row_content.jl):  the shipped Mathematica rows are NOT
-# the nabla-nu-only limit of the covariant reduction.  Two structural
-# differences, both exact:
-#   (1) the sigma_(nu) drive enters the shipped rows with the OPPOSITE SIGN
-#       (every nu-derivative coefficient is exactly minus the covariant one —
-#       the mostly-minus notebook heritage, same family as the W0/C0 traps);
-#   (2) the shipped rows carry coordinate-transport couplings among
-#       (pi_l, pi_phi, Pi_Q) (e.g. d src3/d X3 = 0.842 tau_M-units instead of
-#       1, cross terms ±0.16, 0.23) that the parallel-transported basis shows
-#       to be absent from Delta-proj D pi.
-# So "zeroing the new terms" cannot reproduce the production payloads; only the
-# verbatim shipped rows can, and the consistent-vs-legacy difference contains
-# the drive-sign repair and the transport cleanup ON TOP of classes ii-iv.
-# nabla_nu exists precisely to attribute the split.
+# "legacy" is not the nabla_nu limit. In the older rows (1) the sigma_(nu) drive
+# has the opposite sign, and (2) there are coordinate-transport couplings among
+# (pi_l, pi_phi, Pi_Q) that are absent from the Delta-projected D pi in the
+# parallel-transported basis. The consistent-vs-legacy difference therefore
+# contains both repairs on top of classes ii-iv; nabla_nu separates them.
 #
-# c_M: rows 3-5 are PASSIVE at the default cM = 0 (rows 3-5 carry no cM
-# entries of their own); the row-2 coupling is hqc_cm_row2 exactly as in the
-# first-moment file.
+# c_M: rows 3-5 carry no cM entries of their own and are passive at the
+# default cM = 0; the row-2 coupling is hqc_cm_row2, as in the first-moment file.
 #
-# Derivation + validation: Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md
-# (symbolic .wls identity exact; manufactured-field FD residual 1.5e-11;
-# kinetic validation mean|dev| tau in [5,13] = 0.0087/0.0098 const/linear).
-# The general-r reduction above is verified pointwise against the covariant
-# E+N+P assembly in the scratch gate accompanying the 2026-09-02 session
-# (see M2_CONSISTENT_DERIVATION.md App. A) and against the shipped rows via
-# the At^-1 Ax / At^-1 src equivalence test in legacy mode.
+# The general-r reduction agrees pointwise with the covariant assembly, and a
+# manufactured-field finite-difference residual is 1.5e-11.
 # ==============================================================================
 
 function _parse_m2_sources(s::AbstractString)
@@ -157,9 +111,9 @@ end
     hqc_m2_sources() -> Symbol
 
 The LP1_M2_SOURCES switch as this process read it (Fluidum.__init__):
-:consistent (default), :legacy (shipped rows verbatim — the G1 control) or
-:nabla_nu (consistent minus the new terms). Anything else is an error at load
-time — a misspelled control is a wrong physics run. Assign
+:consistent (default), :legacy (the older rows verbatim) or :nabla_nu
+(consistent minus the completion terms). Anything else is an error at load
+time, so a misspelled value cannot silently run different physics. Assign
 `Fluidum.HQ_M2_SOURCES[]` (or pass `sources =` to the closure constructor) to
 change it in-process.
 """
@@ -171,13 +125,12 @@ hqc_m2_sources() = HQ_M2_SOURCES[]
 
 Rows 3-5 of the consistent-second-moment system: returns
 (at3, ax3, src3) as 3x5 SMatrix rows / length-3 source, in the
-source-on-the-LHS convention. `sources = :nabla_nu` zeroes exactly the new
-terms; `:legacy` is handled one level up (verbatim shipped rows — see the
-file header).
+source-on-the-LHS convention. `sources = :nabla_nu` zeroes the completion
+terms; `:legacy` is handled by the caller (the older rows, see the file header).
 
 `mix = nothing` (default): the EOS coefficients A/B, d ln C/d ln T and the m² of
-A = I41/P0 are the SINGLE-QUARK closed forms at m = `mq` (the pre-2026-10-13 code,
-bit for bit). `mix = hq_m2_mixture(T, α, list, mq)` (what the driver passes for a
+A = I41/P0 are the single-quark closed forms at m = `mq`.
+`mix = hq_m2_mixture(T, α, list, mq)` (what the driver passes for a
 multi-species list): the list's species sums, and the D α coefficient becomes
 η̄·∂_α ln I31 — the same coefficients as the two-way wrappers. `tauM` is the
 caller's (the driver multiplies it by `mix.Cratio`).
@@ -216,7 +169,7 @@ function hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
     ηQ = etaM                               # = T taun/2 — the paper's eta_Q
     ζQ = (5.0 / 3.0) * ηQ
 
-    # ── legacy rows: tau_M D p_i + p_i = -2 eta_Q signu_i ; trace with zeta_Q theta_nu
+    # ── class (i) rows: tau_M D p_i + p_i = -2 eta_Q signu_i ; trace with zeta_Q theta_nu
     at3 = zeros(MMatrix{3,5,Float64})
     ax3 = zeros(MMatrix{3,5,Float64})
     src = zeros(MVector{3,Float64})
@@ -237,7 +190,7 @@ function hqc_m2_rows(X, tau, r, ur, T, dtT, drT, drur, dtur,
 
     sources == :legacy && error("hqc_m2_rows: :legacy is handled by the caller (verbatim shipped rows)")
     if sources == :consistent
-        if mix === nothing      # single-quark closed forms at m = mq (pre-2026-10-13, bit for bit)
+        if mix === nothing      # single-quark closed forms at m = mq
             z  = mq / T
             K2 = besselk(2, z); K3 = besselk(3, z); K4 = besselk(4, z)
             K5 = K3 + 8 * K4 / z
@@ -296,26 +249,24 @@ function matrix1d_visc_HQ_BG_consistent_m2_5f!(; dmn_eps = 1e-6, background_fiel
         α_max = α_max, use_NR_tauM = use_NR_tauM, sources = src_mode, mixture = mixture)
 end
 
-# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a MULTI-SPECIES charm list
+# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a multi-species charm list
 # the second-moment EOS coefficients (τ_M ∝ C, d ln C/d ln T, A/B, A) are the list's species sums
-# (`hq_m2_mixture`, heavyquark.jl) — the same numbers the two-way wrappers use. false, or a one-species
-# list of mass diffusion.mass (LP1/O+O charm.data), or use_NR_tauM: the single-quark forms (pre-2026-10-13,
-# bit for bit). Not used by :legacy (the verbatim shipped rows).
+# (`hq_m2_mixture`, heavyquark.jl), as in the two-way system. false, a one-species list of mass
+# diffusion.mass, or use_NR_tauM: the single-quark forms. Not used by :legacy.
 function matrix1d_visc_HQ_BG_consistent_m2_5f!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
         use_NR_tauM::Bool = false, sources::Symbol = HQ_M2_SOURCES[],
         mixture::Bool = HQ_M2_MIXTURE[])
 
-    _parse_m2_sources(sources)       # a misspelled control is a wrong physics run
-    # rows 1-2 and the c_M row-2 pieces: the SAME body as matrix1d_visc_HQ_BG_consistent_5f!
+    _parse_m2_sources(sources)       # reject a misspelled mode
+    # rows 1-2 and the c_M row-2 pieces: the same body as matrix1d_visc_HQ_BG_consistent_5f!
     b  = hqc_first_moment_block(ϕ, tau, X[1], params, background_fields(tau, X[1]),
                                 dmn_eps, α_max, use_NR_tauM)
     tr = b.tr
 
-    # rows 3-5: the consistent second moment; under :legacy the VERBATIM shipped
-    # (retracted) rows (gate G1's control — see the header on why the shipped rows
-    # are not the nabla_nu limit); under :nabla_nu the clean covariant
-    # nabla-nu-only forms.
+    # rows 3-5: the consistent second moment; under :legacy the older rows verbatim
+    # (see the header on why they are not the nabla_nu limit); under :nabla_nu the
+    # covariant nabla-nu-only forms.
     local at3, ax3, src3
     if sources == :legacy
         Ats, Axs, srcs = one_d_viscous_matrix_fugacity_BG_only_second_moment(

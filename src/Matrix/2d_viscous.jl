@@ -1,89 +1,39 @@
 # the convention here are T, ux, uy, \[Pi]yy, \[Pi]zz, \[Pi]xy, \[Pi]B
 #
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-# 🔴 2026-09-03 — TEN ENTRIES OF THIS MATRIX ARE WRONG, AND THEY ARE ALL IN THE TWO SHEAR ROWS.
-#
-# Julia/tools/derive_2p1d_viscous.wls re-derives this system from scratch (plain Israel–Stewart,
-# no second-order coefficients) and emits Matrix/viscous_generated.jl.  The SAME generator
-# reproduces the shipped 1-D cylindrical `one_d_viscous_matrix` (`matrix1d_visc!`'s kernel) ENTRY BY ENTRY to 7.8e-16 (gate B-G1 of bench_fluidum_2p1d_viscous.jl;
-# since 2026-10-13 also symbolically, read out of the .jl, as gate V-G4 of the generator; this line
-# said "gate G4", a name three different gates shared).  [Corrected 2026-10-13: this paragraph
-# called that 5-field kernel "the kernel every production 1-D run has used for a year". The
-# production 1-D backgrounds come from the 7-field :MIS kernel, `one_d_viscous_matrix_fugacity`,
-# whose medium is the same Israel-Stewart PLUS delta_pipi = 4/3 tau_pi (derive_1d_matrices.wls,
-# M-V7m) -- a term neither this matrix nor its derived replacement had.  Since 2026-10-13 (P2b) the
-# derived replacement and the 5-field kernel carry it too, behind FLUIDUM_DELTA_PIPI (default 4/3
-# tau_pi, "0" = plain IS bit for bit); THIS legacy matrix stays plain IS.]  Against that reference the
-# 7-field matrix below differs in exactly ten entries, over any state lattice:
+# `two_d_viscous_matrix` below (the legacy matrix) has ten wrong entries, all in the velocity columns
+# (2 = u^x, 3 = u^y) of the π^{yy} and π^{xy} rows:
 #
 #     A_t[4,3]  A_t[6,2]  A_t[6,3]    A_x[4,3]  A_x[6,2]  A_x[6,3]
 #     A_y[4,2]  A_y[4,3]  A_y[6,2]  A_y[6,3]
 #
-# i.e. the velocity columns (2 = u^x, 3 = u^y) of the π^{yy} and π^{xy} rows.  Rows 1–3 (the
-# conservation rows), row 5 (π^η_η), row 7 (Π) and the WHOLE source vector are correct, which is
-# why Bjorken, the sound channel and the ideal cone all check out exactly.
-#
-# TWO SEPARATE DEFECTS LIVE IN THOSE TEN ENTRIES.
-#  1. The σ^{xy} symmetrisation is lost.  At rest the row reads
-#         τ_π D π^{xy} + π^{xy} = −2η ∂_x u^y        (A_y[6,2] ≡ 0 at every u, every π)
-#     where Israel–Stewart asks for −2η σ^{xy} = −η(∂_x u^y + ∂_y u^x).  The SUM is right, the
-#     SPLIT is not: for IRROTATIONAL transverse flow the two forms agree exactly, which is why
-#     every smooth fireball started from rest — the FiVoHydro comparison included — has looked
-#     right.  Under transverse VORTICITY it is wrong by −2η ω_{xy}: a rigid rotation, which must
-#     produce no shear at all, drives π^{xy} at the full Navier–Stokes rate.  It also breaks
-#     isotropy: at rest the transverse shear channel propagates at √(2 C_s) along x and does not
-#     propagate at all along y, where both must be √(C_s).
-#  2. Spurious τ_π·π velocity-gradient terms in rows 4 and 6.  At rest with η = 0 the derivation
-#     gives zero for A_x[4,3], A_y[4,2], A_x[6,3], A_y[6,2]; this matrix gives ±τ_π π^{xy} and
-#     ∓2τ_π π^{xy}.  It is NOT the co-rotating (Jaumann) coupling 2τ_π π_λ^{<μ}ω^{ν>λ}: adding
-#     that term with EITHER sign makes the disagreement worse (12 entries instead of 10), and the
-#     residual survives for irrotational gradients.  It is this defect that a row-by-row repair
-#     cannot reach.
-#
-# Neither defect can be seen in 1-D: the transverse vorticity of a purely radial flow vanishes
-# identically, so the 1-D control (V-G4 / B-G1) passes either way.
-#
-# HOW WRONG, ON A REAL FIREBALL.  The error this matrix makes in its own equations,
-# ||(A_shipped - A_derived).grad(phi)|| / ||equation||, over the cells of a 96^2 elliptic fireball
-# above 0.12 GeV:  median 0.06 % / p90 0.5 % / max 1.3 % at tau = 2, and 0.32 % / 1.3 % / **19.8 %**
-# at tau = 6.  The typical cell is fine -- which is why nothing ever looked wrong -- but the tail is
-# not, and it grows with the transverse vorticity (21 % of the strain at tau = 2, 24 % at tau = 4).
-#
-# THE REPAIR IS THE DEFAULT SINCE 2026-09-03.  `Fluidum.VISC_2D_DERIVED[]` is true unless
-# `FLUIDUM_2D_DERIVED=0`, and it routes `matrix2d_visc!` and the 10-field `matrix2d_visc_HQ_BG!`
-# (whose hydro block is this one; it calls `two_d_viscous_matrix_active` directly, not through
-# `matrix2d_visc!`) to `two_d_viscous_matrix_derived`.
-# `two_d_viscous_matrix` below is kept, unchanged and dated, because this repo keeps its wrong
-# turns -- set the flag to 0 to reproduce anything made before that date.  The repair is free:
-# 163 ns against 186, i.e. the correct matrix is the faster one.
-# Gates: Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl §I (the matrix IS the PDE,
-# 1.99e-12 derived vs 1.68e-02 shipped), §G, §R.
-# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Rows 1–3, 5, 7 and the source vector are correct. The two defects are:
+#  1. The σ^{xy} symmetrisation is lost. At rest the row reads τ_π D π^{xy} + π^{xy} = −2η ∂_x u^y
+#     instead of −η(∂_x u^y + ∂_y u^x). The two agree for irrotational flow and differ by −2η ω_{xy}
+#     under transverse vorticity, which also breaks transverse isotropy of the shear channel.
+#  2. Spurious τ_π π^{xy} velocity-gradient terms in rows 4 and 6 (A_x[4,3], A_y[4,2], A_x[6,3],
+#     A_y[6,2]). They are not the corotational coupling 2τ_π π_λ^{<μ}ω^{ν>λ}.
+# Neither defect is visible in 1-D, where the transverse vorticity of a radial flow vanishes.
+# `two_d_viscous_matrix_derived` (Matrix/viscous_generated.jl, from deriv/derive_2p1d_viscous.wls) is
+# the Israel–Stewart system and is used by default; it reproduces `one_d_viscous_matrix` entry by
+# entry. It includes delta_pipi (FLUIDUM_DELTA_PIPI); the legacy matrix is plain IS.
 
 """
     VISC_2D_DERIVED
 
-`true` (the DEFAULT since 2026-09-03) when the 2+1D viscous kernels use
-`two_d_viscous_matrix_derived` — the matrix re-derived from scratch by
-`Julia/tools/derive_2p1d_viscous.wls` — instead of the legacy `two_d_viscous_matrix`, ten of whose
-entries are wrong (see the note at the top of this file).  Set `FLUIDUM_2D_DERIVED=0` to get the
-legacy matrix back, which is what anything produced before that date used.
-Read in `__init__` (NOT here: a `Ref(get(ENV, ...))` at module top level
-is evaluated when the precompile image is BUILT, so the environment variable would have no effect
-whatsoever — the trap already documented at src/Fluidum.jl:60 for `HQ_TAUN_SCALE`, and walked into
-again here on 2026-09-03: a shipped-vs-derived A/B of the FiVo comparison came back bit-identical in
-all 108 numbers because both runs were the shipped matrix).  Assignable at run time.
+`true` (the default) when the 2+1D viscous kernels use `two_d_viscous_matrix_derived` instead of
+the legacy `two_d_viscous_matrix`, ten of whose entries are wrong (see the note at the top of this
+file). Set `FLUIDUM_2D_DERIVED=0` for the legacy matrix. Read in `__init__`, so the environment
+variable takes effect at load time; assignable at run time.
 """
 const VISC_2D_DERIVED = Ref(false)
 
 """
     two_d_viscous_matrix_active(u, tau, p, dtp, dtdtp, zeta, visc, tauS, tauB)
 
-`two_d_viscous_matrix_derived` when `VISC_2D_DERIVED[]`, else the shipped
-`two_d_viscous_matrix`.  Both have the same signature and the same field layout, so this is the
-one place the choice is made.  The derived matrix takes delta_pipi from its default trailing
-argument `delta_pipi(tauS)` (FLUIDUM_DELTA_PIPI: 4/3 tau_pi unless "0", since 2026-10-13); the
-legacy matrix has no delta_pipi at all.
+`two_d_viscous_matrix_derived` when `VISC_2D_DERIVED[]`, else the legacy `two_d_viscous_matrix`.
+Both have the same signature and field layout. The derived matrix takes delta_pipi from its default
+trailing argument `delta_pipi(tauS)` (FLUIDUM_DELTA_PIPI: 4/3 tau_pi unless "0"); the legacy matrix
+has no delta_pipi.
 """
 @inline two_d_viscous_matrix_active(args...) =
     VISC_2D_DERIVED[] ? two_d_viscous_matrix_derived(args...) : two_d_viscous_matrix(args...)

@@ -1,5 +1,5 @@
-# The conformal set and the two-way medium + charm system (Matrix/two_way.jl): the fast subset of
-# Julia/Projects/FluidumValidation/gate_two_way.jl. Added 2026-10-13 (MATRICES_PROGRAMME.md, P3b).
+# The conformal set and the two-way medium + charm system (src/Matrix/two_way.jl).
+# Derivation: deriv/derive_two_way.wls.
 using Fluidum, Test, StaticArrays, LinearAlgebra, OrdinaryDiffEq
 
 @testset "two-way system" begin
@@ -80,7 +80,7 @@ using Fluidum, Test, StaticArrays, LinearAlgebra, OrdinaryDiffEq
         end
     end
 
-    @testset "cold edge (P3c): decoupling factor and two_way_problem" begin
+    @testset "cold edge: decoupling factor and two_way_problem" begin
         o = TwoWayOptions(; charm = CH)
         @test tw_edge_factor(0.2, o) == 1.0 && tw_edge_factor(0.156, o) == 1.0
         @test tw_edge_factor(0.12, o) == o.edge_floor && 0 < tw_edge_factor(0.146, o) < 1

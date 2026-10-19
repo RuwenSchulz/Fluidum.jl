@@ -1,41 +1,30 @@
 #!/usr/bin/env julia
 # ════════════════════════════════════════════════════════════════════════════════════════════════
-# bench/bench_1p1d_viscous.jl — THE 1+1D VISCOUS SOLVER AGAINST CLOSED FORMS.
+# bench/bench_1p1d_viscous.jl — the 1+1D viscous solver against closed forms.
 #
 # `matrix1d_visc!` (src/Matrix/1d_viscous_cilindrical.jl) evolves
 #
 #       φ = (T, u^r, π^φ_φ, π^η_η, Π)
 #
-# on a cylindrical, boost-invariant Milne slice. **This is the production kernel** — LangevinPaper1,
-# AttractorHydro and SpectraDiagnostic all stand on the matrix this file checks, and its charm
-# sibling `matrix1d_visc_HQ!` reuses the same five rows.
+# on a cylindrical, boost-invariant Milne slice. The charm driver `matrix1d_visc_HQ!` reuses the
+# same five rows. Every reference is a closed form or an ODE integrated in this file; no data files.
 #
-# WHY IT EXISTS (2026-09-14). The 2+1D solver got `bench/bench_2p1d_viscous.jl` on 2026-09-03 —
-# 19 gates against closed forms — and the 1+1D one, which is the one every paper actually uses, had
-# no equivalent inside the package at all. Its coverage lived entirely in
-# `Julia/Projects/FluidumValidation/`, which `run_suite.jl` cannot discover, and in scattered
-# asserts in `test/runtests.jl`. This file is the 1-D twin of the 2-D ladder: same structure, same
-# conventions, every reference a closed form or an ODE integrated inside this file. Nothing reads
-# the DataStore, so it is portable and deterministic.
-#
-#   julia --project=Julia Julia/Fluidum.jl/bench/bench_1p1d_viscous.jl
+#   julia --project=. bench/bench_1p1d_viscous.jl
 #   FLUIDUM_1DV_FULL=1 …    adds N = 800 to the axis-parity ladder in A
 #
-#   M  the characteristic structure, from the matrix alone — closed-form speeds, causal envelope
-#   D  the DERIVATION control: `one_d_viscous_matrix_derived` reproduces the shipped kernel
-#   B  BJORKEN   a radially uniform state must integrate the 0+1D Israel–Stewart equations EXACTLY
-#   A  STRUCTURE the origin parity, and convergence of a real fireball
-#   C  COST
+#   M  the characteristic structure, from the matrix alone: closed-form speeds, causal envelope
+#   D  the derivation control: `one_d_viscous_matrix_derived` reproduces the shipped kernel
+#   B  Bjorken: a radially uniform state integrates the 0+1D Israel–Stewart equations
+#   A  structure: the origin parity, and convergence of a fireball
+#   C  cost
 #
-# CONVENTIONS, pinned by B1 and used throughout
-# ─────────────────────────────────────────────
-#   `piphiphi` and `pietaeta` are MIXED components: π^η_η = τ²π^{ηη}, π^φ_φ = r²π^{φφ}. Same mixed
-#   convention `viscous_2d` uses for `piyy`/`pizz`. Navier–Stokes fixed points on Bjorken:
+# Conventions (checked by B1)
+# ───────────────────────────
+#   `piphiphi` and `pietaeta` are mixed components: π^η_η = τ²π^{ηη}, π^φ_φ = r²π^{φφ}, as
+#   `viscous_2d` uses for `piyy`/`pizz`. Navier–Stokes fixed points on Bjorken:
 #       π^η_η → −4η/(3τ),   π^φ_φ → +2η/(3τ),   Π → −ζ/τ.
-#   The relaxation is ISRAEL–STEWART + δ_ππ π θ, δ_ππ = (4/3)τ_π by default and 0 under
-#   FLUIDUM_DELTA_PIPI=0 (2026-10-13, RS; until then plain IS) — no τ_ππ, no λ_πΠ. B1 pins that to
-#   1e-9 against the ODE for whichever value the switch holds; the two values differ by ~20 % in
-#   π^η_η on the state reached.
+#   The relaxation is Israel–Stewart + δ_ππ π θ, with δ_ππ = (4/3)τ_π by default and 0 under
+#   FLUIDUM_DELTA_PIPI=0. No τ_ππ, no λ_πΠ. The two δ_ππ values differ by ~20 % in π^η_η at τf.
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 using Fluidum, LinearAlgebra, Printf, OrdinaryDiffEq
 const F    = Fluidum
@@ -89,9 +78,8 @@ println("="^100)
 section("M · the characteristic structure — closed forms, no PDE solve")
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # In radial symmetry π^{μν} is diagonal in the parallel-transported triad (l, φ̂, η̂), so the two
-# stored traceless channels fix the third: π^l_l = −(π^φ_φ + π^η_η). M1 checks that the tensor the
-# solver's three numbers describe really is traceless and u-orthogonal — the 1-D statement of the
-# 2-D bench's M1.
+# stored traceless channels fix the third: π^l_l = −(π^φ_φ + π^η_η). M1 checks that the tensor
+# they describe is traceless and u-orthogonal.
 function pi_full(ur, pphi, peta)
     ut = sqrt(1 + ur^2)
     pll = -(pphi + peta)                     # tracelessness in the triad
@@ -130,7 +118,7 @@ end
 gate_M2()
 
 # With every dissipative coefficient switched off the extreme characteristics must be the
-# relativistic sound cone (v ± c_s)/(1 ± v c_s) — the ideal limit, boosted.
+# relativistic sound cone (v ± c_s)/(1 ± v c_s): the ideal limit, boosted.
 function gate_M3()
     worst = 0.0
     for T in (0.15, 0.3, 0.5), ur in (-1.5, -0.4, 0.0, 0.9, 2.5)
@@ -144,9 +132,8 @@ function gate_M3()
 end
 gate_M3()
 
-# A_t must stay invertible over the temperatures a fireball actually visits. Below that the EoS
-# derivatives underflow and the system is singular — the 1-D half of §E1 of bench_fluidum_full.jl,
-# which measured the floor at ≈0.02 GeV. Here we assert only the range production uses.
+# A_t must stay invertible over the temperatures a fireball visits. Below about 0.02 GeV the EoS
+# derivatives underflow and the system is singular; only the range 0.05–0.6 GeV is checked.
 function gate_M4()
     worst = 0.0; Tw = 0.0
     for T in (0.05, 0.08, 0.12, 0.2, 0.3, 0.45, 0.6), ur in (0.0, 1.0)
@@ -162,11 +149,9 @@ gate_M4()
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 section("D · the derivation control — the shipped kernel against an independent re-derivation")
 # ════════════════════════════════════════════════════════════════════════════════════════════════
-# `Julia/tools/derive_2p1d_viscous.wls` re-derives Israel–Stewart from scratch and emits
-# `Matrix/viscous_generated.jl`.  Its 1-D routine is what makes the whole derivation trustworthy:
-# it must reproduce the SHIPPED production kernel entry by entry.  That control has existed since
-# 2026-09-03 but lived as gate G1 of a file named for the 2-D sector and was documented in no 1-D
-# document, so nothing running the 1-D side ever exercised it. It runs here now.
+# `deriv/derive_2p1d_viscous.wls` re-derives Israel–Stewart from scratch and writes
+# `src/Matrix/viscous_generated.jl`. Its 1-D routine must reproduce the shipped kernel entry by
+# entry; this is the control for its 2-D half.
 function gate_D1()
     worst = 0.0; nst = 0
     for T in (0.12, 0.2, 0.35, 0.55), ur in (-1.3, -0.2, 0.0, 0.6, 2.2),
@@ -193,7 +178,7 @@ section("B · Bjorken — a radially uniform state IS the 0+1D Israel–Stewart 
 # must integrate
 #   de/dτ = −(e + p + Π + π^η_η)/τ ;  τ_π Dπ^η_η = −π^η_η − 4η/(3τ) − δ_ππ π^η_η/τ ;  τ_Π DΠ = −Π − ζ/τ
 # (θ = 1/τ; δ_ππ = Fluidum.DELTA_PIPI[]·(4/3)τ_π, the value the kernel is running with)
-# and π^φ_φ = −π^η_η/2 must EMERGE from two independently evolved rows rather than be imposed.
+# and π^φ_φ = −π^η_η/2 must follow from two independently evolved rows.
 function bjorken_reference(T0, τ0, τf)
     function rhs!(du, U, p, τ)
         T, peta, PiB = U
@@ -246,9 +231,8 @@ gate_B()
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 section("A · structure — the origin, and a real fireball")
 # ════════════════════════════════════════════════════════════════════════════════════════════════
-# r = 0 is a SYMMETRY AXIS, not a boundary: u^r is odd there and everything else even. A profile
-# that is smooth and flat at the origin must stay so; a parity error shows as a kink in the first
-# cells, which is exactly what this measures.
+# r = 0 is a symmetry axis: u^r is odd there and everything else even. A profile that is smooth
+# and flat at the origin must stay so; a parity error shows as a kink in the first cells.
 function fireball(N, R, τf; par = PAR, a = 0.6, T0 = 0.45, Tmin = 0.05)
     d   = grid1d(N, R)
     phi = set_array(r -> T0/(exp((r - 6.0)/a) + 1) + Tmin, :temperature, d)
@@ -277,11 +261,10 @@ function gate_A()
                  join((@sprintf("%.2e", x) for x in firsts), " → "), join(Ns, "/")))
 
     # Self-convergence of T: a first-order upwind scheme, so the deviation between successive grids
-    # should fall roughly like 1/N. Reported as an order, gated loosely — the number that matters is
-    # that it CONVERGES, not its exact value at these resolutions.
+    # should fall roughly like 1/N. Reported as an order and checked loosely (it must converge).
     # One ghost cell per side; cell centres sit at (i-½)Δr, so a 2N grid's cells 2i-1 and 2i tile
-    # the N grid's cell i EXACTLY. Block-average the fine grid down rather than sub-sampling it —
-    # sub-sampling compares different points and reports the profile's slope as an error.
+    # the N grid's cell i. Block-average the fine grid down; sub-sampling would compare different
+    # points and report the profile's slope as an error.
     interior(a) = a[2:end-1]
     sols = [interior(fireball(N, 20.0, 3.0)[2][end][1, :]) for N in (100, 200, 400)]
     coarsen(a) = [(a[2i-1] + a[2i])/2 for i in 1:length(a)÷2]
@@ -307,7 +290,7 @@ function gate_C()
     @printf("        scaling N = 100 → 400: %.2fx wall time for 4x the cells\n", ts[end]/ts[1])
     note("Deliberately NOT normalised per cell: the STEP COUNT is not fixed across these grids, so")
     note("a µs/cell figure divides by the wrong thing and reads as super-linear cost that is not there.")
-    note("The kernel is EoS-bound (FLUIDUM_FULL_AUDIT.md §4) — the `thermodynamic` lookups inside the")
+    note("The kernel is EoS-bound: the `thermodynamic` lookups inside the")
     note("matrix build dominate, not the linear algebra around them.")
 end
 gate_C()

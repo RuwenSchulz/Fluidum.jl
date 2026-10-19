@@ -1,21 +1,10 @@
-# ==============================================================================================
 # test/test_2p1d_viscous.jl -- the 2+1D viscous solver, `matrix2d_visc!`.
 #
-# Until 2026-09-03 the whole coverage of this solver was one `@test all(isfinite.(result))` in the
-# "2d viscous" testset below, and that is how ten wrong entries in the shear rows survived. What is
-# asserted here is what a smoke test cannot see: closed-form characteristic speeds, the isotropy the
-# defect broke, and the Bjorken limit -- all of it cheap enough to run on every `Pkg.test()`.
-#
-# The heavy, quantitative version of the same statements (sound attenuation against the exact MIS
-# dispersion relation, Gubser, 2-D against the 1-D cylindrical solver) is
-#     Julia/Fluidum.jl/bench/bench_2p1d_viscous.jl
-# and the derivation side is
-#     Julia/tools/derive_2p1d_viscous.wls  +  Projects/FluidumValidation/bench_fluidum_2p1d_viscous.jl
-# ==============================================================================================
+# Checked here: closed-form characteristic speeds, isotropy of the shear rows, and the Bjorken limit.
+# Longer version (sound attenuation against the MIS dispersion relation, Gubser, 2-D against the
+# 1-D cylindrical solver): bench/bench_2p1d_viscous.jl. Derivation: deriv/derive_2p1d_viscous.wls.
 using Test, LinearAlgebra
-# no Printf: under `Pkg.test` the environment is Fluidum's deps plus [targets] test = ["Test"],
-# and Printf is in neither, so importing it here turns the whole suite red while still looking
-# green under `--project=Julia`, whose outer environment does have it.
+# no Printf: it is not in the `Pkg.test` environment.
 using Fluidum, OrdinaryDiffEq
 const _F = Fluidum
 
@@ -73,11 +62,9 @@ end
         # the Israel-Stewart front, at rest
         vf = sqrt(_cs2(T,_EOS) + (4/3)*eta/(w*taupi) + zeta/(w*tauPi))
         @test maximum(abs, _spec(_sys(T,0,0,0,0,0,0,2.0)[1])) ≈ vf rtol=1e-12
-        # The transverse shear channel.  Israel-Stewart gives sqrt(eta/(w tau_pi)) = sqrt(C_s),
-        # T- and EoS-independent.  This assertion used to demand sqrt(2 C_s) -- the closed form of
-        # the WRONG equation: the legacy matrix's one-sided sigma^{xy} makes that channel a factor
-        # sqrt(2) too fast along x and absent along y.  Corrected when the derived matrix became
-        # the default on 2026-09-03; the legacy value is asserted below so the defect stays covered.
+        # The transverse shear channel. Israel-Stewart gives sqrt(eta/(w tau_pi)) = sqrt(C_s),
+        # independent of T and the EoS. The legacy matrix (one-sided sigma^{xy}) gives sqrt(2 C_s)
+        # along x and no channel along y; that value is checked below with the legacy matrix.
         @test minimum(abs.(_spec(_sys(T,0,0,0,0,0,0,2.0)[1]) .- sqrt(0.2))) < 1e-12
         let had = Fluidum.VISC_2D_DERIVED[]
             try
@@ -99,11 +86,8 @@ end
     end
 end
 
-# ── THE TWO ASSERTIONS THAT WOULD HAVE CAUGHT THE pi^{xy} DEFECT FROM COLD ──────────────────────
-# Both are sub-millisecond and need no PDE solve. They are stated against the DERIVED matrix, which
-# is the statement about the physics; the legacy matrix fails both, which is why the derived one has
-# been the DEFAULT since 2026-09-03 (`FLUIDUM_2D_DERIVED` unset or 1; 0 restores the legacy matrix for
-# reproducing older runs only -- see the note atop src/Matrix/2d_viscous.jl).
+# Isotropy and the symmetric shear gradient. The derived matrix is the default
+# (`FLUIDUM_2D_DERIVED` unset or 1); the legacy matrix (`FLUIDUM_2D_DERIVED=0`) fails both checks.
 @testset "2+1D viscous -- isotropy and the symmetric sigma^{xy} (derived matrix)" begin
     had = Fluidum.VISC_2D_DERIVED[]
     try
@@ -112,7 +96,7 @@ end
             Ax, Ay, _ = _sys(T, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0)
             # at rest and isotropic, the x- and y-flux spectra must coincide
             @test maximum(abs, _spec(Ax) .- _spec(Ay)) < 1e-11
-            # and pi^{xy} must be driven by the SYMMETRIC gradient: eta/tau_pi on each half
+            # and pi^{xy} must be driven by the symmetric gradient: eta/tau_pi on each half
             eta, taupi, _, _ = _coeffs(T)
             @test Ax[6,3] ≈ eta/taupi rtol=1e-10
             @test Ay[6,2] ≈ eta/taupi rtol=1e-10
@@ -128,10 +112,9 @@ end
     #   tau_pi D pi^eta_eta = -pi^eta_eta - 4 eta/(3 tau) - delta_pipi pi^eta_eta/tau,
     #   tau_Pi D Pi = -Pi - zeta/tau
     # written here from the physics rather than from the matrix (theta = 1/tau on Bjorken; the same
-    # form is gate V-G5 of Julia/tools/derive_2p1d_viscous.wls). This is what pins the conventions:
-    # pi^{zz} is the MIXED pi^eta_eta = tau^2 pi^{eta eta}. delta_pipi = (4/3) tau_pi by default and 0
-    # under FLUIDUM_DELTA_PIPI=0 (2026-10-13; until then the 2-D medium was plain IS). Both values are
-    # asserted against their own ODE, and each must MISS the other's by more than 5 %.
+    # form is checked in deriv/derive_2p1d_viscous.wls). This pins the convention: pi^{zz} is the
+    # mixed pi^eta_eta = tau^2 pi^{eta eta}. delta_pipi = (4/3) tau_pi by default and 0 under
+    # FLUIDUM_DELTA_PIPI=0. Each value is checked against its own ODE and must miss the other's by >5 %.
     tau0, tau1, T0 = 0.4, 3.0, 0.35
     function bjref(fac)
         function rhs!(du, U, p, tau)
@@ -161,7 +144,7 @@ end
             @test u[5,ic,ic] ≈ ref[2] rtol=1e-10
             @test u[7,ic,ic] ≈ ref[3] rtol=1e-10
             @test abs(u[5,ic,ic]/bjref(1.0 - fac)[2] - 1) > 0.05
-            # tracelessness is DYNAMICAL: pi^{yy} and pi^{zz} are advanced by separate rows
+            # tracelessness is dynamical: pi^{yy} and pi^{zz} are advanced by separate rows
             @test u[4,ic,ic] ≈ -u[5,ic,ic]/2 rtol=1e-11
             # a uniform state must stay uniform and at rest
             @test maximum(abs, u[1,2:25,2:25] .- u[1,ic,ic])/u[1,ic,ic] < 1e-13
@@ -181,10 +164,8 @@ end
 end
 
 @testset "2+1D viscous -- the 1-D and 2-D transport paths agree" begin
-    # These were DISJOINT method sets until 2026-09-02: `matrix2d_visc!` passes a whole
-    # `Thermodynamic` and `matrix1d_visc!` a scalar entropy, and each entry point worked with
-    # exactly the viscosity model the other could not take. The formulas are identical; this is
-    # what makes sure they stay identical.
+    # `matrix2d_visc!` passes a whole `Thermodynamic` and `matrix1d_visc!` a scalar entropy.
+    # The formulas are identical and must give the same numbers.
     for T in (0.15, 0.25, 0.35, 0.5)
         th = thermodynamic(T, _EOS); dpt = _ent(T,_EOS); dptt = _dst(T,_EOS)
         @test Fluidum.viscosity(T, dpt, _PAR.shear)     ≈ Fluidum.viscosity(T, th, _PAR.shear)     rtol=1e-12

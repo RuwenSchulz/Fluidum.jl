@@ -113,8 +113,7 @@ end
 
 ConstDiffusion(DsT::T, mass::T) where {T<:Real} = ConstDiffusion{T}(DsT,mass)
 
-# Legacy compatibility constructor retained because older driver scripts still
-# call HQdiffusion while the concrete implementation now lives in ConstDiffusion.
+# `HQdiffusion` constructors kept for backward compatibility.
 HQdiffusion(DsT::T, mass::T) where {T<:Real} = ConstDiffusion(DsT, mass)
 
 struct LinearDiffusion{T} <:Diffusion

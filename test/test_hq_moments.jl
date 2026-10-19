@@ -1,6 +1,5 @@
-# The charm second moment (and the first-moment rows it rides on): retraction, c_M default,
-# the shared transport helper, passivity, the 2-D -> 1-D reduction, zero allocations.
-# Added 2026-10-13 (Projects/FluidumValidation/MATRICES_PROGRAMME.md, phase P1).
+# The charm second moment and the first-moment rows it uses: the retracted-matrix switch, the c_M
+# default, the shared transport helper, passivity, the 2-D -> 1-D reduction, zero allocations.
 using Fluidum, Test, StaticArrays, LinearAlgebra, QuadGK
 
 const HQM_CHARM_FILE = let p = joinpath(mktempdir(), "charm.data")
@@ -54,7 +53,7 @@ end
         Ai, Si = hqm_eval1(m, HQM_PHI5)
         @test all(isfinite, Ai) && all(isfinite, Si)
     end
-    hqm_with(Fluidum.ALLOW_RETRACTED, true) do      # the FLUIDUM_ALLOW_RETRACTED=1 route
+    hqm_with(Fluidum.ALLOW_RETRACTED, true) do      # same as FLUIDUM_ALLOW_RETRACTED=1
         @test Fluidum.matrix1d_visc_HQ_BG_second_moment!(; background_fields = HQM_BG1) isa Function
     end
 end
@@ -96,7 +95,7 @@ end
             @test isapprox(S[1:2], Sb[1:2]; rtol = 1e-13)
             @test isapprox(A[1:2, 1:2], Ab[1:2, 1:2]; rtol = 1e-13)
         end
-        # EXACTLY, on the assembled system: rows 1-2 carry no m2 column and no m2 field
+        # on the assembled blocks, bit for bit: rows 1-2 carry no m2 column and no m2 field
         bg = HQM_BG1(2.3, 3.1)
         ϕb = SVector(HQM_PHI5[1], HQM_PHI5[2], -3.0e-3, 7.0e-4, 1.1e-3)
         b  = Fluidum.hqc_first_moment_block(HQM_PHI5, 2.3, 3.1, HQM_PARAMS, bg, 1e-6, 200.0, false)
@@ -133,7 +132,7 @@ end
     T, α, eos, dif = 0.27, -1.3, HQM_EOS, HQM_PARAMS.diffusion
     tr = Fluidum.hq_transport(T, α, eos, dif)
     z = dif.mass / T
-    # production defaults reproduce the formulas each file used to carry, bit for bit
+    # the defaults reproduce the closed-form expressions bit for bit
     @test tr.taun == Fluidum.τ_diffusion_hadron(T, α, eos, dif) * 1.0
     @test tr.tauM == tr.taun * Fluidum.besselk(4, z) * Fluidum.besselk(2, z) / (2 * Fluidum.besselk(3, z)^2)
     @test tr.etaM == T * tr.taun / 2
@@ -149,7 +148,7 @@ end
             @test Fluidum.hqc_enthalpy_per_particle(T, α, eos, dif)[2] == t2.taun
             @test t2.h == t2.taun * T / t2.Ds              # tau_n = D_s h / T under every knob
             @test t2.etaM == T * t2.taun / 2
-            # the shipped 1-D first moment reads the same τ_n now (it ignored both knobs until 2026-10-13)
+            # the 1-D first moment reads the same τ_n
             A0, _ = hqm_with(ref, ref === Fluidum.HQ_MOMENTUM_DIMS ? 3 : 1.0) do
                 hqm_eval1(Fluidum.matrix1d_visc_HQ_BG!(; background_fields = HQM_BG1), SVector(α, 0.01))
             end
@@ -157,7 +156,7 @@ end
             @test A0 != A1
         end
     end
-    # MOMENTUM_DIMS=2 rescales τ_M by (K3/K4)/λ2 — in every matrix now, not only the retracted one
+    # MOMENTUM_DIMS=2 rescales τ_M by (K3/K4)/λ2 in every matrix
     hqm_with(Fluidum.HQ_MOMENTUM_DIMS, 2) do
         t2 = Fluidum.hq_transport(T, α, eos, dif)
         λ1 = z * (z + 1) / (z^2 + 3z + 3); λ2 = z * (z^2 + 3z + 3) / (z^3 + 6z^2 + 15z + 15)
@@ -167,8 +166,8 @@ end
     end
 end
 
-@testset "2-D m2 rows reduce to the 1-D consistent m2 rows (axisymmetric, gate N1)" begin
-    # The N1 logic of Projects/FiVoFluidumComparison/gate_2p1d_m2.jl, self-contained.
+@testset "2-D m2 rows reduce to the 1-D consistent m2 rows (axisymmetric)" begin
+    # On the +x axis with u^y = 0 the 2-D m2 rates must reproduce the 1-D rates.
     STATES = [
         (tau=2.3, r=3.1, ur= 0.42, T=0.31, dtT=-0.055, drT=-0.021, drur= 0.13, dtur= 0.07,
          n=0.9, nu= 0.031, Ds=0.44, h=2.20, hp=-0.9,
@@ -208,7 +207,7 @@ end
         rel(a, b) = abs(a - b) / max(abs(b), 1e-300)
         if pj      # the projector is part of the equation: the reduction holds only with it ON
             worst = max(worst, rel(pl_2d, d1[1]), rel(got[3], d1[2]), rel(got[4], d1[3]))
-        else       # without it p_l must disagree (this is what the frozen-map gate once missed)
+        else       # without it p_l must disagree
             @test rel(pl_2d, d1[1]) > 1e-8
         end
     end
@@ -230,7 +229,7 @@ end
     end
 end
 
-@testset "multi-species list: second-moment coefficients = momentum quadrature, drivers ≡ wrappers (2026-10-13)" begin
+@testset "multi-species list: second-moment coefficients = momentum quadrature, drivers ≡ wrappers" begin
     # three unit-charge species: the mixture values are unambiguous (no charge convention)
     L3 = Fluidum.HadronResonaceGas_ccbar(Fluidum.StructArray([
              Fluidum.Particle("D", 1.8646, 0.0, 4, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 421),
@@ -274,7 +273,7 @@ end
         Fluidum.matrix1d_visc_HQ_BG_consistent_m2_5f!(; dmn_eps = 0.0, background_fields = HQM_BG1, mixture = false)(Ao, So, X, 2.3, (3.1,), P3)
         @test maximum(abs.(So .- Sv)) / maximum(abs.(Sv)) > 1e-3
     end
-    # one species: bit-identical with the switch on and off (LP1 / O+O run charm.data)
+    # one species (charm.data): bit-identical with the switch on and off
     for mx in (true, false)
         A = (zeros(MMatrix{5,5,Float64}),); Sv = zeros(MVector{5,Float64})
         Fluidum.matrix1d_visc_HQ_BG_consistent_m2_5f!(; background_fields = HQM_BG1, mixture = mx)(A, Sv, HQM_PHI5, 2.3, (3.1,), HQM_PARAMS)

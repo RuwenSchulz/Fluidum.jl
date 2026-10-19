@@ -3,44 +3,36 @@
 01 — the minimal correct 1+1D viscous run, and the check to do before any other.
 
 Everything here is the API you will copy: field layout, discretisation, fluid properties, initial
-condition, driver, readout. The physics is deliberately trivial — a radially UNIFORM state at rest,
-which must evolve as Bjorken — because that is the one configuration where 1+1D has a closed-form
-answer, so it separates "the solver works" from "my initial condition is what I think it is".
+condition, driver, readout. The physics is a radially uniform state at rest, which must evolve as
+Bjorken: the one configuration where 1+1D has a closed-form answer. It separates "the solver works"
+from "my initial condition is what I think it is".
 
-This is the PRODUCTION kernel: `matrix1d_visc!` is what LangevinPaper1, AttractorHydro and
-SpectraDiagnostic stand on, and the charm driver `matrix1d_visc_HQ!` (example 03) reuses its rows.
+The charm driver `matrix1d_visc_HQ!` (example 03) reuses the rows of `matrix1d_visc!`.
 
-CONVENTIONS, which this file also pins:
+Conventions, checked here:
   phi = (T, u^r, pi^phi_phi, pi^eta_eta, Pi)
-  pi^eta_eta is the MIXED Milne component tau^2 pi^{eta eta} (NOT pi^{eta eta}), pi^phi_phi the
-  mixed r^2 pi^{phi phi}.  Navier-Stokes fixed points on a Bjorken background:
+  pi^eta_eta is the mixed Milne component tau^2 pi^{eta eta}, pi^phi_phi the mixed
+  r^2 pi^{phi phi}. Navier-Stokes fixed points on a Bjorken background:
       pi^eta_eta -> -4 eta/(3 tau),   pi^phi_phi -> +2 eta/(3 tau),   Pi -> -zeta/tau.
-  The relaxation is ISRAEL-STEWART + delta_pipi pi theta, delta_pipi = (4/3) tau_pi (the DNMR value,
-  default since 2026-10-13; FLUIDUM_DELTA_PIPI=0 restores plain IS); no tau_pipi, no lambda_piPi.
-  The reference below follows the switch; the two delta_pipi values differ by ~20 % in pi^eta_eta on
-  the state reached below, so the agreement pins which one the kernel carries.
+  The relaxation is Israel-Stewart + delta_pipi pi theta, with delta_pipi = (4/3) tau_pi (the DNMR
+  value) by default and 0 under FLUIDUM_DELTA_PIPI=0; no tau_pipi, no lambda_piPi.
+  The reference below follows the switch. The two delta_pipi values differ by ~20 % in pi^eta_eta
+  on the state reached, so the agreement shows which one the kernel carries.
 
-THE AXIS IS NOT A BOUNDARY.  r = 0 is a symmetry axis: `ur` is declared ODD there and every other
-field EVEN (`viscous_1d`).  Nothing in this file exercises that — a uniform state has u^r = 0
-everywhere — but it is the first thing to get wrong on a real profile, so see example 02.
+r = 0 is a symmetry axis: `ur` is odd there and every other field even (`viscous_1d`). A uniform
+state has u^r = 0 everywhere and does not exercise this; see example 02.
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, OrdinaryDiffEq, Plots
-# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
-# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
-# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
-# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+# Figure style: dpi 200 and larger fonts keep the figures legible when a README scales them down.
 gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
                titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
                foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
                left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
-               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
-                                             # tick labels on every map panel (measured on ex10)
+               colorbar_titlefontsize = 8,   # at 10 pt the colorbar title overlaps its tick labels
                top_margin = 2Plots.mm)
-# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
-# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
-# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
-# all three panels and reappeared only once the margins were set.
+# The margins are needed: at these font sizes GR otherwise drops the axis labels and clips the
+# y-label off the left edge.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -56,12 +48,12 @@ ene(T) = T*ent(T) - F.pressure(T, EOS)
 
 # ── the run ─────────────────────────────────────────────────────────────────────────────────────
 # `viscous_1d()` is the 5-field layout; `OriginInterval(N, R)` is a radial grid whose first cell
-# centre sits at R/(2N), i.e. the axis is BETWEEN cells and is never evaluated directly.
+# centre sits at R/(2N), so the axis lies between cells and is never evaluated directly.
 disc = CartesianDiscretization(F.OriginInterval(24, 20.0))
 d    = DiscreteFields(F.viscous_1d(), disc, Float64)
 phi  = set_array(r -> T0, :temperature, d)
 for f in (:ur, :piphiphi, :pietaeta, :piB); set_array!(phi, r -> 0.0, f, d); end
-# ⚠ `set_array` returns a NEW array for the first field and `set_array!` writes into it. Building
+# `set_array` returns a new array for the first field and `set_array!` writes into it. Building
 # the IC with `set_array` twice silently discards the first field.
 sol = F.oneshoot(d, F.matrix1d_visc!, PAR, phi, (TAU0, TAUF); reltol = 1e-10, abstol = 1e-12)
 
@@ -94,7 +86,7 @@ Tr, pr, Br = ([ref(t)[i]    for t in taus] for i in (1, 2, 3))
         abs(pn[end])/ene(Tn[end]))
 @printf("    |pi^eta_eta| / e = %.3f at tau = %.1f — that is the amplitude the agreement above is measured at\n",
         abs(sol(TAU0 + 0.2)[4, k])/ene(sol(TAU0 + 0.2)[1, k]), TAU0 + 0.2)
-# pi^phi_phi = -pi^eta_eta/2 is NOT imposed: it comes out of two independently evolved rows.
+# pi^phi_phi = -pi^eta_eta/2 is not imposed: it comes out of two independently evolved rows.
 @printf("    pi^phi_phi + pi^eta_eta/2 = %.2e  (relative %.2e)\n",
         sol[end][3, k] + pn[end]/2, abs(sol[end][3, k] + pn[end]/2)/abs(pn[end]))
 # uniformity and rest are exact fixed points of the discretisation

@@ -27,36 +27,6 @@ function free_hadron(T,μ,deg,q; m = 1.5)
     return (density,densityDerT,densityDerμ,densityDerTDerμ)
 end
 
-# struct Const_DsT{T} <:DiffusionModel
-#     DsT::T
-# end
-
-# struct Linear_DsT{T} <:DiffusionModel
-#     slope::T
-#     offset::T
-# end
-
-# struct HQdiffusion{L,T}<:Diffusion
-#     DsT_model::L
-#     mass::T
-# end
-
-# HQdiffusion(DsT::M, mass::M) where {M} = HQdiffusion{Const_DsT{M},M}(Const_DsT(DsT),mass)
-# HQdiffusion(slope::M, offset::M, mass::M) where {M} = HQdiffusion{Linear_DsT{M},M}(Linear_DsT(slope, offset), mass)
-
-
-# DsT(m::Const_DsT,T) = m.DsT
-# function DsT(m::Linear_DsT,T;Tfo = 0.156)
-#     if T > Tfo
-#         return m.slope*T + m.offset
-#     else
-#         return m.slope*Tfo + m.offset
-#     end
-# end 
-
-# DsT(y::HQdiffusion, T) = DsT(y.DsT_model, T)
-#DsT(y::HQdiffusion, T) = DsT(y.DsT_model, T)
-
 @inline function DsT(m::ConstDiffusion,T) 
     m.DsT
 end
@@ -70,12 +40,7 @@ end
 end 
 
 
-# 2026-09-02 FIX: the body referenced an undefined `x` (`x.DsT(y,T)`), so ANY call with a
-# ConstDiffusion / LinearDiffusion threw `UndefVarError: x not defined in Fluidum`. This is the
-# error `Projects/NumericBackendAudit/AUDIT_REPORT.md` recorded against `oneshoot_debug`: the
-# causality checker calls `diffusion(T,n,params.diffusion)` and `τ_diffusion(T,params.diffusion)`,
-# and both were dead. `DsT` is a plain function, never a field of the coefficient struct — cf.
-# `diffusion_hadron` just below, the same expression with `normalization(T,μ,x)` in place of `n`.
+# κ = D_s n with D_s = DsT/T; `diffusion_hadron` below is the same with `normalization(T,μ,x)` for n.
 function diffusion(T,n,y::Diffusion)
     density = n #fm-^3
     κ = DsT(y,T)/T*density/fmGeV #fm^-2
@@ -86,11 +51,9 @@ function diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion)
 end
 
 
-# 2026-09-02 FIX: the same undefined-`x` defect (`x.mass`, `x.DsT(y,T)`). The mass lives on the
-# diffusion coefficient itself (ConstDiffusion.mass / LinearDiffusion.mass). With `y` substituted
-# this method is ALGEBRAICALLY IDENTICAL to `τ_diffusion_hadron` on a single unit-charge species of
-# mass `y.mass`: both reduce to  τ_n = D_sT·m³(2b₁-3b₃+b₅)/(48 T⁴ b₂)/fmGeV, the degeneracy
-# cancelling against `normalization`. Gated as D1 in Projects/FluidumValidation/bench_fluidum_attractor.jl.
+# The mass is that of the diffusion coefficient (ConstDiffusion.mass / LinearDiffusion.mass). Equal to
+# `τ_diffusion_hadron` for a single unit-charge species of mass `y.mass`:
+# τ_n = D_sT·m³(2b₁-3b₃+b₅)/(48 T⁴ b₂)/fmGeV.
 function τ_diffusion(T,y::Diffusion) 
     m = y.mass
   
@@ -118,38 +81,28 @@ function τ_diffusion_hadron(T,μ,x::Heavy_Quark,y::Diffusion)
         b4 = b2 + 6/(m/T)*b3
         b5 = b3+8/(m/T)*b4
         ex = exp(q*μ)
-        # 2026-07-21 FIX: the numerator carries `deg` so it cancels the `deg` in `normalization`
-        # (= Σ q²·free_hadron ∝ deg). τ_n is a ratio of moments of the SAME distribution ⇒ the
-        # degeneracy MUST cancel — this is Eq. (30) of Capellino et al. 2205.07692, τ_n = D_s·I₃₁/(T·P₀),
-        # and I₃₁, P₀ both ∝ g. WITHOUT `deg` here the single-species charm quark (g=6) came out
-        # τ_n = τ_n^bare/6 (superluminal above T≈0.48; contradicts the reference, the FP derivation,
-        # LangevInMedium.tau_n_main3, and Fluidum's own first-moment τ_diffusion). Harmless for the
-        # original pseudoscalar-D-meson list (deg=1); a genuine 6× error only for the charm quark.
+        # `deg` in the numerator cancels the `deg` in `normalization` (= Σ q²·free_hadron ∝ deg):
+        # τ_n = D_s·I₃₁/(T·P₀) is a ratio of moments of the same distribution, Eq. (30) of
+        # Capellino et al. 2205.07692.
         tauq += (deg*(2*π*DsT(y,T))/(192*π^3*T^3)*q^2*m^5*ex*(2*b1 - 3*b3 +b5));
     end
   return tauq/normalization(T,μ,x)*(fmGeV^2); #
 end
 
 
-# ── THE charm relaxation times, with the two diagnostic knobs applied ONCE (2026-10-13) ──────────
-# Until this date each matrix file built τ_n / τ_M / η_M / h itself and the knobs disagreed:
-# HQ_TAUN_SCALE was ignored by the 1-D first moment; FLUIDUM_HQ_MOMENTUM_DIMS=2 rescaled τ_M in the
-# (now retracted) shipped second moment but never in the consistent one; the 2-D m2 driver paired an
-# UNrescaled τ_n with an h built from the rescaled one (ratio 0.9156 at DIMS=2, breaking τ_n = D_s h/T).
-# Every charm matrix now takes them from here. At the production defaults (scale 1.0, DIMS 3) the
-# values are bit-identical to what each file computed before.
+# ── Charm relaxation times ───────────────────────────────────────────────────────────────────────
+# Every charm matrix takes τ_n, τ_M, η_M, h from `hq_taun` / `hq_transport`, which apply
+# HQ_TAUN_SCALE and FLUIDUM_HQ_MOMENTUM_DIMS.
 #
-# FLUIDUM_HQ_MOMENTUM_DIMS=2 (2026-08-21): match the charm sector in the TWO-dimensional momentum
-# measure. The Langevin ensembles of LangevinPaper1 evolve transverse momenta only, so their
-# equilibrium is the 2-D Jüttner p dp e^{-E/T} and their ℓ-th moment relaxes at λ_ℓ(2D)·η_D, not at
-# the 3-D λ_ℓ = K_{ℓ+1}/K_{ℓ+2} that τ_n = D_s z K₃/K₂ and τ_M = D_s z K₄/(2K₃) encode. In that
-# measure every moment ∫_M^∞ E^n e^{-E/T} dE is an incomplete Gamma of integer order, so the ratios
-# are closed forms (checked against quadrature to 1e-9 at z = 2…20):
+# FLUIDUM_HQ_MOMENTUM_DIMS=2 matches the charm sector in the 2-D momentum measure, for comparison with
+# a Langevin ensemble that evolves transverse momenta only. Its equilibrium is the 2-D Jüttner
+# p dp e^{-E/T}, and its ℓ-th moment relaxes at λ_ℓ(2D)·η_D instead of the 3-D λ_ℓ = K_{ℓ+1}/K_{ℓ+2}
+# encoded in τ_n = D_s z K₃/K₂ and τ_M = D_s z K₄/(2K₃). In that measure every moment
+# ∫_M^∞ E^n e^{-E/T} dE is an incomplete Gamma of integer order, so
 #     λ₁(2D) = z(z+1)/(z²+3z+3),      λ₂(2D) = z(z²+3z+3)/(z³+6z²+15z+15),
-# and τ_n^{2D} = τ_n·(K₂/K₃)/λ₁(2D)  (5–12 % shorter over z = 3.5–10),  τ_M^{2D} = τ_M·(K₃/K₄)/λ₂(2D).
-# η_M stays tied to τ_n (η_M = T τ_n/2); κ = D_s n is dimension-independent. The 5/3 shear/bulk
-# tie and the tensor structure of the matrices are NOT switched (they are the 3-spatial-dimension
-# projection the solvers are written in). DIAGNOSTIC knob.
+# and τ_n^{2D} = τ_n·(K₂/K₃)/λ₁(2D),  τ_M^{2D} = τ_M·(K₃/K₄)/λ₂(2D).
+# η_M stays tied to τ_n (η_M = T τ_n/2); κ = D_s n is dimension-independent. The tensor structure of
+# the matrices stays three-dimensional. Diagnostic only.
 
 """
     hq_taun(T, α, eos, diffusion)
@@ -170,15 +123,14 @@ end
 """
     hq_transport(T, α, eos, diffusion; use_NR_tauM = false) -> (; taun, tauM, etaM, h, Ds)
 
-The charm transport coefficients of the first and second moment, tied to ONE τ_n:
+The charm transport coefficients of the first and second moment, tied to one τ_n:
 
     τ_M = τ_n K₄K₂/(2K₃²)   (use_NR_tauM: τ_n/2),    η_M = T τ_n/2,
     D_s = DsT/T (fm),        h = τ_n T/D_s           (so τ_n = D_s h/T exactly),
 
 with `HQ_TAUN_SCALE` and `FLUIDUM_HQ_MOMENTUM_DIMS` applied (z = m/T, m = `diffusion.mass`). The
-FP→hydro matching (Tex/HydroFPderivation/FP_Hydro_matching.tex) defines τ_n and τ_M in the same
-convention, so the RATIO τ_M/τ_n = ½K₄K₂/K₃² (≈ 0.550 at z = 9.615) is what is physical; tying τ_M
-to τ_n keeps that ratio whatever τ_n's normalisation.
+Fokker–Planck to hydro matching fixes the ratio τ_M/τ_n = ½K₄K₂/K₃² (≈ 0.550 at z = 9.615); tying
+τ_M to τ_n keeps that ratio for any normalisation of τ_n.
 """
 function hq_transport(T, α, eos, diffusion; use_NR_tauM::Bool = false)
     taun = τ_diffusion_hadron(T, α, eos, diffusion) * HQ_TAUN_SCALE[]
@@ -195,36 +147,25 @@ function hq_transport(T, α, eos, diffusion; use_NR_tauM::Bool = false)
 end
 
 
-# ── THE CONSISTENT SECOND MOMENT'S EOS COEFFICIENTS FOR A CHARM LIST (2026-10-13) ─────────────────
-# The consistent second moment (Tex/LangevinPaper1/M2_CONSISTENT_DERIVATION.md) needs, besides h, four
-# EOS objects of the charm gas: I31 (its T-log-derivative A/B multiplies D ln T in the trace drive),
-# A = I41/P0 (the a·ν completion terms), C = I52/I42 (τ_M = D_s C/(2T) and D ln C) — derived for ONE
-# Boltzmann species. For a LIST of species i (mass m_i, degeneracy g_i, charm charge q_i) at a common
-# (T, α) with ONE ν and ONE δM field the moments are species sums, with the weights the existing
-# aggregates already carry (n = Σ q n_i; ν channel δf_i ∝ q_i f0_i ⇒ h = Σ q² n_i h_i / Σ q² n_i, the
-# weighting for which D_s h/T IS τ_diffusion_hadron; π channel δf_i ∝ q_i f0_i likewise):
+# ── EOS coefficients of the consistent second moment for a charm list ────────────────────────────
+# Besides h, the consistent second moment needs: I31 (its T-log-derivative A/B multiplies D ln T in
+# the trace drive), A = I41/P0 (the a·ν completion terms) and C = I52/I42 (τ_M = D_s C/(2T) and
+# D ln C). They are derived for one Boltzmann species. For a list of species i (mass m_i, degeneracy
+# g_i, charm charge q_i) at a common (T, α) with one ν and one δM field they are species sums, with
+# n = Σ q n_i and δf_i ∝ q_i f0_i in the ν and π channels, so h = Σ q² n_i h_i / Σ q² n_i:
 #     I31 = n T h          ⇒ A/B = ∂ln I31/∂ln T|_α = T ∂_T n/n + 1 + T ∂_T h/h,   ∂_α ln I31 = (Σ q² n_i)/n
 #     A   = Σ q² n_i (m_i² + 5T h_i) / Σ q² n_i  =  ⟨m²⟩ + 5T h,         ⟨m²⟩ = Σ q² n_i m_i² / Σ q² n_i
 #     C   = Σ q² I42_i C_i / Σ q² I42_i,   I42_i = T² n_i h_i,   C_i = m_i K4(z_i)/K3(z_i)
-# with every T-derivative analytic at fixed α. For one species of mass m all of these are the
-# single-quark closed forms (A/B = 5 + zK2/K3, A = m² + 5Th, C = m K4/K3).
-#
-# 🔴 WHY THIS EXISTS. Until 2026-10-13 the m2 DRIVERS (HQ_const_BG_consistent_m2.jl, HQ_2p1d_BG_m2.jl)
-# took A/B, d ln C/d ln T, A and C from the SINGLE-QUARK forms at m = diffusion.mass, and the two-way
-# WRAPPERS (two_way.jl) took A/B from the list but C = h K4K2/K3² and A = m² + 5Th at diffusion.mass.
-# Against a direct momentum quadrature over the 77-state production list (T = 0.156–0.45 GeV):
-# drivers A/B −22…−26 %, d ln C/d ln T −24…+26 %; both C (hence τ_M) +1.6…+6.6 %, A −27…−37 %;
-# wrappers' d ln C/d ln T +5…+12 % (MATRICES_PROGRAMME.md Log 2026-10-13). Identical for one species.
-#
-# ⚠ UNIT-CHARGE ASSUMPTION (the derivation's). The one q = 2 state of the production list (J/ψ) enters
-# with the weights above; a charge-correct second moment would also carry ∂_α C, ∂_α h, and Σ q I31_i
-# instead of nTh. Size at production list loadings: MATRICES_PROGRAMME.md Log 2026-10-13.
+# with every T-derivative analytic at fixed α. For one species of mass m these reduce to
+# A/B = 5 + zK2/K3, A = m² + 5Th, C = m K4/K3.
+# The derivation assumes unit charge. A q = 2 state (J/ψ) enters with the weights above; a
+# charge-correct second moment would also carry ∂_α C, ∂_α h, and Σ q I31_i instead of nTh.
 
 """
     with_m2_mixture(f, on::Bool)
 
 Run `f()` with `HQ_M2_MIXTURE[] = on` and restore it afterwards (closures read the Ref when they are
-BUILT, so build them inside `f`). `on = false` reproduces the pre-2026-10-13 list coefficients.
+built, so build them inside `f`). `on = false` uses the single-quark coefficients.
 """
 function with_m2_mixture(f, on::Bool)
     old = HQ_M2_MIXTURE[]
@@ -239,9 +180,8 @@ end
 """
     hq_m2_single(list, mq) -> Bool
 
-True when the charm `list` is ONE unit-charge species of mass `mq` (LP1's and O+O's `charm.data`):
-the second-moment coefficients are then the single-quark closed forms and every m2 matrix keeps
-its pre-2026-10-13 code path bit for bit.
+True when the charm `list` is one unit-charge species of mass `mq`. The second-moment coefficients
+are then the single-quark closed forms.
 """
 function hq_m2_single(list::HadronResonaceGas_ccbar, mq)
     length(list.particle_list) == 1 || return false
@@ -258,12 +198,12 @@ The consistent second moment's EOS coefficients of a charm `list` (a `HadronReso
 `m2bar` = ⟨m²⟩ (A = m2bar + 5Th), `C`, `dCdT`, `dlnC_dlnT`, `ABr` = ∂ln I31/∂ln T|_α,
 `aI31` = ∂_α ln I31 (= Σq²n_i/n; 1 for unit charges), and `Cratio` = C / (h K4K2/K3²|_{z = mq/T}),
 the factor that turns `hq_transport`'s single-quark-ratio τ_M into the list's τ_M = D_s C/(2T)
-(keeping the diagnostic knobs' factors). The one implementation behind the m2 drivers AND the two-way
-wrappers. Zero allocations.
+(keeping the diagnostic knobs' factors). Used by the m2 drivers and the two-way wrappers. Does not
+allocate.
 """
 function hq_m2_mixture(T, α, list::HadronResonaceGas_ccbar, mq)
     R = float(promote_type(typeof(T), typeof(α)))
-    # common scale e^{-sh}, sh = max_i (q_i α − z_i): every weight is a RATIO, so nothing underflows
+    # common scale e^{-sh}, sh = max_i (q_i α − z_i): every weight is a ratio, so nothing underflows
     # (deep vacuum α → −∞, cold T) and no species is dropped
     sh = typemin(R)
     for p in list.particle_list
@@ -344,13 +284,8 @@ end
     y.ηs*entropy*invfmGeV
  end
 
-# 2026-09-02: the two shear models carried DISJOINT method sets — SimpleShearViscosity only took a
-# `Thermodynamic`, QGPViscosity only a scalar entropy — so `matrix2d_visc!` (which passes the whole
-# Thermodynamic) MethodError'd with QGPViscosity, the model every 1-D production run uses, while
-# `matrix1d_visc_HQ!` and the new 2+1D solvers (which pass the scalar) MethodError'd with
-# SimpleShearViscosity, the one Fluidum's own `2d viscous` testset uses.  Each entry point worked
-# with exactly the model the other could not take.  The formulas are IDENTICAL — η = ηs·s/ħc and
-# τ_s = η/(T s C_s) = ηs/(ħc T C_s) — so the fix is the four missing dispatches, not new physics.
+# Both shear models accept either a scalar entropy or a `Thermodynamic`:
+# η = ηs·s/ħc and τ_s = η/(T s C_s) = ηs/(ħc T C_s).
 @inline function viscosity(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
     y.ηs*entropy*invfmGeV
 end
@@ -408,9 +343,7 @@ function normalization_without_degeneracy(T,μ,x::Heavy_Quark)
 end
 
 
-# The ÷g_hq that `HQ_const_BG_2nd_moment.jl` once divided τ_M/η_M by (removed 2026-07-21). No
-# matrix calls it any more; kept because Julia/tools/rhs_compare.jl still reads it to reproduce the
-# old convention.
+# The ratio normalization / normalization_without_degeneracy (a ÷g factor). No matrix uses it.
 second_moment_transport_normalization(T,μ,x) = one(promote_type(typeof(T), typeof(μ)))
 
 function second_moment_transport_normalization(T,μ,x::Heavy_Quark)

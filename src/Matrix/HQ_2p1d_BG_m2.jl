@@ -1,10 +1,9 @@
 # ==============================================================================
-# HQ_2p1d_BG_m2.jl — THE CONSISTENT SECOND MOMENT ON A PRESCRIBED 2+1D BACKGROUND
-# (2026-09-09).
+# Consistent charm second moment on a prescribed 2+1D background.
 #
-# The 2-D twin of HQ_const_BG_consistent_m2.jl, and the second-moment companion
-# of HQ_2p1d_BG.jl (which carries the first moment only, and in its SHIPPED
-# ∇α-only closure).  Fields
+# The 2-D analogue of HQ_const_BG_consistent_m2.jl, and the second-moment
+# companion of HQ_2p1d_BG.jl (first moment only, grad-alpha-only closure).
+# The background (T, u) is prescribed, not evolved. Fields
 #
 #     phi = (alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, piQ^eta_eta, Pi_Q)
 #
@@ -13,36 +12,32 @@
 #
 #     A_t d_tau phi + A_x d_x phi + A_y d_y phi + src = 0
 #
-# which is the convention of every matrix in this directory.
-#
-# Part of the package build since 2026-10-13 (src/Fluidum.jl includes it after
-# HQ_const_BG_consistent.jl and HQ_2p1d_BG.jl). It needs `hq_transport`
+# as everywhere in this directory. Uses `hq_transport`
 # (EquationOfState/heavyquark.jl), `hqc_dh_dT` / `hqc_enthalpy_per_particle`
-# (HQ_const_BG_consistent.jl) and `hq2d_matrices[_consistent]` (the two generated
-# 2-D files). Drivers that still `Base.include` it at run time keep working (the
-# file defines only functions) and register their own mode.
+# (HQ_const_BG_consistent.jl) and `hq2d_matrices[_consistent]` (the two
+# generated 2-D files).
 #
 # ------------------------------------------------------------------------------
-# WHY THE FIELDS LOOK LIKE THIS
+# Field layout
 # ------------------------------------------------------------------------------
 # Boost invariance kills every eta-mixed component of piQ (odd under eta -> -eta),
 # leaving tau tau, tau x, tau y, xx, xy, yy, eta eta = seven, cut by three
-# orthogonality relations (u_mu piQ^{mu nu} = 0) and one trace condition to THREE
-# independent dofs.  They are stored as FOUR, with piQ^eta_eta redundant and
+# orthogonality relations (u_mu piQ^{mu nu} = 0) and one trace condition to three
+# independent dofs. They are stored as four, with piQ^eta_eta redundant and
 # held on the tracelessness constraint by a stiff relaxation in the RHS (row 7 of
-# the driver) — the same storage the medium shear uses in
-# Matrix/2d_viscous.jl and in FiVo's src2d/shear2d.jl.  The tau-row is DERIVED
-# from the transverse block, never stored, so orthogonality holds by construction.
+# the driver), the same storage the medium shear uses in Matrix/2d_viscous.jl.
+# The tau-row is derived from the transverse block, never stored, so
+# orthogonality holds by construction.
 #
 # ------------------------------------------------------------------------------
-# ⚠ THE CONTRACTIONS NEED THE METRIC.  THIS IS WHERE THE ERRORS LIVE.
+# ⚠ The contractions need the metric
 # ------------------------------------------------------------------------------
 # In the 1-D cylindrical chart the second-moment fields are components on a
-# PARALLEL-TRANSPORTED ORTHONORMAL TRIAD, so every contraction looks like a plain
-# product and the metric is invisible.  Here the stored fields are CONTRAVARIANT,
-# and lowering an index on a u-orthogonal tensor brings in its tau-row.  Six
-# distinct terms are affected, and getting any of them wrong is a silent O(u^2)
-# error that looks perfectly smooth:
+# parallel-transported orthonormal triad, so every contraction looks like a plain
+# product and the metric is invisible. Here the stored fields are contravariant,
+# and lowering an index on a u-orthogonal tensor brings in its tau-row. Six
+# terms are affected, and getting any of them wrong is a silent O(u^2) error
+# that looks smooth:
 #
 #     pi:sigma          both indices lowered  (NOT pxx sxx + 2 pxy sxy + ...)
 #     pi^{(i}_l s^{j)l} one index lowered
@@ -52,64 +47,41 @@
 #     sigma_(nu)        NOT the u-shear with u -> nu; the projector drags in
 #                       gradients of U through nu^tau = (u.nu)/u^tau
 #
-# The FiVo twin (src2d/hq_consistent_m2_2d.jl) made all six mistakes in turn and
-# its axisymmetric-reduction gate caught each one, taking it from 65 % to
-# 2.3e-15.  This file is written against that record.
+# ------------------------------------------------------------------------------
+# Two terms absent from the 1-D reduction
+# ------------------------------------------------------------------------------
+#   hq2d_proj_corr   the Delta-projection of the comoving derivative. On by
+#                    default (`projector = true`); `false` reproduces earlier
+#                    results.
+#   hq2d_vorticity   the DNMR corotation term 2 pi^{l<i} omega_l^{j>}. Off by
+#                    default (`vorticity = false`), so existing results are
+#                    unchanged.
+#
+# Neither shows up in a 1-D reduction: the vorticity coupling vanishes
+# identically on an axisymmetric state, and the projector term is lost if the
+# 2-D rate is mapped onto the 1-D p_l with the projection held fixed. Both are
+# derived symbolically: the projector's closed form, and the coupling's
+# antisymmetry, u-orthogonality, tracelessness, vanishing in 1-D and sign
+# (sigma-coupling + omega-coupling = the full pi.NablaPerp u contraction).
 #
 # ------------------------------------------------------------------------------
-# TWO TERMS ADDED 2026-09-11 -- AND WHY NO GATE HAD CAUGHT THEM
+# Validation
 # ------------------------------------------------------------------------------
-# Both belong to the derived equation and both were simply absent, here and in
-# FiVo, because both 2-D files were written from the 1-D reduction:
-#
-#   hq2d_proj_corr   the Delta-PROJECTION of the comoving derivative.  DEFAULT ON
-#                    (`projector = true`) -- it is not optional physics, the
-#                    switch exists only to reproduce a pre-2026-09-11 number.
-#   hq2d_vorticity   the DNMR corotation term 2 pi^{l<i} omega_l^{j>}.  DEFAULT
-#                    OFF (`vorticity = false`), to keep parity with FiVo's
-#                    default and leave every existing number unchanged.
-#
-# ⛔ THE LESSON, and it is the same one twice: a cross-code gate proves the two
-# codes agree, NOT that either is right.  N3 held at 2.2e-16 while BOTH codes
-# omitted BOTH terms.  And the 1-D-reduction gates are blind by construction --
-# the vorticity coupling VANISHES IDENTICALLY on an axisymmetric state, and N1
-# mapped the 2-D rate onto the 1-D p_l with the projection HELD FIXED, which is
-# exactly the projector term, so a frozen map agreed with projector-less rows.
-# N1's mapping is corrected (it now differentiates the projection along the
-# trajectory) and a new gate covers the terms on genuinely 2-D states:
-# Projects/FiVoFluidumComparison/gate_2p1d_m2_newterms.jl.
-#
-# Both are derived symbolically, and the derivation is gated: G6 (the projector's
-# closed form, exactly) and G7 (the coupling's antisymmetry, u-orthogonality,
-# tracelessness, its vanishing in 1-D, and the split that fixes its SIGN --
-# sigma-coupling + omega-coupling == the full pi.NablaPerp u contraction) in
-# Julia/tools/derive_hq_m2_2p1d.wls, 22/22.
-#
-# ------------------------------------------------------------------------------
-# VALIDATION
-# ------------------------------------------------------------------------------
-# This is an INDEPENDENT implementation, not a call into FiVo: the point of a
-# cross-check is two codes, and a shared implementation would prove nothing.
-#     N1  the axisymmetric reduction against Fluidum's OWN 1-D hqc_m2_rows
-#     N2  rotational covariance of the traceless block
-#     N3  agreement with FiVo's src2d/hq_consistent_m2_2d.jl at identical states
-#     N4  the live 8x8 driver assembles those rows
-#     N5  the projector moves the rows; the coupling is traceless, dies in 1-D,
-#         and enters exactly as -W/u^tau            [gate_2p1d_m2.jl, 5/5]
-#     M1-M5  both terms, both codes, on GENUINELY 2-D states: every switch
-#         combination agrees at ~1e-16, the coupling is live there (1.4e-4), and
-#         the two switches are additive  [gate_2p1d_m2_newterms.jl, 3/3]
+#     the axisymmetric reduction reproduces the 1-D hqc_m2_rows;
+#     the traceless block is rotationally covariant;
+#     an independent finite-volume implementation agrees at identical states to
+#         ~1e-16, including genuinely 2-D states with every switch combination;
+#     the 8x8 driver assembles those rows.
 # ==============================================================================
 
 """
     hq2d_m2_coeffs(T, n, taun, Ds, h, mq) -> NamedTuple
 
-The consistent second moment's scalar coefficients — identical closed forms to
-the 1-D `hqc_m2_rows` block, because they are built from the EoS and nothing
-about them is chart-dependent. These are the SINGLE-QUARK forms at m = `mq`; for a
-multi-species list the driver uses the method below (2026-10-13: the single-quark
-A/B, d ln C/d ln T, C and A are 2–37 % off for the 77-state production list —
-heavyquark.jl `hq_m2_mixture`).
+The consistent second moment's scalar coefficients, the same closed forms as in
+the 1-D `hqc_m2_rows` (they come from the EoS and are chart-independent). These
+are the single-quark forms at m = `mq`; for a multi-species list the driver uses
+the method below. For a 77-state charm hadron list the single-quark A/B,
+d ln C/d ln T, C and A differ from the species sums by 2–37 %.
 """
 function hq2d_m2_coeffs(T, n, taun, Ds, h, mq)
     z  = mq / T
@@ -129,10 +101,9 @@ end
     hq2d_m2_coeffs(T, n, taun, Ds, h, mq, mix) -> NamedTuple
 
 The same block for a MULTI-SPECIES charm list, `mix = hq_m2_mixture(T, α, list, mq)`
-(EquationOfState/heavyquark.jl, 2026-10-13): A/B, d ln C/d ln T and the m² of A from
-the list's species sums, and the D α coefficient η̄ ∂_α ln I31 — the coefficients the
-two-way wrappers use. The single-quark method above is the pre-2026-10-13 code, bit
-for bit, and what a one-species list of mass `mq` gets.
+(EquationOfState/heavyquark.jl): A/B, d ln C/d ln T and the m² of A from the list's
+species sums, and the D α coefficient η̄ ∂_α ln I31, as in the two-way system. A
+one-species list of mass `mq` uses the single-quark method above.
 """
 function hq2d_m2_coeffs(T, n, taun, Ds, h, mq, mix)
     ηbar = taun * n * T / 2
@@ -201,20 +172,15 @@ differentiating `u_a pi^{ab} = 0` gives `u_a D pi^{ab} = -pi^{ab} a_a`, hence
 
     Delta^{ij}_{ab} D pi^{ab} = D pi^{ij} - u^i c^j - u^j c^i,   c^j = pi^{j b} a_b
 
-so what must be SUBTRACTED from the LHS source is `tau_M (u^i c^j + u^j c^i)`.
+so what must be subtracted from the LHS source is `tau_M (u^i c^j + u^j c^i)`.
 Returned here as that quantity, already symmetrised; the caller subtracts it.
 
-⚠ ADDED 2026-09-11. Until then this file — and FiVo's twin until 2026-09-10 —
-integrated the plain `D pi^{ij}`, i.e. the correction was simply missing. The
-cross-code gate could not see it, because BOTH codes omitted it and agreed at
-2.2e-16 (gate_2p1d_m2.jl N3). Nor could the 1-D-reduction gate N1: it mapped the
-2-D rate onto the 1-D `p_l` with the projection held FIXED (`l_mu l_nu d_tau
-pi^{mu nu}`), but `l` depends on `u(tau)`, and `d_tau(l l pi) - l l d_tau pi` is
-exactly this term — so the mis-mapped gate agreed with the projector-less code.
+A 1-D reduction that maps the 2-D rate onto `p_l` with the projection held fixed
+(`l_mu l_nu d_tau pi^{mu nu}`) misses this term: `l` depends on `u(tau)`, and
+`d_tau(l l pi) - l l d_tau pi` is this term.
 
-Derived and gated symbolically in `Julia/tools/derive_hq_m2_2p1d.wls` (G6):
-the orthogonality identity, the closed form EXACTLY on the transverse block, and
-the fact that it leaves no trace remainder. Size: 1.6e-4 to 3.4e-3 of the rate.
+Derived symbolically: the orthogonality identity, the closed form on the
+transverse block, and the absence of a trace remainder. Size: 1.6e-4 to 3.4e-3 of the rate.
 It vanishes at rest on the EVOLVED ij block (it is O(u a)); its tau-i components
 do not, which is why only the ij block is stored.
 """
@@ -240,7 +206,7 @@ The transverse block of the DNMR corotation term `2 pi^{l<i} omega_l^{j>}`, with
 
 Multiply by `tau_M` and ADD to the LHS source.
 
-⚠ `omega` IS NOT `d_x u^y - d_y u^x`. A boost-invariant transverse flow carries
+⚠ `omega` is not `d_x u^y - d_y u^x`. A boost-invariant transverse flow carries
 the acceleration terms too: `omega^{xy} = (1/2)(d_xu^y - d_yu^x + u^x a^y - u^y a^x)`.
 
 Every eta-component of omega vanishes by boost invariance, so only the (tau,x,y)
@@ -249,20 +215,17 @@ block enters, and
     2 pi^{l<i} omega_l^{j>} = (pi g omega) + (pi g omega)^T
 
 is ALREADY symmetric, traceless and u-orthogonal (pi symmetric, omega
-antisymmetric, both u-orthogonal) — no projection is needed. All four of those
-properties are gated symbolically in `Julia/tools/derive_hq_m2_2p1d.wls` (G7).
+antisymmetric, both u-orthogonal), so no projection is needed. All four
+properties are checked symbolically.
 
-⚠ OFF BY DEFAULT (`vorticity = false`), to preserve parity with FiVo's default
-and so that every existing number is unchanged. It VANISHES IDENTICALLY in 1+1D
-— a radial flow has no transverse vorticity — which is why the 1-D code never
-needed it, why both 2-D ports inherited its absence from the 1-D reduction, and
-why no 1-D-limit gate can see it. THE GATE THAT FIXES ITS SIGN is G7-splits:
-sigma-coupling + omega-coupling equals the full contraction
-`pi^{l<i} NablaPerp_l u^{j>}` EXACTLY, which ties this term's normalisation to
-the sigma coupling that gate N1 already holds at 1e-15.
+⚠ Off by default (`vorticity = false`), so that existing results are unchanged.
+It vanishes identically in 1+1D, since a radial flow has no transverse
+vorticity, so no 1-D limit can test it. Its sign and normalisation are fixed by
+the identity sigma-coupling + omega-coupling = the full contraction
+`pi^{l<i} NablaPerp_l u^{j>}`, which ties it to the sigma coupling.
 
-Measured in FiVo on a real Pb+Pb event, converged over N = 160/480/640:
-`|omega|/|sigma|` median 3.01e-2 -> 2.84e-2 -> 2.79e-2, moving pi_Q by ~1e-2.
+On a realistic Pb+Pb event `|omega|/|sigma|` has a median of ~2.8e-2 (converged
+in resolution), and the term moves pi_Q by ~1e-2.
 """
 @inline function hq2d_vorticity(pxx, pxy, pyy, ax, ay, ux, uy, uT,
                                 dtux, dtuy, dxux, dxuy, dyux, dyuy)
@@ -327,9 +290,8 @@ current.
 
 ⚠ NOT the u-shear with u -> nu. The projector acts on the FULL `grad^{(a}nu^{b)}`,
 whose tau-row involves `nu^tau = (u.nu)/u^tau` — a function of u — so projecting
-drags in terms carrying gradients of U. Derived symbolically
-(Julia/tools/derive_signu_2p1d.wls, 3/3) and shared with the FiVo twin's
-generated form, which reproduces the 1-D `(grad nu)_ll` to 1e-15.
+drags in terms carrying gradients of U. Derived symbolically; it reproduces the
+1-D `(grad nu)_ll` to 1e-15.
 """
 @inline function hq2d_signu(ux, uy, uT, tau, nux, nuy,
                             dtnx, dxnx, dynx, dtny, dxny, dyny,
@@ -365,17 +327,14 @@ passes it to all ten of its calls (it costs three Bessel functions).
 
 `X = (alpha, nu^x, nu^y, pxx, pxy, pyy, peta, PiQ)`.
 
-TWO TERMS ARE SWITCHABLE, both added 2026-09-11 (see their helpers for the full
-story and for why no existing gate could see either):
+Two terms are switchable (see their helpers):
 
-  * `projector = true` (DEFAULT ON) — the Delta-projection of the comoving
-    derivative, `hq2d_proj_corr`. It belongs in the equation; it was simply
-    missing. Turning it OFF reproduces this file's pre-2026-09-11 behaviour, and
-    is the way to reproduce an old number.
-  * `vorticity = false` (DEFAULT OFF) — the DNMR corotation term,
-    `hq2d_vorticity`. It also belongs in the equation, but it is left off so that
-    parity with FiVo's default (`m2_vorticity = false`) and every existing number
-    are unchanged. Turn BOTH codes on together.
+  * `projector = true` (default on): the Delta-projection of the comoving
+    derivative, `hq2d_proj_corr`. It belongs in the equation; turning it off
+    reproduces earlier results.
+  * `vorticity = false` (default off): the DNMR corotation term,
+    `hq2d_vorticity`. It also belongs in the equation; it is off so that
+    existing results are unchanged.
 """
 function hq2d_m2_rows(X, tau, T, ux, uy, dtT, dxT, dyT,
                       dtux, dxux, dyux, dtuy, dxuy, dyuy,
@@ -475,12 +434,12 @@ moment, matching `matrix2d_HQ_BG!`'s signature. Returns the
 `background_fields(tau, x, y)` returns the same 12-tuple `matrix2d_HQ_BG!` takes:
 `(T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy)`.
 
-⚠ ROWS 4-8 ARE PASSIVE AT c_M = 0, WHICH IS THE ONLY CASE THIS DRIVER SUPPORTS.
+⚠ Only c_M = 0 is supported, and rows 4-8 are then passive.
 The second moments read the current and the background but feed back into
-neither, so the 8×8 is BLOCK TRIANGULAR: rows 1-3 are a 3-field first moment,
+neither, so the 8×8 is block triangular: rows 1-3 are a 3-field first moment,
 unchanged, and rows 4-8 hang off them. Rows 1-3 are `hq2d_matrices_consistent`
-(the full-grad-P row, the 2-D twin of `hqc_matrices`) by default, and
-`hq2d_matrices` — exactly `matrix2d_HQ_BG!`'s shipped grad-alpha-only row — with
+(the full-grad-P row, the 2-D analogue of `hqc_matrices`) by default, and
+`hq2d_matrices` (the grad-alpha-only row of `matrix2d_HQ_BG!`) with
 `consistent_fm = false`. It is the same structure the 1-D
 `matrix1d_visc_HQ_BG_consistent_m2_5f!` has at its default c_M = 0.
 
@@ -498,10 +457,9 @@ function matrix2d_HQ_BG_m2!(; dmn_eps = 1e-6, background_fields, α_max = 200.0,
         projector = projector, vorticity = vorticity, mixture = mixture)
 end
 
-# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a MULTI-SPECIES charm list
-# τ_M, d ln C/d ln T, A/B and A come from the list's species sums (`hq_m2_mixture`) — the coefficients the
-# two-way wrappers use. false, or a one-species list of mass diffusion.mass: the single-quark forms
-# (pre-2026-10-13, bit for bit).
+# `mixture` (default `HQ_M2_MIXTURE[]`, env FLUIDUM_HQ_M2_MIXTURE, true): for a multi-species charm list
+# τ_M, d ln C/d ln T, A/B and A come from the list's species sums (`hq_m2_mixture`), as in the two-way
+# system. false, or a one-species list of mass diffusion.mass: the single-quark forms.
 function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         dmn_eps = 1e-6, background_fields = nothing, α_max = 200.0,
         consistent_fm::Bool = true,
@@ -520,9 +478,8 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     dn_da += dmn_eps
 
     κ  = diffusion_hadron(T, α_safe, params.eos, params.diffusion)
-    # τ_n, τ_M, η_M, h, D_s — ONE τ_n for both moments (until 2026-10-13 this driver
-    # paired an un-rescaled τ_n with an h built from the rescaled one, which broke
-    # τ_n = D_s h/T under FLUIDUM_HQ_MOMENTUM_DIMS=2).
+    # τ_n, τ_M, η_M, h, D_s: one τ_n for both moments, so τ_n = D_s h/T holds
+    # under every diagnostic knob.
     tr   = hq_transport(T, α_safe, params.eos, params.diffusion)
     taun = tr.taun; tauM0 = tr.tauM; etaM = tr.etaM; h = tr.h; Ds = tr.Ds
     hp   = hqc_dh_dT(T, α_safe, params.eos, params.diffusion)
@@ -530,12 +487,11 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     # ── rows 1-3: the first moment ─────────────────────────────────────────────
     # `hq2d_matrices_consistent` (default) is the full-grad-P row,
     #     (D_s/T) Delta^mu_lambda Nabla_nu T_Q^{nu lambda} + nu^mu = 0,
-    # generated by Julia/tools/derive_hq_consistent_2p1d.wls (15/15 gates: the
-    # cylindrical reduction reproduces Fluidum's own 1-D consistent source, and the
-    # at-rest limit is the closed form to 2.2e-16). `consistent_fm = false` gives the
-    # shipped grad-alpha-only row, whose temperature-gradient channel is 0 — on a
-    # real Pb+Pb cell that channel is 1.8x the alpha drive (COMPARISON_2P1D.md §12;
-    # until 2026-09-09 the flag was accepted and never read).
+    # generated by deriv/derive_hq_consistent_2p1d.wls (its cylindrical reduction
+    # reproduces the 1-D consistent source, and its at-rest limit matches the closed
+    # form to 2.2e-16). `consistent_fm = false` gives the grad-alpha-only row, whose
+    # temperature-gradient channel is 0; on a realistic Pb+Pb cell that channel is
+    # 1.8x the alpha drive.
     At3, Ax3, Ay3, src3 = consistent_fm ?
         hq2d_matrices_consistent(α_safe, ϕ[2], ϕ[3], tau, T, ux, uy,
                                  dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy,
@@ -559,18 +515,16 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
         (tauM0, hq2d_m2_coeffs(T, n, taun, Ds, h, params.diffusion.mass))
     end
 
-    # ⚠ THE alpha AND nu GRADIENTS GO IN THE MATRIX, NOT THE SOURCE. Rows 4-8
-    # depend on d_tau alpha, d_i alpha and d nu -- in this convention those are
-    # COLUMNS of At/Ax/Ay (columns 1, 2, 3), because alpha, nu^x and nu^y are
-    # evolved fields of this very system. Putting them in `src` with their
-    # current values frozen would lag them by a step and, worse, hide a real
-    # coupling from the characteristic analysis.
+    # ⚠ The alpha and nu gradients go in the matrix, not the source. Rows 4-8
+    # depend on d_tau alpha, d_i alpha and d nu; in this convention those are
+    # columns of At/Ax/Ay (columns 1, 2, 3), because alpha, nu^x and nu^y are
+    # evolved fields of this system. Putting them in `src` with their current
+    # values frozen would lag them by a step and hide a real coupling from the
+    # characteristic analysis.
     #
     # `hq2d_m2_rows` returns explicit RATES, so the columns are read off by
     # finite-differencing it in each gradient. They are exactly linear in every
-    # one of them (the system is quasi-linear -- gate G3 of
-    # derive_hq_m2_2p1d.wls), so a single difference is exact, not an
-    # approximation.
+    # one of them (the system is quasi-linear), so a single difference is exact.
     m2rate(dta, dxa, dya, dtnx, dxnx, dynx, dtny, dxny, dyny) =
         hq2d_m2_rows((α_safe, ϕ[2], ϕ[3], ϕ[4], ϕ[5], ϕ[6], ϕ[7], ϕ[8]),
                      tau, T, ux, uy, dtT, dxT, dyT,
@@ -616,9 +570,8 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     # Row 7 (piQ^eta_eta) is the REDUNDANT dof: not evolved independently, but
     # relaxed toward its tracelessness value `hq2d_piQ_eta(...)`, which keeps it on
     # the constraint without adding a constraint equation. Tracelessness is
-    # ALGEBRAIC, not a slow mode: until 2026-09-09 the rate was 1/fm, the field
-    # lagged (piQ^eta/(pxx+pyy) = -0.343 against -1), and the lag froze the
-    # cross-code difference at ~40 % in pi_Q^xx regardless of resolution.
+    # algebraic, not a slow mode: at a rate of 1/fm the field lags
+    # visibly (piQ^eta/(pxx+pyy) = -0.34 instead of -1).
     #
     # `RELAX_RATE` sets how fast the constraint is enforced. It must be fast
     # compared with tau_M (the physical relaxation of the moments themselves), so
@@ -626,7 +579,7 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
     # 1/(0.01 fm) is ~25x faster than a typical tau_M ~ 0.25 fm here and still
     # finite, which keeps the system an ODE rather than a DAE. It is a STIFF term
     # of the RHS, not a post-step projection: an explicit integrator's step is
-    # stability-capped near ~0.03 fm by it (production runs dtmax = 0.01 anyway).
+    # stability-capped near ~0.03 fm by it (typical runs use dtmax = 0.01).
     RELAX_RATE = 100.0
     src[7] = RELAX_RATE * (ϕ[7] - hq2d_piQ_eta(ux, uy, uT, ϕ[4], ϕ[5], ϕ[6]))
     At[7,7] = one(T); Ax[7,7] = zero(T); Ay[7,7] = zero(T)

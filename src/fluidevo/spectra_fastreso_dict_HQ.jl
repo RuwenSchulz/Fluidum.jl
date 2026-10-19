@@ -29,15 +29,9 @@ end
         @warn string("Radial velocity out of fastreso limits")       
     end 
     
-    # CANONICAL FACTOR REMOVED (2026-08-18), together with the one in the transport EOS
-    # (charm_HRG.jl). The two were a matched pair: alpha was fixed by f_can*n_GC(alpha) = n_hard and
-    # the yield then multiplied by f_can again, so for OPEN CHARM (q=1) they cancelled. With the EOS
-    # now grand-canonical, alpha_gc = alpha_can + ln(f_can), and dropping this factor reproduces the
-    # SAME yield exactly: f_can*exp(alpha_can) == exp(alpha_gc).
-    # WARNING for q=2 (hidden charm, J/psi): that channel had fact = 1 and yield ~ exp(2*alpha), so it
-    # is NOT invariant under the convention change -- it shifts by f_can^2. J/psi is not produced by
-    # any current pipeline (it appears only as a plot label), but a hidden-charm yield computed here
-    # needs its own canonical treatment in the grand-canonical convention before being trusted.
+    # No canonical factor: the transport EOS (charm_HRG.jl) is grand-canonical, so alpha already
+    # fixes the open-charm (q=1) yield. Hidden charm (q=2, yield ~ exp(2*alpha)) would need its
+    # own canonical treatment.
     fact = 1
     q = 1
     if part.name == "Dc2007zer" || part.name == "Dc2010plu" #D* has degeneracy 3 since total angular momentum = 3.  
@@ -163,9 +157,8 @@ function internal_thermal_spectra(pt,m,r,t,dra,dta,ur,T,μ,ν;deg=1)
     k2min=besselk(-2,karg)
     rcc = 1/4*(k2min+2*k0+k2)
     acc = 1/4*(i2min+2*i0+i2)
-    # SIGN OF THE RANK-1 δf.  The line below (`ν = -ν`) is the a₁ = −1/P₀ minus of the Denicol
-    # 14-moment ansatz δf = f₀ a₁ ν_μ k^{⟨μ⟩}.  It has been commented out for the entire history of
-    # this repo
+    # Sign of the rank-1 δf: `ν = -ν` is the minus of a₁ = −1/P₀ in the Denicol 14-moment ansatz
+    # δf = f₀ a₁ ν_μ k^{⟨μ⟩}. LP1_DELTAF_SIGN=shipped leaves it out.
     if get(ENV, "LP1_DELTAF_SIGN", "fixed") != "shipped"
         ν = -ν
     end
@@ -186,13 +179,7 @@ function internal_thermal_spectra(pt,m,r,t,dra,dta,ur,T,μ,ν;deg=1)
     return result*fmGeV^3*deg
 end 
 
-# =================================================================================================
-#  ARCHIVED δf-OFF KERNEL — internal_thermal_spectra_old
-#
-#  Verbatim copy of `internal_thermal_spectra` as it stood at commit ee66d6a (2026-03-02) and in
-#  every commit before it back to 7331ca3 (2025-08-26).  This is the kernel with the diffusion
-#  correction switched OFF ENTIRELY
-# =================================================================================================
+# `internal_thermal_spectra` with the diffusion correction switched off (ν = 0).
 function internal_thermal_spectra_old(pt,m,r,t,dra,dta,ur,T,μ,ν;deg=1)
     fmGeV = 5.068
     mt=sqrt(m^2+pt^2)

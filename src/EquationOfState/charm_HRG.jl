@@ -286,19 +286,10 @@ function thermodynamic(T,μ,x::HadronResonaceGas_ccbar{L,M})  where {L,M}
                 b3 = b1+4/(reducemass)*b2
                 ex=exp(QC* μ - reducemass)
                 
-                # CANONICAL FACTOR REMOVED FROM THE TRANSPORT EOS (2026-08-18).
-                # Charm here is a PASSIVE TRACER: a fixed number of quarks from initial hard
-                # scattering, so the transport problem is LINEAR in n and nu^r/n cannot depend on the
-                # ccbar count. f_can = I1(N/2)/I0(N/2) depends on the TOTAL charm number and breaks
-                # that -- measured, scaling the charm IC 10x gave 1.216x instead of 10x in (alpha,nu).
-                # It is also absent from the published framework: Capellino et al. fix the density by
-                # n(T,alpha) = n_hard (2307.14449 Eq. 14), use kappa_n = D_s n_0 (2205.07692 Eq. 31),
-                # and impose N through the initial condition -- no canonical factor anywhere. Their
-                # stated reason: charm pairs are "accidentally conserved" because the mass is too
-                # large for thermal production, and f_can suppresses THERMAL production.
-                # The canonical suppression belongs at PARTICLIZATION (yields), not here; it was
-                # removed from src/fluidevo/spectra*.jl in the same commit, which makes the pair
-                # exactly yield-neutral for open charm since alpha_gc = alpha_can + ln(f_can).
+                # No canonical factor f_can = I1(N/2)/I0(N/2). Charm is a passive tracer with a fixed
+                # number of quarks from hard scattering, so the transport is linear in n. The density
+                # is fixed by n(T, alpha) = n_hard through the initial condition (2307.14449 Eq. 14,
+                # 2205.07692 Eq. 31).
                 if QC == 1 
                     fact = one(T)
                 else 
@@ -399,19 +390,10 @@ function hq_pressure(T,α;m=1.5)
                 
                 b3 = b1+4/(reducemass)*b2
                 ex=exp(QC* α - reducemass)
-                # CANONICAL FACTOR REMOVED FROM THE TRANSPORT EOS (2026-08-18).
-                # Charm here is a PASSIVE TRACER: a fixed number of quarks from initial hard
-                # scattering, so the transport problem is LINEAR in n and nu^r/n cannot depend on the
-                # ccbar count. f_can = I1(N/2)/I0(N/2) depends on the TOTAL charm number and breaks
-                # that -- measured, scaling the charm IC 10x gave 1.216x instead of 10x in (alpha,nu).
-                # It is also absent from the published framework: Capellino et al. fix the density by
-                # n(T,alpha) = n_hard (2307.14449 Eq. 14), use kappa_n = D_s n_0 (2205.07692 Eq. 31),
-                # and impose N through the initial condition -- no canonical factor anywhere. Their
-                # stated reason: charm pairs are "accidentally conserved" because the mass is too
-                # large for thermal production, and f_can suppresses THERMAL production.
-                # The canonical suppression belongs at PARTICLIZATION (yields), not here; it was
-                # removed from src/fluidevo/spectra*.jl in the same commit, which makes the pair
-                # exactly yield-neutral for open charm since alpha_gc = alpha_can + ln(f_can).
+                # No canonical factor f_can = I1(N/2)/I0(N/2). Charm is a passive tracer with a fixed
+                # number of quarks from hard scattering, so the transport is linear in n. The density
+                # is fixed by n(T, alpha) = n_hard through the initial condition (2307.14449 Eq. 14,
+                # 2205.07692 Eq. 31).
                 if QC == 1 
                     fact = one(T)
 

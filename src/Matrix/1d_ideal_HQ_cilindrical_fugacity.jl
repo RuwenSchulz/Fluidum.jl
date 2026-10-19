@@ -4,13 +4,11 @@
 # The fields are stored in the order : T, ur, alpha
 #
 # Equations: ideal Nabla_m T^{mn} = 0 and Nabla.(n(T, alpha) u) = 0 (no diffusion current). Row 3 has
-# d_tau T and d_tau u^r eliminated with rows 1-2. GATED 2026-10-13: M-I3a of
-# Julia/tools/derive_1d_matrices.wls (solved form, exact) and J-Ia of
-# Projects/FluidumValidation/gate_matrices_1d.jl. Mode :ideal_HQ_fugacity; nothing in production runs it.
+# d_tau T and d_tau u^r eliminated with rows 1-2. The solved form agrees exactly with the covariant
+# derivation.
 #
-# `dmn_eps` is ACCEPTED AND IGNORED (the mode registry passes it to every closure): this matrix has
-# NO regulator on dn/dalpha, unlike the viscous ones -- A_t[3,3] = u^tau dn/dalpha is singular where
-# n underflows. Adding one would change what the mode computes, so it is documented, not added.
+# `dmn_eps` is accepted and ignored, so the closure has the same keyword as the other modes. This
+# matrix has no regulator on dn/dalpha: A_t[3,3] = u^tau dn/dalpha is singular where n underflows.
 
 function matrix1d_ideal_HQ_fugacity!(;dmn_eps=1e-6)
     (A_i, Source, ϕ, tau, X, params) -> matrix1d_ideal_HQ_fugacity!(A_i, Source, ϕ, tau, X, params)

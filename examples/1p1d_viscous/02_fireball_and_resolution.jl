@@ -2,49 +2,38 @@
 #=
 02 — a real radial fireball: the sector ladder, the axis, and what resolution buys you.
 
-Example 01 had no radial structure at all, so it could not see the two things that actually decide
-whether a 1+1D run is trustworthy: what happens AT THE AXIS, and how much of the radial flow is
-physics rather than the scheme's own diffusivity. Both are measured here on a Woods-Saxon profile.
+Example 01 had no radial structure, so it could not see what happens at the axis, or how much of
+the radial flow is physics rather than the scheme's own diffusivity. Both are measured here on a
+Woods-Saxon profile.
 
-THREE THINGS THIS FILE ESTABLISHES
+1. The sector ladder. Ideal, +shear, +shear+bulk, from one initial condition, so the difference is
+   the sector. Shear resists the transverse gradient and slows the radial push; bulk resists the
+   expansion itself. Both are reported as a change in the flow the fireball builds.
 
-1. THE SECTOR LADDER. Ideal, +shear, +shear+bulk, run from ONE initial condition, so the difference
-   is the sector and not the IC. Shear resists the transverse gradient and slows the radial push;
-   bulk resists the expansion itself. Both are reported as a change in the flow the fireball builds.
+2. The axis. `viscous_1d` declares `ur` odd at r = 0 and every other field even. A parity error
+   does not crash; it puts a kink in the first few cells that looks like a physical feature. The
+   measure is |u^r| in the first cell relative to its peak: it must go to zero, faster as the grid
+   refines. A parity error leaves it finite and resolution-independent.
 
-2. THE AXIS IS A SYMMETRY AXIS, NOT A BOUNDARY. `viscous_1d` declares `ur` ODD at r = 0 and every
-   other field EVEN. If that were wrong you would not get a crash — you would get a kink in the
-   first few cells that looks like a physical feature. What is measured is |u^r| in the first cell
-   relative to its peak: it must go to zero, and it must do so FASTER as the grid refines. A parity
-   error leaves it finite and resolution-independent.
+3. Convergence order. `basicupwinding` is first-order accurate, so the error falls like 1/N and the
+   scheme carries a numerical diffusivity of order dx. The self-convergence ladder below measures the
+   observed order. It should sit near 1; near 0.5 the run is not resolving its own initial condition.
 
-3. FIRST ORDER MEANS FIRST ORDER. `basicupwinding` is first-order accurate, so the error falls
-   like 1/N and the scheme carries a numerical diffusivity of order dx. On a fireball this shows up
-   as a radial profile that sharpens with resolution and never quite stops. The self-convergence
-   ladder below measures the observed order — it should sit near 1, and if it sits near 0.5 the run
-   is not resolving its own initial condition (the trap COMPARISON_2P1D.md section 37.3 records).
-
-⚠ Block-average the fine grid onto the coarse one; do NOT sub-sample it. Cell centres sit at
-(i-1/2)dr, so a 2N grid's cells 2i-1 and 2i tile the N grid's cell i exactly, and sub-sampling
-compares different points and reports the profile's own slope as an error.
+Block-average the fine grid onto the coarse one; do not sub-sample it. Cell centres sit at
+(i-1/2)dr, so a 2N grid's cells 2i-1 and 2i tile the N grid's cell i, and sub-sampling compares
+different points and reports the profile's own slope as an error.
 =#
 ENV["GKSwstype"] = "100"
 using Fluidum, Printf, OrdinaryDiffEq, Plots
-# Figure style, shared by every example in BOTH packages (2026-09-14). dpi 200 and the larger
-# fonts are for the GitHub READMEs: they render an image at container width (~900 px), so a
-# 1700-px-wide figure is downscaled and 8 pt tick labels turn to mush. Keep the two packages
-# identical — a reader comparing FiVo and Fluidum plots should not be reading two house styles.
+# Figure style: dpi 200 and larger fonts keep the figures legible when a README scales them down.
 gr(); default(; fontfamily = "sans-serif", framestyle = :box, grid = false, dpi = 200, lw = 2.2,
                titlefontsize = 11, guidefontsize = 10, tickfontsize = 9, legendfontsize = 8,
                foreground_color_legend = nothing, background_color_legend = RGBA(1,1,1,0.75),
                left_margin = 9Plots.mm, bottom_margin = 6Plots.mm, right_margin = 3Plots.mm,
-               colorbar_titlefontsize = 8,   # ⚠ at 10 pt the colorbar TITLE overlaps its own
-                                             # tick labels on every map panel (measured on ex10)
+               colorbar_titlefontsize = 8,   # at 10 pt the colorbar title overlaps its tick labels
                top_margin = 2Plots.mm)
-# ⚠ the margins are NOT cosmetic. Raising the font sizes above without them silently DROPS the axis
-# labels and clips the y-label off the left edge — GR gives the axis whatever space is left after the
-# panel, and at dpi 200 with 10 pt guides there is none. Measured on ex01: "τ [fm/c]" vanished from
-# all three panels and reappeared only once the margins were set.
+# The margins are needed: at these font sizes GR otherwise drops the axis labels and clips the
+# y-label off the left edge.
 const F   = Fluidum
 const FIG = joinpath(@__DIR__, "figures"); isdir(FIG) || mkpath(FIG)
 
@@ -74,7 +63,7 @@ interior(a) = a[2:end-1]                      # one ghost cell per side
 # ── 1. the sector ladder ────────────────────────────────────────────────────────────────────────
 println("\n  SECTOR LADDER  (N_r = 300, tau ", TAU0, " → ", TAUF, ")")
 println("  " * "-"^78)
-# ⚠ quote |pi|/e over cells ABOVE freeze-out only. In the dilute tail e -> 0 while pi relaxes on a
+# quote |pi|/e over cells above freeze-out only. In the dilute tail e -> 0 while pi relaxes on a
 # finite clock, so the ratio there is a property of the vacuum, not of the fluid, and it runs past 1.
 const TFO = 0.1565
 @printf("  %-18s %12s %12s %16s\n", "sector", "max u^r", "T(r=0)", "max|pi^eta_eta|/e")

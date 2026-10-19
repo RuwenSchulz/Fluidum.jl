@@ -243,10 +243,9 @@ Collect the information of the field and the space-doiscretization in one data t
 """
 function DiscreteFields(fields::Fields{N_field,space_dimension,S}
 ,discretization::CartesianDiscretization{space_dimension,Sizes,Lengths,DXS,M},type::Type{T},N_copies::Int=6) where {N_field,space_dimension,S,Sizes,Lengths,DXS,M,T}
-# The interior sweep needs FOUR vector copies and one matrix copy per worker (see the note above
-# `basicupwinding`), so the floor is 4 x threads. Reading `Threads.nthreads()` HERE and not at
-# module scope is deliberate: a `const` initialised at load time is baked into the precompile
-# cache, which is how `FLUIDUM_2D_DERIVED` shipped dead (Matrix/2d_viscous.jl).
+# The interior sweep needs four vector copies and one matrix copy per worker (see the note above
+# `basicupwinding`), so the floor is 4 x threads. `Threads.nthreads()` is read here and not at
+# module scope, where it would be fixed at precompile time.
 N_copies = max(N_copies, 6, 4*Threads.nthreads())
 
 Sizes_ghosted=Sizes.+2
@@ -412,29 +411,12 @@ boundary_condition!(phi,discrete_fields.index_structure,discrete_fields.left_par
 #end
 
 
-# ════════════════════════════════════════════════════════════════════════════════════════════════
-#  THE INTERIOR SWEEP, AND HOW IT IS PARALLELISED
-#
-#  Every interior cell is independent: it READS `phi` at I and I ± e_i and WRITES only `dphi[:,I]`,
-#  and `matrix_equation!` writes only the `A_i`/`Source` handed to it. So the loop is embarrassingly
-#  parallel and the answer cannot depend on the order — which is why the threaded path below is
-#  asserted to be BITWISE identical to the serial one, not merely close.
-#
-#  What was in the way is the scratch. `A_i`, `Source`, `nabla`, `delta` and `temp` were ONE set of
-#  buffers reused by every cell, so threading the loop as written races on the first iteration.
-#
-#  🪤 And `FieldsCache`'s `N_copies` is NOT a pool of thread slots, which is the natural reading and
-#  the wrong one: copies 1-4 are FOUR DISTINCT BUFFERS (Source, nabla, delta, temp) and the matrix
-#  vector only ever used copy 1. So a worker needs one matrix copy and FOUR vector copies, and
-#  `N_copies` has to be ≥ 4 × workers. `DiscreteFields` now sizes it from `Threads.nthreads()`.
-#
-#  🪤 The work is split into CHUNKS and the buffer is chosen by CHUNK INDEX, never by
-#  `Threads.threadid()`. Under the default `:dynamic` scheduler a task may migrate between threads
-#  mid-iteration, so a `threadid()`-indexed buffer is a race that only shows up under load.
-#
-#  Slot 1 maps to exactly the buffers the serial code used, so a single-worker run is the old code
-#  path unchanged.
-# ════════════════════════════════════════════════════════════════════════════════════════════════
+# The interior sweep. Each interior cell reads `phi` at I and I ± e_i and writes only `dphi[:,I]`,
+# so cells are independent and the threaded path is bitwise identical to the serial one.
+# Each worker needs its own scratch: one matrix copy and four vector copies (Source, nabla, delta,
+# temp) of `FieldsCache`, so `N_copies` must be ≥ 4 × workers. The work is split into chunks and
+# the buffer is chosen by chunk index, not `Threads.threadid()`, since tasks may migrate between
+# threads under the `:dynamic` scheduler. Slot 1 holds the buffers of the serial path.
 
 "how many chunks the interior sweep may use: threads, but never more than the cache can feed"
 @inline function _upwind_workers(discrete_fields, nI::Int)
@@ -783,8 +765,8 @@ end
 
 function oneshoot(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan,args...;kwargs...)
     prob=problem(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan)
-    # Max internal time step. Default 0.01 (unchanged); override via FLUIDUM_DTMAX to better resolve
-    # rapid transients such as the near-instantaneous central freeze-out collapse.
+    # Max internal time step, default 0.01. FLUIDUM_DTMAX overrides it, e.g. to resolve rapid
+    # transients such as a fast central freeze-out.
     dtmax = parse(Float64, get(ENV, "FLUIDUM_DTMAX", "0.01"))
     solve(prob,Tsit5(),args...;kwargs..., dtmax = dtmax)
 end

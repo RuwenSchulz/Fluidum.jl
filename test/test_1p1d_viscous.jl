@@ -1,24 +1,11 @@
-# ==============================================================================================
 # test/test_1p1d_viscous.jl -- the 1+1D viscous solver, `matrix1d_visc!`.
 #
-# THE PRODUCTION KERNEL. LangevinPaper1, AttractorHydro and SpectraDiagnostic all stand on the
-# matrix asserted here, and the charm driver `matrix1d_visc_HQ!` reuses its five rows -- yet until
-# 2026-09-14 it had no testset of its own. The 2+1D solver got one on 2026-09-03 (after ten wrong
-# entries in its shear rows had survived a year of `@test all(isfinite.(...))`); this is its 1-D
-# twin, asserting what a smoke test cannot see and staying cheap enough for every `Pkg.test()`:
-# the field layout and its parities, closed-form characteristic speeds, the shear closure, the
-# Bjorken limit, and the control that the shipped kernel matches an independent re-derivation.
-#
-# The heavy, quantitative version of the same statements (convergence on a real fireball, the
-# origin-parity ladder, cost) is
-#     Julia/Fluidum.jl/bench/bench_1p1d_viscous.jl
-# and the audits are
-#     Projects/FluidumValidation/bench_fluidum_full.jl  +  bench_fluidum_attractor.jl
-# ==============================================================================================
+# The charm driver `matrix1d_visc_HQ!` reuses these five rows. Checked here: the field layout and
+# its parities, closed-form characteristic speeds, the shear closure, the Bjorken limit, and
+# agreement with an independent re-derivation of the matrix.
+# Longer version (convergence on a fireball, origin parity, cost): bench/bench_1p1d_viscous.jl
 using Test, LinearAlgebra
-# no Printf: under `Pkg.test` the environment is Fluidum's deps plus [targets] test = ["Test"], and
-# Printf is in neither -- importing it here would turn the suite red while still looking green
-# under `--project=Julia`, whose outer environment does have it. (The trap its 2-D twin records.)
+# no Printf: it is not in the `Pkg.test` environment.
 using Fluidum, OrdinaryDiffEq
 
 _prs(T, eos)  = Fluidum.pressure(T, eos)
@@ -50,9 +37,8 @@ end
     f = Fluidum.viscous_1d()
     @test length(f.field) == 5
     @test collect(Fluidum.names(f)) == [:temperature, :ur, :piphiphi, :pietaeta, :piB]
-    # r = 0 is a SYMMETRY AXIS, not a boundary: the radial velocity is odd there and every scalar
-    # or diagonal-tensor channel is even. A parity error here is a kink in the first cells, which
-    # is easy to mistake for a physical feature -- hence an explicit assertion.
+    # r = 0 is a symmetry axis: the radial velocity is odd there and every scalar or
+    # diagonal-tensor channel is even. A parity error shows up as a kink in the first cells.
     @test Fluidum.get_index(:pietaeta, f) == 4
     @test Fluidum.get_index(:ur, f)       == 2
     # the charm layout is this one plus (alpha, nu^r), in that order
@@ -102,10 +88,9 @@ end
 end
 
 @testset "1+1D viscous -- the derived matrix reproduces the shipped kernel" begin
-    # `Julia/tools/derive_2p1d_viscous.wls` re-derives Israel-Stewart from scratch. Its 1-D routine
-    # must reproduce the SHIPPED production kernel entry by entry -- that control is what makes the
-    # 2-D half of the same derivation trustworthy where it DISAGREES with the shipped 2-D matrix.
-    # both delta_pipi values (2026-10-13): dpp = 0 (FLUIDUM_DELTA_PIPI=0) and the default 4/3 tau_pi
+    # `deriv/derive_2p1d_viscous.wls` re-derives Israel-Stewart from scratch. Its 1-D routine must
+    # reproduce `one_d_viscous_matrix` entry by entry; this is the control for its 2-D half.
+    # Both delta_pipi values: 0 (FLUIDUM_DELTA_PIPI=0) and the default (4/3) tau_pi.
     worst = 0.0
     for T in (0.12, 0.35, 0.55), ur in (-1.3, 0.0, 2.2),
         (pphi, peta, PiB) in ((0.0,0.0,0.0), (0.02,-0.05,0.01)), tau in (0.4, 7.0), r in (0.05, 12.0)
@@ -127,10 +112,9 @@ end
     # convention is pinned here -- pi^eta_eta -> -4 eta/(3 tau), pi^phi_phi -> +2 eta/(3 tau),
     # Pi -> -zeta/tau. On Bjorken theta = 1/tau, so the shear row the matrix encodes is
     #     tau_pi d_tau pi^eta_eta + pi^eta_eta + 4 eta/(3 tau) + delta_pipi pi^eta_eta/tau = 0
-    # with delta_pipi = (4/3) tau_pi by default and 0 under FLUIDUM_DELTA_PIPI=0 (2026-10-13; until
-    # then this kernel was plain IS). No tau_pipi, no lambda_piPi. Both switch values are asserted,
-    # each against its own ODE; the two answers differ by ~20 % in pi^eta_eta on the state reached
-    # below, so each is a sharp statement, not a smoke test.
+    # with delta_pipi = (4/3) tau_pi by default and 0 under FLUIDUM_DELTA_PIPI=0. No tau_pipi, no
+    # lambda_piPi. Both switch values are checked, each against its own ODE; the two differ by
+    # ~20 % in pi^eta_eta at tauf.
     T0, tau0, tauf = 0.45, 0.4, 4.0
     function solve_ref(f)
         function rhs!(du, U, p, tau)
@@ -158,12 +142,12 @@ end
             @test isapprox(fin[1, k], Tr;    rtol = 1e-9)
             @test isapprox(fin[4, k], petar; rtol = 1e-8)
             @test isapprox(fin[5, k], PiBr;  rtol = 1e-8)
-            # pi^phi_phi = -pi^eta_eta/2 must EMERGE from two independently evolved rows, not be imposed
+            # pi^phi_phi = -pi^eta_eta/2 follows from two independently evolved rows
             @test abs(fin[3, k] + fin[4, k]/2)/abs(fin[4, k]) < 1e-9
             # uniformity and rest are exact fixed points of the discretisation
             @test maximum(abs, fin[1, :] .- fin[1, k])/fin[1, k] < 1e-11
             @test maximum(abs, fin[2, :])                        < 1e-11
-            # and the OTHER switch value's ODE is far away: the term is really there (or really absent)
+            # the other switch value's ODE is far away, so the term is present (or absent)
             @test abs(fin[4, k]/solve_ref(1.0 - fac)(tauf)[2] - 1) > 0.05
         end
     finally
@@ -173,9 +157,7 @@ end
 
 @testset "1+1D viscous -- the 1-D and 2-D transport paths agree" begin
     # `matrix1d_visc!` reaches the transport coefficients through a scalar entropy, `matrix2d_visc!`
-    # through a whole `Thermodynamic`. They are the same formulas and must give the same numbers --
-    # the two entry points once accepted DISJOINT viscosity models for exactly this reason
-    # (FLUIDUM_2P1D_HQ.md section 5).
+    # through a whole `Thermodynamic`. The formulas are the same and must give the same numbers.
     for T in (0.12, 0.25, 0.4, 0.6)
         dpt  = Fluidum.pressure_derivative(T, Val(1), _EOS1)
         dptt = Fluidum.pressure_derivative(T, Val(2), _EOS1)

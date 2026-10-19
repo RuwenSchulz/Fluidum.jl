@@ -11,9 +11,8 @@ Field layout for the 7-field 1+1D viscous hydro + charm system (`matrix1d_visc_H
 `(T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r)` in cylindrical Milne. [`viscous_1d`](@ref)
 plus the charm fugacity and its diffusion current; the Cartesian sibling is [`HQ_viscous_2d`](@ref).
 
-`u^r` and `nu^r` are ODD at the origin and everything else EVEN — the r = 0 axis is a symmetry
-axis, not a boundary, and getting a parity wrong there shows up as a kink in the first cells rather
-than as an error. Charm is a PASSIVE tracer: it does not feed `T^{munu}`.
+`u^r` and `nu^r` are odd at the origin and everything else even, since r = 0 is a symmetry axis.
+Charm is a passive tracer: it does not feed `T^{munu}`.
 """
 @inline function HQ_viscous_1d() 
     return Fields(
@@ -30,13 +29,11 @@ end
 """
     HQ_const_BG_init()
 
-Field layout for the charm FIRST MOMENT on a PRESCRIBED 1+1D background (`matrix1d_visc_HQ_BG!`):
-`(alpha, nu^r)`. The medium is handed in as `background_fields(tau, r)` instead of being evolved,
-which is what makes a closure study cheap — the same background can be replayed under different
-charm closures. The 2-D twin is [`HQ_2p1d_BG_init`](@ref).
+Field layout for the charm first moment on a prescribed 1+1D background (`matrix1d_visc_HQ_BG!`):
+`(alpha, nu^r)`. The background (T, u) is prescribed through `background_fields(tau, r)`, not
+evolved. The 2-D counterpart is [`HQ_2p1d_BG_init`](@ref).
 
-`alpha` carries a plain ghost rather than an even parity because it is not a tensor component;
-`nu^r` is ODD at the axis.
+`alpha` carries a plain ghost; `nu^r` is odd at the axis.
 """
 @inline function HQ_const_BG_init()
     return Fields(
@@ -48,20 +45,18 @@ end
 """
     HQ_const_BG_second_moment_init()
 
-[`HQ_const_BG_init`](@ref) plus the charm SECOND MOMENT: `(alpha, nu^r, piQ^l, piQ^phi, Pi_Q)`
+[`HQ_const_BG_init`](@ref) plus the charm second moment: `(alpha, nu^r, piQ^l, piQ^phi, Pi_Q)`
 (field names `:PiQr, :PiQperp, :PiQ`) on a prescribed background. In radial symmetry the moment is
-diagonal in the parallel-transported triad `(l, phihat, etahat)`, so two traceless channels plus
-the trace `Pi_Q` are all there is (`piQ^eta = -(piQ^l + piQ^phi)`). The 2-D twin is
-[`HQ_2p1d_BG_m2_init`](@ref), which needs four stored components because the transverse block is
-no longer diagonal.
+diagonal in the parallel-transported triad `(l, phihat, etahat)`, so two traceless channels and
+the trace `Pi_Q` suffice (`piQ^eta = -(piQ^l + piQ^phi)`). The 2-D counterpart is
+[`HQ_2p1d_BG_m2_init`](@ref), which stores four components because the transverse block is not
+diagonal.
 
-The layout of `matrix1d_visc_HQ_BG_consistent_m2_5f!` (the correct second moment),
-`matrix1d_visc_HQ_BG_consistent_5f!`, and the RETRACTED (2026-10-13)
-`matrix1d_visc_HQ_BG_second_moment!`. Field 5 is the TRACE `Pi_Q`; the project-side alias `Meta`
-for it (and `Mr`, `Mperp` for fields 3, 4) is a legacy name, not M^eta_eta.
+Layout of `matrix1d_visc_HQ_BG_consistent_m2_5f!`, `matrix1d_visc_HQ_BG_consistent_5f!` and the
+not usable `matrix1d_visc_HQ_BG_second_moment!`. Field 5 is the trace `Pi_Q`; the legacy keys
+`Meta` (and `Mr`, `Mperp` for fields 3, 4) refer to these fields, not to M^eta_eta.
 
-c_M = 0 by default (`HQ_CM_BACKREACTION`); c_M = D_s/T is the ELLIPTIC branch — see
-`FLUIDUM_ATTRACTOR_AUDIT.md` section 3.
+c_M = 0 by default (`HQ_CM_BACKREACTION`); c_M = D_s/T makes the system elliptic.
 """
 @inline function HQ_const_BG_second_moment_init()
     return Fields(
@@ -77,8 +72,7 @@ end
     HQ_2p1d_BG_init()
 
 Field layout for the 2+1D charm sector on a prescribed background: (alpha, nu^x, nu^y).
-Cartesian transverse grid, so every boundary is a plain ghost — there is no symmetry
-axis to impose a parity on, unlike the 1-D cylindrical layouts above where `nur` is odd.
+Cartesian transverse grid, so every boundary is a plain ghost.
 """
 @inline function HQ_2p1d_BG_init()
     return Fields(
@@ -91,17 +85,14 @@ end
 """
     HQ_2p1d_BG_m2_init()
 
-Field layout for the 2+1D charm sector WITH the consistent second moment
+Field layout for the 2+1D charm sector with the consistent second moment
 (`matrix2d_HQ_BG_m2!`): (alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy},
 piQ^eta_eta, Pi_Q) on a prescribed background.
 
-Cartesian transverse grid, so every boundary is a plain ghost -- there is no
-symmetry axis to impose a parity on, exactly as for `HQ_2p1d_BG_init`. The
-second-moment components are ordinary scalars on this grid; the ONE constraint
-they carry (tracelessness) is algebraic, not a boundary condition. There is no
-post-step projection: `matrix2d_HQ_BG_m2!` holds `piQ^eta_eta` on its
-tracelessness value `hq2d_piQ_eta(...)` by a stiff relaxation in the RHS (rate
-100/fm, which stability-caps an explicit integrator's step near ~0.03 fm).
+Every boundary is a plain ghost. Tracelessness is algebraic: `matrix2d_HQ_BG_m2!`
+holds `piQ^eta_eta` on its tracelessness value `hq2d_piQ_eta(...)` by a stiff
+relaxation in the RHS (rate 100/fm, which limits an explicit integrator's step
+to ~0.03 fm).
 """
 @inline function HQ_2p1d_BG_m2_init()
     return Fields(
@@ -141,10 +132,8 @@ end
     HQ_viscous_gamma_1d()
 
 [`HQ_viscous_1d`](@ref) with the charm fugacity carried as `gamma = e^alpha` instead of `alpha`
-(`matrix1d_visc_gamma_HQ!`). A second formulation of the same physics, kept so the two can be
-cross-checked; gate X2 of `Projects/FluidumValidation/bench_fluidum_full.jl` does exactly that and
-reports a 1.06e-2, alpha-independent difference that is explained (not a defect) in
-`FLUIDUM_FULL_AUDIT.md` section 3.
+(`matrix1d_visc_gamma_HQ!`). Equivalent to the alpha form for unit-charge states only; with
+charmonia (q = 2) the two differ by ~1 %.
 """
 @inline function HQ_viscous_gamma_1d() 
     return Fields(
@@ -162,7 +151,7 @@ end
     HQ_viscous_no_bulk_1d()
 
 [`HQ_viscous_1d`](@ref) without the bulk pressure: `(T, u^r, pi^phi_phi, pi^eta_eta, alpha, nu^r)`.
-Six fields, for runs that want shear only. Referenced by `MainFluidum/FluidumEvolutionModes.jl`.
+Six fields, shear only.
 """
 @inline function HQ_viscous_no_bulk_1d() 
     return Fields(
@@ -180,8 +169,8 @@ end
     HQ_viscous_BG_ideal_current_1d()
 
 Viscous medium plus an IDEAL (non-diffusing) charm fugacity: `(T, u^r, pi^phi_phi, pi^eta_eta, Pi,
-alpha)`. No `nu^r` field at all, so the charm is advected and diluted but never diffuses — the
-`D_s -> 0` reference against which a diffusion current is measured.
+alpha)`. No `nu^r` field, so the charm is advected and diluted but does not diffuse (the
+`D_s -> 0` limit).
 """
 @inline function HQ_viscous_BG_ideal_current_1d() 
     return Fields(
@@ -197,9 +186,8 @@ end
 """
     HQ_viscous_BG_ideal_current_density_1d()
 
-[`HQ_viscous_BG_ideal_current_1d`](@ref) with the charm carried as the DENSITY `n` rather than the
-fugacity `alpha`. The two are related by the equation of state, and which is the evolved variable
-changes what the matrix's time-derivative column is — not a cosmetic choice.
+[`HQ_viscous_BG_ideal_current_1d`](@ref) with the charm carried as the density `n` instead of the
+fugacity `alpha`. The choice of evolved variable changes the time-derivative column of the matrix.
 """
 @inline function HQ_viscous_BG_ideal_current_density_1d() 
     return Fields(
@@ -229,10 +217,8 @@ end
 """
     HQ_ideal_br_p_density_1d()
 
-[`HQ_ideal_1d`](@ref) with the charm as a DENSITY: `(T, u^r, n)`.
-⚠ Its drivers `matrix1d_ideal_HQ_br_p_density!` / `_fugacity!` are DEAD — they throw
-`UndefVarError: n` inside the module (gate M1 of `bench_fluidum_full.jl`, a declared known failure).
-Kept because this repository preserves wrong turns; do not start new work from it.
+[`HQ_ideal_1d`](@ref) with the charm as a density: `(T, u^r, n)`.
+Its drivers `matrix1d_ideal_HQ_br_p_density!` / `_fugacity!` are not usable.
 """
 @inline function HQ_ideal_br_p_density_1d() 
     return Fields(
@@ -246,9 +232,8 @@ end
     viscous_1d()
 
 Field layout for the 5-field 1+1D viscous hydro system (`matrix1d_visc!`):
-`(T, u^r, pi^phi_phi, pi^eta_eta, Pi)` in cylindrical Milne. **This is the production layout** —
-LangevinPaper1, AttractorHydro and SpectraDiagnostic all stand on the matrix that evolves it. The
-Cartesian sibling is [`viscous_2d`](@ref).
+`(T, u^r, pi^phi_phi, pi^eta_eta, Pi)` in cylindrical Milne. The Cartesian sibling is
+[`viscous_2d`](@ref).
 
 `pi^phi_phi` and `pi^eta_eta` are MIXED components (`pi^eta_eta = tau^2 pi^{eta eta}`), the same
 convention `viscous_2d` uses for `piyy`/`pizz`. On a Bjorken background the Navier-Stokes fixed
@@ -256,10 +241,10 @@ points are
 
     pi^eta_eta -> -4 eta/(3 tau),   pi^phi_phi -> +2 eta/(3 tau),   Pi -> -zeta/tau
 
-and the relaxation is PLAIN Israel-Stewart — no `delta_pipi`, no `tau_pipi`, no `lambda_piPi`.
-Gate B1 of `bench/bench_1p1d_viscous.jl` pins all of that to 1e-13.
+The relaxation is Israel-Stewart with `delta_pipi` set by FLUIDUM_DELTA_PIPI (4/3 tau_pi by
+default, 0 for plain IS); no `tau_pipi`, no `lambda_piPi`.
 
-`u^r` is ODD at the origin, every other field EVEN: r = 0 is a symmetry axis, not a boundary.
+`u^r` is odd at the origin, every other field even: r = 0 is a symmetry axis.
 """
 @inline function viscous_1d() 
     return Fields(
@@ -279,11 +264,9 @@ Field layout for the 7-field 2+1D viscous hydro system (`matrix2d_visc!`):
 Milne slice.  The Cartesian sibling of [`viscous_1d`](@ref).
 
 `pi^{yy}` is the Cartesian `pi^y_y` and `pi^{zz}` the MIXED Milne `pi^eta_eta = tau^2 pi^{eta eta}`
--- the same mixed convention `viscous_1d` uses for `piphiphi`/`pietaeta`, pinned to 1e-13 against
-the 0+1D Israel-Stewart equations by gate B1 of `bench/bench_2p1d_viscous.jl`.
+-- the same mixed convention `viscous_1d` uses for `piphiphi`/`pietaeta`.
 
-Every boundary is a plain ghost: the transverse grid is Cartesian, so there is no symmetry axis to
-impose a parity on, unlike the 1-D cylindrical layouts where `ur` is odd.
+Every boundary is a plain ghost: the transverse grid is Cartesian.
 """
 @inline function viscous_2d()
     return Fields(
@@ -528,8 +511,7 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
         Fluidum.set_array!(phi, x -> init_fun_dict[:PiQ](x), :PiQ, disc_fields)
     catch
         try
-            # legacy key: `:Meta` here means field 5 = the TRACE Pi_Q, NOT M^eta_eta. A Langevin
-            # M^eta_eta handed in under this key would be silently mis-assigned; use :PiQ.
+            # legacy key: `:Meta` here means field 5 = the trace Pi_Q, not M^eta_eta; prefer :PiQ.
             Fluidum.set_array!(phi, x -> init_fun_dict[:Meta](x), :PiQ, disc_fields)
         catch
         end
@@ -619,10 +601,9 @@ return DiscreteInitialFields(disc,disc_fields,phi)
 end
 
 
-# ══ Field layouts of the conformal set and the TWO-WAY system (2026-10-13, P3b of
-# Projects/FluidumValidation/MATRICES_PROGRAMME.md; closures in Matrix/two_way.jl) ═══════════
-# Parities as everywhere in 1+1D: u^r and nu^r ODD at the axis, every scalar and every diagonal
-# tensor component EVEN. 2+1D: plain ghosts. The S3/S4 1+1D layouts are the existing
+# ══ Field layouts of the conformal set and the two-way system (closures in Matrix/two_way.jl) ══
+# 1+1D: u^r and nu^r odd at the axis, every scalar and every diagonal tensor component even.
+# 2+1D: plain ghosts. The S3/S4 1+1D layouts are the existing
 # `HQ_const_BG_init` / `HQ_const_BG_second_moment_init`, the S3 2+1D one `HQ_2p1d_BG_init`, the
 # generic-EOS S2 ones `viscous_1d` / `viscous_2d`.
 
@@ -641,7 +622,7 @@ end
 """
     tw_viscous_conformal_1d()
 
-1+1D viscous hydro with a CONFORMAL medium (`tw_viscous_1p1d!` with `ConformalEOS`; no bulk):
+1+1D viscous hydro with a conformal medium (`tw_viscous_1p1d!` with `ConformalEOS`; no bulk):
 `(T, u^r, pi^phi_phi, pi^eta_eta)`, mixed components as in `viscous_1d`.
 """
 @inline function tw_viscous_conformal_1d()
@@ -656,10 +637,10 @@ end
 """
     two_way_1d()
 
-The 1+1D TWO-WAY system, generic medium EOS (`two_way_1p1d!`), 10 fields:
+The 1+1D two-way system, generic medium EOS (`two_way_1p1d!`), 10 fields:
 `(T, u^r, pi^phi_phi, pi^eta_eta, Pi, alpha, nu^r, p_l, p_phi, Pi_Q)`.
 Medium as `viscous_1d`; charm as `HQ_const_BG_second_moment_init` (p_l, p_phi on the
-parallel-transported triad, p_eta = -(p_l + p_phi)). Charm energy-momentum is IN T^{mu nu}_total.
+parallel-transported triad, p_eta = -(p_l + p_phi)). Charm energy-momentum is in T^{mu nu}_total.
 """
 @inline function two_way_1d()
     return Fields(
@@ -679,7 +660,7 @@ end
 """
     two_way_conformal_1d()
 
-[`two_way_1d`](@ref) with a CONFORMAL medium (no bulk), 9 fields:
+[`two_way_1d`](@ref) with a conformal medium (no bulk), 9 fields:
 `(T, u^r, pi^phi_phi, pi^eta_eta, alpha, nu^r, p_l, p_phi, Pi_Q)`.
 """
 @inline function two_way_conformal_1d()
@@ -712,7 +693,7 @@ end
 """
     tw_viscous_conformal_2d()
 
-2+1D viscous hydro with a CONFORMAL medium (no bulk): `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy})`
+2+1D viscous hydro with a conformal medium (no bulk): `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy})`
 (`pizz` = the mixed pi^eta_eta, as in `viscous_2d`).
 """
 @inline function tw_viscous_conformal_2d()
@@ -729,10 +710,10 @@ end
 """
     HQ_2p1d_BG_m2_7f_init()
 
-2+1D charm with the consistent second moment on a prescribed background, SEVEN fields
+2+1D charm with the consistent second moment on a prescribed background, seven fields
 (`tw_hq_m2_bg_2p1d!`): `(alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
-piQ^eta_eta is ELIMINATED algebraically (tracelessness + u-orthogonality), not stored and
-relaxed as in the 8-field [`HQ_2p1d_BG_m2_init`](@ref) (TWO_WAY_DERIVATION Q7).
+piQ^eta_eta is eliminated algebraically (tracelessness + u-orthogonality) instead of being stored
+and relaxed as in the 8-field [`HQ_2p1d_BG_m2_init`](@ref).
 """
 @inline function HQ_2p1d_BG_m2_7f_init()
     return Fields(
@@ -749,7 +730,7 @@ end
 """
     two_way_2d()
 
-The 2+1D TWO-WAY system, generic medium EOS (`two_way_2p1d!`), 14 fields:
+The 2+1D two-way system, generic medium EOS (`two_way_2p1d!`), 14 fields:
 `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi, alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
 Medium as `viscous_2d`, charm as [`HQ_2p1d_BG_m2_7f_init`](@ref).
 """
@@ -775,7 +756,7 @@ end
 """
     two_way_conformal_2d()
 
-[`two_way_2d`](@ref) with a CONFORMAL medium (no bulk), 13 fields:
+[`two_way_2d`](@ref) with a conformal medium (no bulk), 13 fields:
 `(T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, alpha, nu^x, nu^y, piQ^{xx}, piQ^{xy}, piQ^{yy}, Pi_Q)`.
 """
 @inline function two_way_conformal_2d()

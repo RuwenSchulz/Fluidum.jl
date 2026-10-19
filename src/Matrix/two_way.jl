@@ -1,96 +1,79 @@
-# ==============================================================================
-# two_way.jl — THE CONFORMAL SET AND THE FULLY COUPLED TWO-WAY MEDIUM + CHARM SYSTEM
-# (2026-10-13, phase P3b of Julia/Projects/FluidumValidation/MATRICES_PROGRAMME.md).
+# two_way.jl: the conformal set and the coupled two-way medium + charm system.
 #
-# Hand-written wrappers around the GENERATED matrices of two_way_generated.jl
-# (Julia/tools/derive_two_way.wls, 144/144 gates; derivation note
-# Julia/Projects/FluidumValidation/TWO_WAY_DERIVATION.md). Five systems in three charts:
+# Wrappers around the generated matrices of two_way_generated.jl (deriv/derive_two_way.wls).
+# Five systems:
 #
 #   S1 ideal hydro           S2 viscous hydro (IS, δ_ππ = dpp_factor·τ_π, default 4/3)
-#   S3 charm first moment on a PRESCRIBED background (consistent closure)
+#   S3 charm first moment on a prescribed background (consistent closure)
 #   S4 S3 + the consistent charm second moment on a prescribed background
-#   S5 THE TWO-WAY SYSTEM: ∇_μ(T_m + T_Q)^{μν} = 0, medium π/Π rows, charm rows of S4,
-#      all evolved together; c = 1 ⇔ c_M = D_s/T (δM in T_Q and in the current row).
+#   S5 the two-way system: ∇_μ(T_m + T_Q)^{μν} = 0, medium π/Π rows and the charm rows of S4,
+#      evolved together; c = 1 ⇔ c_M = D_s/T (δM in T_Q and in the current row).
 #
-#   0+1D Bjorken: an ODE right-hand side (`tw_bjorken_rhs`) and a driver (`two_way_bjorken`);
+#   0+1D Bjorken: an ODE right-hand side (`tw_bjorken_rhs`) and a driver (`two_way_bjorken`).
 #   1+1D cylindrical / 2+1D Cartesian: closures in Fluidum's convention
-#   (A_i, Source, ϕ, tau, X, params) -> writes A_t⁻¹A_i and A_t⁻¹src, zero allocations,
+#   (A_i, Source, ϕ, tau, X, params) that write A_t⁻¹A_i and A_t⁻¹src without allocating,
 #   for `oneshoot` / `problem` (fluidevo/discreteFields.jl).
 #
-# THE CHOICES (RS 2026-10-13, Decisions table of MATRICES_PROGRAMME.md):
-#   * δ_ππ = 4/3 τ_π (dpp_factor), δ_ΠΠ = 0 (dPP_factor) — every new system.
-#   * vorticity (the covariant corotation coupling wv) ON in the 2+1D charm m2.
-#   * medium Landau frame; charm energy slaved to T (TWO_WAY Q1, Q2).
-#   * h in T_Q is the THERMODYNAMIC enthalpy per particle of the charm EOS, and the charm
-#     relaxation time is τ_n = D_s h/T (TWO_WAY Q3). The diagnostic knobs HQ_TAUN_SCALE and
-#     FLUIDUM_HQ_MOMENTUM_DIMS therefore do NOT act here (they act on `hq_transport`); at
-#     production knobs both give the same τ_n (gate T3 checks it against hq_transport).
-#   * κ from the UNREGULATED dn/dα: the generated functions receive the true dn/dα; the
-#     vacuum regulator below is added to the number row's α-column ONLY (the "κ-regulator
-#     leak" of the existing matrices, MATRICES_PROGRAMME P1 Log, is absent here).
-#   * 7-field 2+1D charm m2 layout: π_Q^η_η eliminated algebraically (not stored/relaxed).
+# Conventions:
+#   * δ_ππ = 4/3 τ_π (dpp_factor), δ_ΠΠ = 0 (dPP_factor).
+#   * The corotation (vorticity) coupling wv of the 2+1D charm second moment is on by default.
+#   * Medium in the Landau frame; the charm energy is slaved to T.
+#   * h in T_Q is the thermodynamic enthalpy per particle of the charm EOS, and the charm
+#     relaxation time is τ_n = D_s h/T. HQ_TAUN_SCALE and FLUIDUM_HQ_MOMENTUM_DIMS act on
+#     `hq_transport` only, not here. At their defaults both give the same τ_n.
+#   * κ uses the unregulated dn/dα. The vacuum regulator below enters the number row's
+#     α-column only.
+#   * 7-field 2+1D charm second moment: π_Q^η_η is eliminated algebraically.
 #
-# THE CHARM EOS is a parameter (keyword `charm`): a production list (`Heavy_Quark` or its
+# The charm EOS is the keyword `charm`: a hadron list (`Heavy_Quark` or its
 # `HadronResonaceGas_ccbar` hadron_list), or `BoltzmannCharm(m, g)` (one massive Boltzmann
-# quark, closed forms; `charm_quark_list` builds the same thing as a one-particle list).
-#   n, ∂_Tn, ∂_αn       the list's `thermodynamic(T, α, list)` (exactly what every charm matrix uses)
-#   h                   Σ q² n_i h_i / Σ q² n_i,  h_i = m_i K3/K2 — the weighting for which
-#                       D_s h/T IS `τ_diffusion_hadron` (Eq. 30 of 2205.07692) for any list
-#   ∂_Th                analytic (no finite difference), at fixed α
-#   I31 = n T h, aQ = m_q² + 5Th, bQ = Th, cQ = h K4K2/K3² (z = m_q/T, m_q = diffusion.mass)
-#     — so τ_M = D_s cQ/(2T) = τ_n K4K2/(2K3²) is `hq_transport`'s τ_M for every list, and
-#     cQ = m K4/K3 for one species.
-#     🔴 2026-10-13: that cQ and aQ are the SINGLE-QUARK forms; for a MULTI-SPECIES list they are now
-#     the list's own sums, cQ = Σq²I42_i C_i/Σq²I42_i and aQ = ⟨m²⟩ + 5Th (`hq_m2_mixture`, shared with
-#     the m2 drivers; τ_M = D_s cQ/(2T) is then the list's τ_M). Against a direct momentum quadrature
-#     over the production list the old cQ was +1.6…+6.6 %, its ∂ ln/∂ ln T +5…+12 %, aQ −27…−37 %.
-#     `mixture = false` / FLUIDUM_HQ_M2_MIXTURE=0 restores the old forms bit for bit; BoltzmannCharm
-#     and a one-species list of mass m_q are unchanged either way.
-#   ⚠ The derivation assumes UNIT-charge Boltzmann species (P0 = nT, h = h(T)). The production
-#   list has one doubly-charmed state (J/ψ, q = 2): for it P0 = nT over-counts its pressure by
-#   n_J/ψ T, and ∂_αh ≠ 0 is dropped. Both are O(e^{2α} n_J/ψ) — negligible at production
-#   loadings, and not covered by the derivation.
+# quark in closed form; `charm_quark_list` builds the same as a one-particle list).
+#   n, ∂_Tn, ∂_αn       the list's `thermodynamic(T, α, list)`
+#   h                   Σ q² n_i h_i / Σ q² n_i,  h_i = m_i K3/K2. With this weighting D_s h/T
+#                       equals `τ_diffusion_hadron` (Eq. 30 of 2205.07692) for any list.
+#   ∂_Th                analytic, at fixed α
+#   I31 = n T h, bQ = Th. For one species aQ = m_q² + 5Th and cQ = h K4K2/K3² = m K4/K3
+#     (z = m_q/T, m_q = diffusion.mass), so τ_M = D_s cQ/(2T) = τ_n K4K2/(2K3²) is the τ_M of
+#     `hq_transport`. For a multi-species list cQ = Σq²I42_i C_i/Σq²I42_i and aQ = ⟨m²⟩ + 5Th
+#     (`hq_m2_mixture`); `mixture = false` / FLUIDUM_HQ_M2_MIXTURE=0 uses the one-species forms.
+#   The derivation assumes unit-charge Boltzmann species (P0 = nT, h = h(T)). For a doubly charmed
+#   state (J/ψ, q = 2) P0 = nT over-counts its pressure by n_J/ψ T and ∂_αh ≠ 0 is dropped. Both
+#   are O(e^{2α} n_J/ψ).
 #
-# THE MEDIUM EOS is `params.eos`: `ConformalEOS` → the CONFORMAL generated functions (no bulk
-# field; aSB = `conformal_aSB(eos)`), anything else (FluiduMEoS, …) → the generic ones. The
-# keyword `generic = true` forces the generic path for a ConformalEOS (gate T2: the two paths
-# agree). Transport: `params.shear`, `params.bulk` (Fluidum's models), D_s from
-# `params.diffusion` (ConstDiffusion / LinearDiffusion: D_s = DsT/T).
+# The medium EOS is `params.eos`. `ConformalEOS` selects the conformal generated functions (no bulk
+# field; aSB = `conformal_aSB(eos)`); any other EOS selects the generic ones. `generic = true`
+# forces the generic path for a ConformalEOS (the two paths agree). Transport: `params.shear`,
+# `params.bulk`, and D_s from `params.diffusion` (ConstDiffusion / LinearDiffusion: D_s = DsT/T).
 #
-# THE VACUUM TAIL (TWO_WAY Q8). The derived system has no regulator; at n → 0 (α → -∞) the
-# number row's A_t[α, α] = u^τ ∂_αn → 0 and A_t is singular. Treatment of the vacuum:
-#   (i)  `dmn_eps` (default 1e-8 fm⁻³, ONE value for 1+1D and 2+1D since P3c) added to ∂_αn in the
-#        NUMBER ROW's α-column ONLY (κ and every other entry see the true ∂_αn), i.e. the row conserves
-#        n + dmn_eps·α instead of n; invisible where n ≫ dmn_eps (rel |Δn| ≈ 2.3e-3 × dmn_eps/1e-6).
-#   (ii) α is clamped to ±α_max (default 200) for the thermodynamics only (as every charm matrix).
-# THE COLD EDGE (P3c, 2026-10-13; MATRICES_PROGRAMME.md Log, TWO_WAY_DERIVATION.md Q8). Below the
-# freeze-out temperature the charm hydro is outside its validity (Knudsen ≫ 1: |ν| > n, α → -10³) and,
-# untreated, charm that has crossed T_fo is destroyed (−37 % of all charm by τ = 12, 1+1D N = 400).
-# Measured: none of it feeds back into T > T_fo (corona perturbations move it by ≤ 2e-14). Two parts,
-# both ON by default (`edge = true`), `edge = false` = the pre-P3c system exactly:
-#   (v)  DECOUPLING (`tw_edge_factor`, in every closure here): D_s → f(T) D_s, f = 1 for T ≥ T_edge
-#        (0.156 GeV = LP1's T_fo), a C² smoothstep down to `edge_floor` (0.01) at T_edge − edge_width
-#        (20 MeV). κ, τ_n, τ_M and c_M = c D_s/T go with it, so ν and δM relax to ~0 and frozen-out
-#        charm comoves with the medium. The equations for T ≥ T_edge are untouched.
-#   (vi) FLUX-FORM CORONA NUMBER UPDATE (`two_way_problem` only: it needs the neighbours): see the
-#        comment above `TwoWayCoronaRHS`. Needed because at an under-resolved charm edge (2+1D, dx = 0.5)
-#        the quasi-linear α update is not positivity-preserving and decoupling alone does not survive.
-#   Use `two_way_problem(d, params, init, tspan; charm, …)` for runs; the closures two_way_1p1d! /
+# Vacuum tail. At n → 0 (α → -∞) the number row's A_t[α, α] = u^τ ∂_αn → 0 and A_t is singular.
+#   (i)  `dmn_eps` (default 1e-8 fm⁻³) is added to ∂_αn in the number row's α-column only, so the
+#        row conserves n + dmn_eps·α instead of n. Negligible where n ≫ dmn_eps.
+#   (ii) α is clamped to ±α_max (default 200) in the thermodynamics only.
+# Cold edge. Below the freeze-out temperature the charm hydro is outside its validity
+# (Knudsen ≫ 1: |ν| > n, α → -10³), and without treatment charm that crosses T_fo is destroyed.
+# The region T > T_fo does not feel it. Two parts, both on by default (`edge = true`):
+#   (v)  Decoupling (`tw_edge_factor`, in every closure here): D_s → f(T) D_s, f = 1 for T ≥ T_edge
+#        (0.156 GeV), a C² smoothstep down to `edge_floor` (0.01) at T_edge − edge_width (20 MeV).
+#        κ, τ_n, τ_M and c_M = c D_s/T scale with it, so ν and δM relax to ~0 and frozen-out charm
+#        comoves with the medium. The equations for T ≥ T_edge are unchanged.
+#   (vi) Flux-form corona number update (`two_way_problem` only, since it needs the neighbours): see
+#        the comment above `TwoWayCoronaRHS`. At an under-resolved charm edge the quasi-linear α
+#        update is not positivity-preserving and decoupling alone is not enough.
+#   Use `two_way_problem(d, params, init, tspan; charm, …)` for runs. The closures two_way_1p1d! /
 #   two_way_2p1d! carry (v) only.
-# Two OPTIONAL extras of P3b, both OFF by default, inert in the physical region, NOT survival fixes:
+# Two optional extras, off by default and inert in the physical region:
 #   (iii) `nu_cap` > 0: damp the current where its drift |ν|/n exceeds nu_cap (rate up to
-#        (1 + nu_cap_rate)/τ_n) — crashes under Tsit5 (P3c: N = 200/400, both c).
-#   (iv) `cM_nfloor` > 0: c → c·n/(n + cM_nfloor), the shipped HQC_CM_NFLOOR idea.
-# ==============================================================================
+#        (1 + nu_cap_rate)/τ_n). Unstable under Tsit5.
+#   (iv) `cM_nfloor` > 0: c → c·n/(n + cM_nfloor), as HQC_CM_NFLOOR.
 
 # ── the charm EOS ────────────────────────────────────────────────────────────────────────────
 
 """
     BoltzmannCharm(; m = 1.5, g = 6.0)
 
-One massive Boltzmann charm quark (unit charge, degeneracy `g`, mass `m` in GeV): the charm EOS
-of the closed-form gates. n = g m² T K₂(m/T) e^α/(2π²) (fm⁻³), h = m K₃/K₂. Identical to a
-one-particle production list (`charm_quark_list`), but in closed form.
+One massive Boltzmann charm quark (unit charge, degeneracy `g`, mass `m` in GeV) in closed form.
+n = g m² T K₂(m/T) e^α/(2π²) (fm⁻³), h = m K₃/K₂. Identical to the one-particle list
+`charm_quark_list`.
 """
 struct BoltzmannCharm{T} <: EquationOfState
     m::T
@@ -101,8 +84,8 @@ BoltzmannCharm(; m = 1.5, g = 6.0) = BoltzmannCharm(promote(float(m), float(g)).
 """
     charm_quark_list(; m = 1.5, g = 6) -> HadronResonaceGas_ccbar
 
-The single charm quark as a one-particle production-style list (same `Particle` record as
-`Projects/MainFluidum/FluidumInit/charm.data`), for runs that want the list code path.
+The single charm quark as a one-particle `HadronResonaceGas_ccbar` list, for runs that want the
+list code path.
 """
 function charm_quark_list(; m = 1.5, g = 6)
     p = Particle("Charm", float(m), 0.0, Int(g), 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 4)
@@ -177,8 +160,8 @@ function two_way_charm_thermo(T, α, charm, mq; mixture::Bool = HQ_M2_MIXTURE[])
     c = _tw_charm_core(T, α, L)
     n, dndT, dnda, h, dhdT = c.n, c.dndT, c.dnda, c.h, c.dhdT
     if mixture && _tw_is_mixture(L, mq)
-        # a MULTI-SPECIES list: C, ∂_T C and the m² of A from the list's species sums — the ONE
-        # implementation the m2 drivers use too (hq_m2_mixture, heavyquark.jl; 2026-10-13)
+        # multi-species list: C, ∂_T C and the m² of A from the species sums (hq_m2_mixture,
+        # shared with the m2 drivers)
         x = hq_m2_mixture(T, α, L, mq)
         return (n = n, dndT = dndT, dnda = dnda, h = h, dhdT = dhdT,
                 I31 = n * T * h, dI31dT = dndT * T * h + n * h + n * T * dhdT, dI31da = dnda * T * h,
@@ -223,7 +206,7 @@ struct TwoWayOptions{G,C,BG}
     nu_cap::Float64       # vacuum treatment: damp the current where |ν|/n > nu_cap; 0 = off
     nu_cap_rate::Float64  # … with relaxation rate up to (1 + nu_cap_rate)/τ_n
     α_max::Float64
-    edge::Bool            # cold-edge decoupling D_s → f(T) D_s below T_edge (header, (v)); false = pre-P3c
+    edge::Bool            # cold-edge decoupling D_s → f(T) D_s below T_edge (header, (v))
     T_edge::Float64       # f = 1 for T ≥ T_edge (GeV)
     edge_width::Float64   # f rises from edge_floor at T_edge − edge_width to 1 at T_edge (C² smoothstep)
     edge_floor::Float64   # f below the window
@@ -578,7 +561,7 @@ end
                     cM_nfloor = 0, α_max = 200, generic = false)
 
 The 2+1D Cartesian closures (see the 1+1D docstring; `vorticity` is the corotation coupling
-of the charm second moment, ON by default here — RS 2026-10-13). Layouts: `tw_ideal_2d`,
+of the charm second moment, on by default). Layouts: `tw_ideal_2d`,
 `viscous_2d` / `tw_viscous_conformal_2d`, `HQ_2p1d_BG_init`, `HQ_2p1d_BG_m2_7f_init`,
 `two_way_2d` / `two_way_conformal_2d`.
 """
@@ -606,19 +589,19 @@ function tw_hq_m2_bg_2p1d!(; kw...)
     (A_i, Source, ϕ, tau, X, params) -> _tw_apply2!(A_i, Source, ϕ, tau, X, params, o, Val(:hq_m2_bg))
 end
 
-# ══ the corona number update and `two_way_problem` (P3c) ═════════════════════════════════════
+# ══ the corona number update and `two_way_problem` ═══════════════════════════════════════════
 # Below T_edge the quasi-linear α update of discreteFields.jl is replaced (blended over the window
 # with weight w = 1 − S((T − T_edge + edge_width)/edge_width), S the smoothstep of tw_edge_factor) by
 # the FLUX-FORM update of the charm number,
 #     d(τ r N^τ)_i/dτ = −(G_{i+1/2} − G_{i−1/2})/Δr,   G = τ r [ (N^r_L + N^r_R)/2 − a (N^τ_R − N^τ_L)/2 ],
 #     a = min(1, max |N^r|/N^τ over the two cells) (local Lax–Friedrichs: positivity-preserving for the number),
 # solved for α̇ given the scheme's own Ṫ, u̇, ν̇ (∂_αn regulated by dmn_eps, as in the number row).
-# (2+1D Cartesian: the same with τ N^x, τ N^y on the four faces.) Why: the quasi-linear update is not
-# positivity-preserving at an UNDER-RESOLVED charm edge — a cell next to a neighbour with a 10-100×
-# larger current is charged half of that neighbour's ∂ν (central difference) and its n collapses
-# (α → −10³), and the scheme's dissipation, which acts on α, then drains the next cell (MATRICES_PROGRAMME
-# Log P3c). For T ≥ T_edge nothing changes. The fluid rows keep the quasi-linear α̇ (the charm energy
-# ∂ε_Q/∂α in the medium energy row is off by O(Δα̇) in the corona only).
+# (2+1D Cartesian: the same with τ N^x, τ N^y on the four faces.) The quasi-linear update is not
+# positivity-preserving at an under-resolved charm edge. A cell next to a neighbour with a much larger
+# current is charged half of that neighbour's ∂ν (central difference), its n collapses (α → −10³), and
+# the scheme's dissipation, which acts on α, then drains the next cell. For T ≥ T_edge nothing changes.
+# The fluid rows keep the quasi-linear α̇, so the charm energy ∂ε_Q/∂α in the medium energy row is off
+# by O(Δα̇) in the corona only.
 
 "n, ∂_Tn, ∂_αn of the charm EOS (no h): the closed form or the list's `thermodynamic`"
 @inline function _tw_ndens(T, α, x::BoltzmannCharm)
@@ -743,9 +726,9 @@ The two-way system (S5) on `d` (layout `two_way_conformal_1d` / `two_way_1d` in 
 `two_way_conformal_2d` / `two_way_2d` in 2+1D Cartesian) WITH the full cold-edge treatment: the
 decoupling D_s → f(T) D_s below T_edge (in the closure, as for `two_way_1p1d!` / `two_way_2p1d!`)
 AND the flux-form corona number update (`TwoWayCoronaRHS`). `kw` are the `TwoWayOptions` keywords;
-`edge = false` gives the pre-P3c system exactly (= `problem(d, two_way_1p1d!(; edge = false, …), …)`),
+`edge = false` gives the untreated system (= `problem(d, two_way_1p1d!(; edge = false, …), …)`),
 `corona_flux = false` the decoupling alone. Solve with any OrdinaryDiffEq algorithm
-(the studies use Tsit5, reltol 1e-8, abstol 1e-10, dtmax 0.01).
+(e.g. Tsit5, reltol 1e-8, abstol 1e-10, dtmax 0.01).
 """
 function two_way_problem(d::DiscreteFields, params, init, tspan; kw...)
     o = TwoWayOptions(; kw...)
@@ -780,7 +763,7 @@ end
     tw_alpha_from_density(T, n, charm; α_min = -150.0) -> α
 
 The fugacity at which the charm EOS has density `n` at temperature `T` (unit-charge lists:
-exact, α = log(n / n(T, 0)); with the J/ψ of the production list a few Newton steps). Clamped
+α = log(n / n(T, 0)); with a doubly charmed state, a few Newton steps). Clamped
 below at `α_min` so a vacuum tail stays finite.
 """
 function tw_alpha_from_density(T, n, charm; α_min = -150.0)

@@ -64,15 +64,9 @@ function _pointwise_spectra_analytic(pt,alpha,x::A,phi::B,part::particle_attribu
     T,ur,pi_phi,pi_eta,pi_b,μ,ν=phi(alpha)
     m = part.mass
     
-    # CANONICAL FACTOR REMOVED (2026-08-18), together with the one in the transport EOS
-    # (charm_HRG.jl). The two were a matched pair: alpha was fixed by f_can*n_GC(alpha) = n_hard and
-    # the yield then multiplied by f_can again, so for OPEN CHARM (q=1) they cancelled. With the EOS
-    # now grand-canonical, alpha_gc = alpha_can + ln(f_can), and dropping this factor reproduces the
-    # SAME yield exactly: f_can*exp(alpha_can) == exp(alpha_gc).
-    # WARNING for q=2 (hidden charm, J/psi): that channel had fact = 1 and yield ~ exp(2*alpha), so it
-    # is NOT invariant under the convention change -- it shifts by f_can^2. J/psi is not produced by
-    # any current pipeline (it appears only as a plot label), but a hidden-charm yield computed here
-    # needs its own canonical treatment in the grand-canonical convention before being trusted.
+    # No canonical factor: the transport EOS (charm_HRG.jl) is grand-canonical, so alpha already
+    # fixes the open-charm (q=1) yield. Hidden charm (q=2, yield ~ exp(2*alpha)) would need its
+    # own canonical treatment.
     fact = 1
     q = 1
     if part.name == "Dc2007zer" || part.name == "Dc2010plu"  
@@ -117,8 +111,7 @@ function spectra_analytic(fo::FreezeOutResult{A,B},part::particle_attribute{S,R,
     x,phi=fo
     lb=leftbounds(x)
     rb=rightbounds(x)
-    #rb=min.(rb,rightbound)   # 2026-09-02: `rightbound` is undefined — the identical line in the
-                              # sibling method above is already commented out for that reason.
+    #rb=min.(rb,rightbound)   # `rightbound` is undefined, as in the method above.
     buff=alloc_segbuf(Float64, eltype(lb),Float64 ;size=1)
     [quadgk(alpha->_pointwise_spectra_analytic(pt,alpha,x,phi,part,eos),lb...,rb...;segbuf=buff,rtol=rtol) for pt in pt_range ] 
 

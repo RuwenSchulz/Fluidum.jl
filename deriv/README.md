@@ -53,6 +53,6 @@ Environment variables (all optional):
 | variable | default | meaning |
 |---|---|---|
 | `FLUIDUM_REFPOINTS_DIR` | `$TemporaryDirectory/fluidum_refpoints` | where the reference-state CSVs go |
-| `FLUIDUM_DERIV_PROJECT` | the package root | Julia project for the Julia-side checks of `derive_two_way.wls` (needs StaticArrays and SpecialFunctions) |
+| `FLUIDUM_DERIV_PROJECT` | the package root | Julia project for the Julia-side checks of `derive_two_way.wls` (needs StaticArrays and Bessels, both Fluidum dependencies) |
 | `FLUIDUM_EXTERNAL_REFPOINTS` | unset | directory with the 1+1D reference CSVs of the first- and second-moment derivations; when unset, the three checks that use them are skipped |
 | `TWOWAY_OUT`, `TWOWAY_JL`, `TWOWAY_REFDIR`, `FLUIDUM_MATRIX_DIR` | see the header of `derive_two_way.wls` | scratch and output locations of the two-way derivation |

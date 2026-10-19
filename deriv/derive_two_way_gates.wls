@@ -307,9 +307,9 @@ If[KeyExistsQ[results, "2p1d"],
         "pQyy", "PiQ", "Ds", "dtT", "dxT", "dyT", "dtux", "dxux", "dyux", "dtuy", "dxuy", "dyuy", "n", "h", "hp", "cQ",
         "dta", "dtnx", "dtny", "dxa", "dxnx", "dxny", "dya", "dynx", "dyny", "Sxx", "Sxy", "Syy", "SB"}]], "CSV"];
     jls = "
-using SpecialFunctions, StaticArrays
+using Bessels, StaticArrays
 module M2
-using SpecialFunctions, StaticArrays
+using Bessels, StaticArrays
 include(ARGS[1])
 end
 lines = readlines(ARGS[2]); hdr = split(lines[1], ',') .|> s -> strip(s, '\"')

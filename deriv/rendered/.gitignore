@@ -1,0 +1,12 @@
+# LaTeX build by-products of derivations.tex (the .tex fragments, derivations.tex,
+# derivations.pdf and the .nb notebooks are tracked)
+*.aux
+*.log
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.blg
+*.bbl
+*.xdv

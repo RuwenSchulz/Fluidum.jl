@@ -3,7 +3,7 @@
 # This header is written by the generator (no date in it, so a regeneration is
 # byte-identical); regenerate with
 #     wolframscript -file deriv/derive_two_way.wls        (~5 min)
-# which writes this file, and the reference states in $FLUIDUM_REFPOINTS_DIR/two_way_refpoints/,
+# which writes this file, and the reference states in two_way_refpoints/ (see deriv/README.md),
 # only when every check passed.  The hand-written wrappers (EOS, transport, field layouts,
 # A_t^-1) are in two_way.jl.
 #

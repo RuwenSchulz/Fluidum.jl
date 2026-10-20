@@ -440,5 +440,7 @@ Get[FileNameJoin[{DirectoryName[$InputFileName], "derive_two_way_export.wls"}]];
 Print[""]; Print["================ summary ================  (", stamp[], ")"];
 Print["  ", pass, " passed, ", fail, " failed  (", pass + fail, " gates evaluated)"];
 If[fail > 0, Print["  FAILED: ", Select[gateLog, ! #[[2]] &][[All, 1]]]];
+If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* deriv/rendered/: PDF fragment + notebook *)
+  Get[FileNameJoin[{DERIV, "render.wl"}]]; renderTwoWay[]];
 If[pass + fail < 20, Print["  too few gates evaluated -- treating as FAIL"]; Exit[1]];
 Exit[If[fail == 0, 0, 1]];

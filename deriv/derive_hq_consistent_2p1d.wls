@@ -44,8 +44,9 @@
    ============================================================================ *)
 
 $HistoryLength = 0;
-pass = 0; fail = 0;
+pass = 0; fail = 0; gateLog = {};
 gate[id_, ok_, msg_] := (If[TrueQ[ok], pass++, fail++];
+  AppendTo[gateLog, {"HC-" <> id, TrueQ[ok], msg}];
   Print[If[TrueQ[ok], "  [PASS] ", "  [FAIL] "], "HC-" <> id, "  ", msg]);
 PKG = ParentDirectory[DirectoryName[$InputFileName]];   (* the Fluidum.jl package root *)
 DERIV = DirectoryName[$InputFileName];
@@ -326,4 +327,6 @@ Do[Module[{inC, sC},
   {p, 12}];
 If[fail == 0, writeRefpoints[FileNameJoin[{REFDIR, "refpoints_hq2d_consistent.csv"}], rp], Print["  NOT writing the reference states: a gate failed"]];
 Print["\n  ", pass, "/", pass + fail, " gates passed"];
+If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* deriv/rendered/: PDF fragment + notebook *)
+  Get[FileNameJoin[{DERIV, "render.wl"}]]; renderHQC[]];
 If[fail > 0, Exit[1]];

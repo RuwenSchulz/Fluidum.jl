@@ -70,7 +70,7 @@ jlOut = "# =====================================================================
 # This header is written by the generator (no date in it, so a regeneration is
 # byte-identical); regenerate with
 #     wolframscript -file deriv/derive_two_way.wls        (~5 min)
-# which writes this file, and the reference states in $FLUIDUM_REFPOINTS_DIR/two_way_refpoints/,
+# which writes this file, and the reference states in two_way_refpoints/ (see deriv/README.md),
 # only when every check passed.  The hand-written wrappers (EOS, transport, field layouts,
 # A_t^-1) are in two_way.jl.
 #
@@ -163,6 +163,8 @@ Do[Module[{res = results[nm], st, sys, m, vars, fnames, conf, ff, nf, keep, A, s
     Export[FileNameJoin[{refDir, fn <> ".csv"}],
       Prepend[N[csvRows], hdr], "CSV"];
     AppendTo[exported, {fn, Length[fnames], fnames, args, ncs}];
+    If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* kept for render.wl *)
+      renderSys[fn] = <|"A" -> A, "src" -> src, "fields" -> fnames, "chart" -> nm, "sys" -> k, "conf" -> conf|>];
     , {conf, {False, True}}], {k, {"S1", "S2", "S3", "S4", "S5"}}];
   ], {nm, Select[{"0p1d", "1p1d", "2p1d"}, KeyExistsQ[results, #] &]}];
 

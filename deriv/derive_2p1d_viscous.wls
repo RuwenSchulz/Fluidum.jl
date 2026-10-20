@@ -20,8 +20,8 @@
 
    The dpp term is linear, so the system is  M = M_IS + dpp M_dpp , and the generated Julia
    carries the two parts separately: it returns M_IS when dpp == 0 and adds M_dpp otherwise.
-   `dpp` is the routines' last argument, default `delta_pipi(tauS)` (= 4/3 tauS unless
-   FLUIDUM_DELTA_PIPI=0).  The term is a scalar times the contravariant pi^{mu nu}, lowered
+   `dpp` is the routines' last argument, default `delta_pipi(tauS)` (= 4/3 tauS; the solver
+   closures pass 0 for `delta_pipi = false`).  The term is a scalar times the contravariant pi^{mu nu}, lowered
    with the same `lower2` as the rest of (2).  V-G6 checks the split.
 
    D = u.Nabla, Delta^{mu nu} = g^{mu nu} + u^mu u^nu,
@@ -73,8 +73,9 @@
    ============================================================================ *)
 
 $HistoryLength = 0;
-pass = 0; fail = 0;
+pass = 0; fail = 0; gateLog = {};
 gate[id_, ok_, msg_] := (If[TrueQ[ok], pass++, fail++];
+  AppendTo[gateLog, {"V-" <> id, TrueQ[ok], msg}];
   Print[If[TrueQ[ok], "  [PASS] ", "  [FAIL] "], "V-" <> id, "  ", msg]);
 PKG = ParentDirectory[DirectoryName[$InputFileName]];   (* the Fluidum.jl package root *)
 DERIV = DirectoryName[$InputFileName];
@@ -199,7 +200,7 @@ shC[d_] := {sh1["At"] + d sh1["dAt"], sh1["Ax"] + d sh1["dAx"], sh1["source"] + 
 zero5 = {ConstantArray[0, {5, 5}], ConstantArray[0, {5, 5}], ConstantArray[0, 5]};
 gate["G4", Simplify[derC[dpp] - shC[dpp]] === zero5,
   "1-D: derived == shipped one_d_viscous_matrix, A_t, A_r, src entry by entry, read from the .jl, SYMBOLIC dpp  [CONTROL]"];
-gate["G4-0", Simplify[derC[0] - shC[0]] === zero5, "1-D at dpp = 0 (FLUIDUM_DELTA_PIPI=0): plain IS == the shipped IS part"];
+gate["G4-0", Simplify[derC[0] - shC[0]] === zero5, "1-D at dpp = 0 (plain IS): plain IS == the shipped IS part"];
 gate["G4-1", Simplify[derC[4 tauS/3] - shC[4 tauS/3]] === zero5, "1-D at dpp = 4/3 tauS (default)"];
 (* V-G4m: at the default dpp the 5-field medium is the 7-field :MIS medium block *)
 sh7 = juliaMatrices[FileNameJoin[{PKG, "src", "Matrix", "1d_viscous_HQ_cilindrical_fugacity.jl"}],
@@ -369,8 +370,9 @@ hdr = "# =======================================================================
 #   tauS Delta^{mn}_{ab} D pi^{ab} + pi^{mn} + 2 eta sigma^{mn} + dpp pi^{mn} theta = 0
 #   tauB D Pi + Pi + zeta theta = 0
 #
-# dpp is the last argument, default `delta_pipi(tauS)` = 4/3 tauS, or 0 under
-# FLUIDUM_DELTA_PIPI=0.  The system is linear in dpp and is emitted as IS part + dpp * (dAt, ...);
+# dpp is the last argument, default `delta_pipi(tauS)` = 4/3 tauS; dpp = 0 is plain IS
+# (`delta_pipi = false` in the solver closures).  The system is linear in dpp and is emitted as
+# IS part + dpp * (dAt, ...);
 # dpp == 0 returns the IS part before the dpp part is evaluated.
 #
 # The 1-D routine reproduces `one_d_viscous_matrix` entry by entry: symbolically in check V-G4
@@ -391,7 +393,7 @@ Same signature and same field layout as `one_d_viscous_matrix`.
 function one_d_viscous_matrix_derived(u, tau, R, pres, dtp, dtdtp, zeta, visc, tauS, tauB, dpp = delta_pipi(tauS))
     uT, uR, pFF, pEE, pBB = u[1], u[2], u[3], u[4], u[5]
 ";
-dppHead = "\n    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (gates V-G4, V-G6)\n";
+dppHead = "\n    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (checks V-G4, V-G6)\n";
 body1 = mat2jl[AtC, "At", 5, subC] <> "\n" <> mat2jl[ArC, "Ax", 5, subC] <> "\n" <> vec2jl[srcC, "source", 5, subC] <>
         "\n    iszero(dpp) && return (At, Ax, source)\n" <> dppHead <>
         mat2jl[AtDC, "dAt", 5, subC] <> "\n" <> mat2jl[ArDC, "dAx", 5, subC] <> "\n" <> vec2jl[srcDC, "dsource", 5, subC];
@@ -433,14 +435,15 @@ body4 = mat2jl[AtN, "dAt", 7, subK] <> "\n" <> mat2jl[AxN, "dAx", 7, subK] <> "\
 hdr3 = "\n\n\"\"\"
     two_d_viscous_vorticity(u, tau, tauS)
 
-The gradient-matrix contribution of the co-rotating (Jaumann) coupling
-`2 tauS pi_lam^{<mu} omega^{nu>lam}` to the same seven rows, with
+The gradient-matrix contribution of `2 pi_lam^{<mu} omega^{nu>lam}` to the same seven rows,
+with
 
     omega^{mu nu} = (1/2) Delta^{mu al} Delta^{nu be} (Nabla_al u_be - Nabla_be u_al).
 
 Returns (dAt, dAx, dAy); it contributes no source.  It vanishes identically on 1-D
 cylindrical flow, so the 1-D matrix carries no information about it.  Used to test
-whether a 2-D matrix carries this term.
+whether a 2-D matrix carries this term.  The co-rotating (Jaumann) coupling in the shear
+equation is tauS times this; the argument `tauS` is not used.
 \"\"\"
 function two_d_viscous_vorticity(u, tau, tauS)
     uT, uX, uY, pYY, pEE, pXY, pBB = u[1], u[2], u[3], u[4], u[5], u[6], u[7]
@@ -471,7 +474,7 @@ Do[Module[{in1, in2, inV},
     rp = Join[rp, refRows["two_d_viscous_matrix_derived", p, in2,
       Join[matRows["At", AtK //. subK], matRows["Ax", AxK //. subK], matRows["Ay", AyK //. subK],
            vecRows["source", srcK //. subK]]]];
-    (* the same states at the default dpp = 4/3 tauS (FLUIDUM_DELTA_PIPI unset); "in:dpp" is recorded,
+    (* the same states at the default dpp = 4/3 tauS; "in:dpp" is recorded,
        but a test should call the routines without it, so that the default argument is tested *)
     With[{d1 = 4 in1[tauS]/3, d2 = 4 in2[tauS]/3},
       rp = Join[rp, refRows["one_d_viscous_matrix_derived_dpp", p, Append[in1, dpp -> d1],
@@ -488,4 +491,6 @@ Do[Module[{in1, in2, inV},
   {p, 12}];
 If[fail == 0, writeRefpoints[FileNameJoin[{REFDIR, "refpoints_viscous_generated.csv"}], rp], Print["  NOT writing the reference states: a gate failed"]];
 Print["\n", pass, " passed, ", fail, " failed  (", pass + fail, " gates evaluated)"];
+If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* deriv/rendered/: PDF fragment + notebook *)
+  Get[FileNameJoin[{DERIV, "render.wl"}]]; renderViscous[]];
 Exit[If[fail == 0, 0, 1]];

@@ -12,8 +12,9 @@
 #   tauS Delta^{mn}_{ab} D pi^{ab} + pi^{mn} + 2 eta sigma^{mn} + dpp pi^{mn} theta = 0
 #   tauB D Pi + Pi + zeta theta = 0
 #
-# dpp is the last argument, default `delta_pipi(tauS)` = 4/3 tauS, or 0 under
-# FLUIDUM_DELTA_PIPI=0.  The system is linear in dpp and is emitted as IS part + dpp * (dAt, ...);
+# dpp is the last argument, default `delta_pipi(tauS)` = 4/3 tauS; dpp = 0 is plain IS
+# (`delta_pipi = false` in the solver closures).  The system is linear in dpp and is emitted as
+# IS part + dpp * (dAt, ...);
 # dpp == 0 returns the IS part before the dpp part is evaluated.
 #
 # The 1-D routine reproduces `one_d_viscous_matrix` entry by entry: symbolically in check V-G4
@@ -96,7 +97,7 @@ function one_d_viscous_matrix_derived(u, tau, R, pres, dtp, dtdtp, zeta, visc, t
 
     iszero(dpp) && return (At, Ax, source)
 
-    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (gates V-G4, V-G6)
+    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (checks V-G4, V-G6)
     dAt = SMatrix{5,5}((
         0,
         0,
@@ -335,7 +336,7 @@ function two_d_viscous_matrix_derived(u, tau, pres, dtp, dtdtp, zeta, visc, tauS
 
     iszero(dpp) && return (At, Ax, Ay, source)
 
-    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (gates V-G4, V-G6)
+    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (checks V-G4, V-G6)
     dAt = SMatrix{7,7}((
         0,
         0,
@@ -505,14 +506,15 @@ end
 """
     two_d_viscous_vorticity(u, tau, tauS)
 
-The gradient-matrix contribution of the co-rotating (Jaumann) coupling
-`2 tauS pi_lam^{<mu} omega^{nu>lam}` to the same seven rows, with
+The gradient-matrix contribution of `2 pi_lam^{<mu} omega^{nu>lam}` to the same seven rows,
+with
 
     omega^{mu nu} = (1/2) Delta^{mu al} Delta^{nu be} (Nabla_al u_be - Nabla_be u_al).
 
 Returns (dAt, dAx, dAy); it contributes no source.  It vanishes identically on 1-D
 cylindrical flow, so the 1-D matrix carries no information about it.  Used to test
-whether a 2-D matrix carries this term.
+whether a 2-D matrix carries this term.  The co-rotating (Jaumann) coupling in the shear
+equation is tauS times this; the argument `tauS` is not used.
 """
 function two_d_viscous_vorticity(u, tau, tauS)
     uT, uX, uY, pYY, pEE, pXY, pBB = u[1], u[2], u[3], u[4], u[5], u[6], u[7]

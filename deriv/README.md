@@ -56,3 +56,34 @@ Environment variables (all optional):
 | `FLUIDUM_DERIV_PROJECT` | the package root | Julia project for the Julia-side checks of `derive_two_way.wls` (needs StaticArrays and Bessels, both Fluidum dependencies) |
 | `FLUIDUM_EXTERNAL_REFPOINTS` | unset | directory with the 1+1D reference CSVs of the first- and second-moment derivations; when unset, the three checks that use them are skipped |
 | `TWOWAY_OUT`, `TWOWAY_JL`, `TWOWAY_REFDIR`, `FLUIDUM_MATRIX_DIR` | see the header of `derive_two_way.wls` | scratch and output locations of the two-way derivation |
+| `FLUIDUM_DERIV_RENDER` | unset | `1` also writes the rendered derivation into `rendered/` (see below) |
+
+## Rendered output
+
+`rendered/` holds the derivations in readable form, written by the scripts themselves from the
+matrices, sources and check results they computed:
+
+- `derivations.pdf`: one section per script (setup, every nonzero matrix and source entry, the
+  table of checks). `derivations.tex` is the master; `viscous.tex`, `hq_2p1d.tex`,
+  `hq_consistent_2p1d.tex` and `two_way.tex` are the generated fragments.
+- `viscous.nb`, `hq_2p1d.nb`, `hq_consistent_2p1d.nb`, `two_way.nb`: the same content as
+  notebooks, with the script source at the end.
+
+For the two-way script, the 0+1D systems and the 1+1D conformal systems are written out in full;
+the generic-EOS 1+1D systems and all 2+1D systems are shown as field layout and sparsity
+pattern (their entries are in `src/Matrix/two_way_generated.jl`).
+
+The rendering code is `render.wl`. It is loaded only when `FLUIDUM_DERIV_RENDER=1`; without it
+the scripts behave as before. Every displayed entry is compared with the derived expression at
+random exact points before it is written. To regenerate everything:
+
+```sh
+deriv/render_all.sh
+```
+
+or one script at a time, then the PDF:
+
+```sh
+FLUIDUM_DERIV_RENDER=1 wolframscript -file deriv/<script>.wls
+cd deriv/rendered && latexmk -pdf derivations.tex
+```

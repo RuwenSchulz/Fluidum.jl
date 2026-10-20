@@ -88,6 +88,22 @@ end
     )
 end 
 
+"""
+    viscous_2d()
+Fields of `matrix2d_visc!`; pizz is the mixed pi^eta_eta, as in `viscous_1d`.
+"""
+@inline function viscous_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB)
+    )
+end
+
 function fug(T, nhard_profile, r, eos; rdrop = 20)       
     if r<=rdrop
         return log(nhard_profile(r)/(thermodynamic(T(r),0.0,eos).pressure))

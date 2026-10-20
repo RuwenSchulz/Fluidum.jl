@@ -277,3 +277,7 @@ include("test_freezeout_contour.jl")
     @test isfile(joinpath(Fluidum.root_particle_lists, "./particles.data"))
 end
 
+
+# 1+1D and 2+1D viscous solvers: closed-form characteristic speeds, isotropy, the Bjorken limit.
+include("test_1p1d_viscous.jl")
+include("test_2p1d_viscous.jl")

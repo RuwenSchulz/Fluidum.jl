@@ -200,5 +200,19 @@ function diffusion_hadron(T,μ,x::Heavy_Quark,y::ZeroDiffusion)
     return 0.0
 end
 
+# shear viscosity and τ_shear from a scalar entropy or from a Thermodynamic
+@inline function viscosity(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*entropy*invfmGeV
+end
+@inline function τ_shear(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*invfmGeV/(T*y.Cs)
+end
+@inline function viscosity(T,x::Thermodynamic{N,1,1},y::QGPViscosity{N}) where {N}
+    y.ηs*(@inbounds x.pressure_derivative[1])*invfmGeV
+end
+@inline function τ_shear(T,x::Thermodynamic{N,1,1},y::QGPViscosity{N}) where {N}
+    y.ηs*invfmGeV/(T*y.Cs)
+end
+
 
 

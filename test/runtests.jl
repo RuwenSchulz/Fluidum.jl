@@ -269,6 +269,9 @@ end
 
 end
 =#
+# freeze-out: isotherm contours with two branches, surfaces from a path, the tau_0 cap
+include("test_freezeout_contour.jl")
+
 @testset "artifacts" begin
     @test isfile(joinpath(Fluidum.root_kernels, "./kernels/PDGid_211_total_T0.1560_Fj.out"))
     @test isfile(joinpath(Fluidum.root_particle_lists, "./particles.data"))

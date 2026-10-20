@@ -83,6 +83,7 @@ include("fluidevo/spectra_fastreso2_dict_HQ.jl")
 include("fluidevo/spectra.jl")
 
 include("fluidevo/test_functions.jl")
+include("fluidevo/freezeout_contour.jl")
 
 include("fluidevo/map_profile.jl")
 include("fluidevo/initial_fields.jl")
@@ -110,6 +111,7 @@ export RunConfig, Detector, GridParameters, InitialParameters, Tspan, ExpTail, C
 
 export NDField, Fields, OriginInterval, CartesianDiscretization, DiscreteFields, HRGc_list
 export set_array, set_array!, freeze_out_routine, fo_integral, jgemvavx!, oneshoot, test_integral_cauchy, SplineInterp, spectra_analitic
+export FOContourOpts, isotherm_contour, isotherm_branches, freezeout_from_path, freezeout_cap, freezeout_from_isotherm
 export spectra, spectra_lf, multiplicity, multiplicity_lf, DiscreteFields, TabulatedData, initialize_fields, FreezeOutResult, initialize_fields_free_HQ, FreezeOutResultPerturbation
 export get_profile, map_initial_profile, Profiles, Profiles2 
 """

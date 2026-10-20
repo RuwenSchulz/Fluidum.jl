@@ -287,6 +287,7 @@ export IdealQCD, FluiduMEoS, HadronResonaceGas,waleckacondition,LatticeQCD, Hadr
 export SimpleBulkViscosity,SimpleShearViscosity,SimpleDiffusionCoefficient , ZeroViscosity, ZeroBulkViscosity
 export Analytic, Gluing,Thermodynamic, EquationOfState, readresonancelist
 export Heavy_Quark, ConstDiffusion, LinearDiffusion, free_charm, QGPViscosity,ZeroDiffusion
+export viscous_2d
 export InverseFuction 
 # type piracy 
 

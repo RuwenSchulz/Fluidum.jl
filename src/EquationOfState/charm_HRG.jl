@@ -11,6 +11,17 @@ struct HadronResonaceGas_ccbar{T,S} <:EquationOfState
     ccbar::S
 end
 
+"""
+    HadronResonaceGas_ccbar_grandcanonical(particle_list, ccbar)
+`HadronResonaceGas_ccbar` without the canonical factor I₁(ccbar/2)/I₀(ccbar/2): grand-canonical densities.
+"""
+struct HadronResonaceGas_ccbar_grandcanonical{T,S} <:EquationOfState
+    particle_list::T
+    ccbar::S
+end
+
+const CharmHadronList = Union{HadronResonaceGas_ccbar,HadronResonaceGas_ccbar_grandcanonical}
+
 struct Particle{A,B,C} #for particle.data file
     Name::A
     Mass::B
@@ -210,6 +221,9 @@ waleckacondition(x)=x.Name != "f00600zer"&&x.Name !="om0782zer"&& x.Name != "pr0
 @inline Base.getindex(elm::HadronResonaceGas_ccbar, i::Int)= elm.particle_list[i]
 @inline Base.eachindex(elm::HadronResonaceGas_ccbar)=Base.eachindex(elm.particle_list)
 
+@inline Base.getindex(elm::HadronResonaceGas_ccbar_grandcanonical, i::Int)= elm.particle_list[i]
+@inline Base.eachindex(elm::HadronResonaceGas_ccbar_grandcanonical)=Base.eachindex(elm.particle_list)
+
 
 """
 Density of hadron resonance gas of charm 
@@ -262,7 +276,7 @@ end
 """
     Density of hadron resonance gas of charm, considering the canonical correction factor
 """
-function thermodynamic(T,μ,x::HadronResonaceGas_ccbar{L,M})  where {L,M}
+function thermodynamic(T,μ,x::Union{HadronResonaceGas_ccbar{L,M},HadronResonaceGas_ccbar_grandcanonical{L,M}})  where {L,M}
     ccbar = x.ccbar
     if isless(T,zero(T))
         return Thermodynamic(zero(T),(zero(T),zero(T)),(zero(T),zero(T),zero(T)))
@@ -290,7 +304,7 @@ function thermodynamic(T,μ,x::HadronResonaceGas_ccbar{L,M})  where {L,M}
                 ex=exp(QC* μ - reducemass)
                 
                 #correction factor due to canonical ensemble 
-                if QC == 1 
+                if QC == 1 && x isa HadronResonaceGas_ccbar
                     fact = besseli(1, ccbar/2)./besseli(0, ccbar/2)
                 else 
                     fact = 1
@@ -456,3 +470,11 @@ end
 #    return Thermodynamic(P, (PT, Pα), (PTT, PTα, Pαα))
 #end
 
+"""
+    charm_quark_list(; m = 1.5, g = 6)
+The single charm quark as a one-particle `HadronResonaceGas_ccbar_grandcanonical` list.
+"""
+function charm_quark_list(; m = 1.5, g = 6)
+    p = Particle("Charm", float(m), 0.0, Int(g), 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 4)
+    return HadronResonaceGas_ccbar_grandcanonical(StructArray([p]), 1.0)
+end

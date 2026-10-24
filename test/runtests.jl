@@ -281,3 +281,8 @@ end
 # 1+1D and 2+1D viscous solvers: closed-form characteristic speeds, isotropy, the Bjorken limit.
 include("test_1p1d_viscous.jl")
 include("test_2p1d_viscous.jl")
+# charm on a prescribed background: EOS inputs, first and second moment, 2-D -> 1-D, allocations
+include("test_hq_moments.jl")
+# the two-way medium + charm system
+include("test_two_way.jl")
+include("test_charm_delta_f.jl")

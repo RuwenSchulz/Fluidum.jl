@@ -16,6 +16,63 @@ end
     )
 end
 
+"""
+    HQ_const_BG_init()
+Fields (α, nur) of `matrix1d_visc_HQ_BG!` and `matrix1d_visc_HQ_BG_consistent!`.
+"""
+@inline function HQ_const_BG_init()
+    return Fields(
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur)
+    )
+end
+
+"""
+    HQ_const_BG_second_moment_init()
+Fields (α, nur, piphiphi_Q, pietaeta_Q, piB_Q) of `matrix1d_visc_HQ_BG_consistent_m2!`: the charm stress in the
+components of the medium's (piphiphi, pietaeta, piB).
+"""
+@inline function HQ_const_BG_second_moment_init()
+    return Fields(
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:piphiphi_Q),
+    NDField((:even,),(:ghost,),:pietaeta_Q),
+    NDField((:even,),(:ghost,),:piB_Q)
+    )
+end
+
+"""
+    HQ_2p1d_BG_init()
+Fields (α, nux, nuy) of `matrix2d_HQ_BG!` and `matrix2d_HQ_BG_consistent!`.
+"""
+@inline function HQ_2p1d_BG_init()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy)
+    )
+end
+
+"""
+    HQ_viscous_2d()
+Fields of `matrix2d_visc_HQ_BG!`: those of `viscous_2d` plus (α, nux, nuy).
+"""
+@inline function HQ_viscous_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy)
+    )
+end
+
 @inline function HQ_viscous_gamma_1d() 
     return Fields(
     NDField((:even,),(:ghost,),:temperature),
@@ -359,4 +416,105 @@ function initialize_fields(x::TabulatedData{A,B}; cfg) where {A,B}
     set_array!(phi,(x)->fugacity(x),:α,disc_fields); #fugacity initialization
     
 return DiscreteInitialFields(disc,disc_fields,phi), ccbar_hard
+end
+
+# layouts of the two-way systems (Matrix/1d_two_way_cilindrical.jl, Matrix/2d_two_way.jl)
+
+"""
+    two_way_1d()
+Fields of `matrix1d_two_way!`: those of `viscous_1d` plus (α, nur, piphiphi_Q, pietaeta_Q, piB_Q).
+"""
+@inline function two_way_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur),
+    NDField((:even,),(:ghost,),:piphiphi),
+    NDField((:even,),(:ghost,),:pietaeta),
+    NDField((:even,),(:ghost,),:piB),
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:piphiphi_Q),
+    NDField((:even,),(:ghost,),:pietaeta_Q),
+    NDField((:even,),(:ghost,),:piB_Q)
+    )
+end
+
+"""
+    two_way_conformal_1d()
+Fields of `matrix1d_two_way!` with a `ConformalEOS` (no bulk).
+"""
+@inline function two_way_conformal_1d()
+    return Fields(
+    NDField((:even,),(:ghost,),:temperature),
+    NDField((:odd,),(:ghost,),:ur),
+    NDField((:even,),(:ghost,),:piphiphi),
+    NDField((:even,),(:ghost,),:pietaeta),
+    NDField((:even,),(:ghost,),:α),
+    NDField((:odd,),(:ghost,),:nur),
+    NDField((:even,),(:ghost,),:piphiphi_Q),
+    NDField((:even,),(:ghost,),:pietaeta_Q),
+    NDField((:even,),(:ghost,),:piB_Q)
+    )
+end
+
+"""
+    HQ_2p1d_BG_m2_init()
+Fields (α, nux, nuy, piyy_Q, pizz_Q, pixy_Q, piB_Q) of `matrix2d_HQ_BG_m2!`: the charm stress in the components
+of the medium's (piyy, pizz, pixy, piB).
+"""
+@inline function HQ_2p1d_BG_m2_init()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB_Q)
+    )
+end
+
+"""
+    two_way_2d()
+Fields of `matrix2d_two_way!`: those of `viscous_2d` plus (α, nux, nuy, piyy_Q, pizz_Q, pixy_Q, piB_Q).
+"""
+@inline function two_way_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB_Q)
+    )
+end
+
+"""
+    two_way_conformal_2d()
+Fields of `matrix2d_two_way!` with a `ConformalEOS` (no bulk).
+"""
+@inline function two_way_conformal_2d()
+    return Fields(
+    NDField((:ghost,:ghost),(:ghost,:ghost),:temperature),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:ux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:uy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:α),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nux),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:nuy),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piyy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pizz_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:pixy_Q),
+    NDField((:ghost,:ghost),(:ghost,:ghost),:piB_Q)
+    )
 end

@@ -174,7 +174,8 @@ with k the momentum in the fluid rest frame:
     δf₁ = f₀ ν_l k_l / (n T)
     δf₂ = f₀ [pi_Q^ij k_i k_j + piB_Q (k² − ⟨k²⟩)] / (2 n h T²),   ⟨k²⟩ = 3 T h.
 
-δf₁ reproduces the diffusion current ν^μ (N^μ = n u^μ + ν^μ), read as nur from the seventh field. δf₂, included
+δf₁ reproduces the diffusion current ν^μ (N^μ = n u^μ + ν^μ), read as nur from the seventh field and α from the
+sixth, the `two_way_1d` layout (the conformal layouts have both one field earlier). δf₂, included
 with `second_moment`, reproduces the charm stress and leaves the density unchanged; it is read at `idx` as
 (piphiphi_Q, pietaeta_Q, piB_Q), the components of the medium's (piphiphi, pietaeta, piB), as in `two_way_1d`;
 the radial component in the fluid rest frame is −(piphiphi_Q + pietaeta_Q). n and h are `charm_eos(T, α, list)`
@@ -220,7 +221,7 @@ function spectra_internal(m::Number,fo::FreezeOutResult{A,B};pt_min=0.,pt_max=8.
     rb=rightbounds(x)
     buff=alloc_segbuf(Float64, eltype(lb),Float64 ;size=1)
     
-    [quadgk(alpha->_pointwise_spectra_internal(pt,m,alpha,x,phi,deg=deg,delta_f=delta_f),lb...,rb...;segbuf=buff) for pt in range(pt_min,pt_max,step) ] 
+    [quadgk(alpha->_pointwise_spectra_internal(pt,m,alpha,x,phi,deg=deg,delta_f=delta_f),lb...,rb...;segbuf=buff) for pt in range(pt_min,pt_max,step) ]
 
 end
 

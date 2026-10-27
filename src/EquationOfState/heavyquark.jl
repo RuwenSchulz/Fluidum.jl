@@ -44,7 +44,7 @@ end
     m.DsT
 end
 
-@inline function DsT(m::LinearDiffusion,T; Tc = 0.180)
+@inline function DsT(m::LinearDiffusion,T; Tc = m.Tc)
     ifelse(T > Tc, m.slope*T + m.offset, m.slope*Tc + m.offset)
 end 
 

@@ -125,9 +125,10 @@ struct LinearDiffusion{T} <:Diffusion
     slope::T
     offset::T
     mass::T
+    Tc::T   # below Tc the law is frozen at its value at Tc
 end
 
-LinearDiffusion(slope::T, offset::T, mass::T) where {T<:Real} = LinearDiffusion{T}(slope, offset, mass)
+LinearDiffusion(slope::T, offset::T, mass::T; Tc = 0.180) where {T<:Real} = LinearDiffusion{T}(slope, offset, mass, T(Tc))
 
 
 @inline function diffusion(T,x::Thermodynamic{N,1,1},y::SimpleDiffusionCoefficient{N}) where{N}

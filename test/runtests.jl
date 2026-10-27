@@ -286,3 +286,4 @@ include("test_hq_moments.jl")
 # the two-way medium + charm system
 include("test_two_way.jl")
 include("test_charm_delta_f.jl")
+include("test_charm_conventions.jl")

@@ -18,7 +18,7 @@
         end
     end
 
-    fact = besseli(1, eos.hadron_list.ccbar/2)/besseli(0, eos.hadron_list.ccbar/2)
+    fact = canonical_factor(eos.hadron_list)
 
     if charm == 2
         fact = 1

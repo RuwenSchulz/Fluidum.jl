@@ -22,6 +22,15 @@ end
 
 const CharmHadronList = Union{HadronResonaceGas_ccbar,HadronResonaceGas_ccbar_grandcanonical}
 
+"""
+    canonical_factor(list)
+
+Canonical suppression I₁(ccbar/2)/I₀(ccbar/2) of the open-charm (|q| = 1) yield for a
+`HadronResonaceGas_ccbar`, and 1 for a `HadronResonaceGas_ccbar_grandcanonical`.
+"""
+canonical_factor(x::HadronResonaceGas_ccbar) = besseli(1, x.ccbar/2)/besseli(0, x.ccbar/2)
+canonical_factor(::HadronResonaceGas_ccbar_grandcanonical) = 1
+
 struct Particle{A,B,C} #for particle.data file
     Name::A
     Mass::B
@@ -296,7 +305,9 @@ function thermodynamic(T,μ,x::Union{HadronResonaceGas_ccbar{L,M},HadronResonace
         reducemass=m/T
         degeneracy=x[i].Degeneracy
         
-        if reducemass<500*one(T)
+        # cut at m/T = 1000, beyond the underflow of exp(-m/T), so n > 0 wherever it is
+        # representable and the fugacity can be inverted at a cold edge
+        if reducemass<1000*one(T)
            
                 b1 = besselk1x(reducemass)
                 b2 = besselkx(2,reducemass)
@@ -304,8 +315,8 @@ function thermodynamic(T,μ,x::Union{HadronResonaceGas_ccbar{L,M},HadronResonace
                 ex=exp(QC* μ - reducemass)
                 
                 #correction factor due to canonical ensemble 
-                if QC == 1 && x isa HadronResonaceGas_ccbar
-                    fact = besseli(1, ccbar/2)./besseli(0, ccbar/2)
+                if QC == 1
+                    fact = canonical_factor(x)
                 else 
                     fact = 1
                 end   

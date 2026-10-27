@@ -16,7 +16,7 @@ function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background
     T,ur,dtT,drT,drur,dtur = background_fields(tau,X[1])
 
     α_safe = clamp(ϕ[1], -α_max, α_max)
-    
+
     thermo = thermodynamic(T,α_safe,params.eos.hadron_list)
     n=thermo.pressure
     dn_dT, dn_dmu = thermo.pressure_derivative
@@ -27,16 +27,16 @@ function matrix1d_visc_HQ_BG!(A_i,Source,ϕ,tau,X,params;dmn_eps=1e-6,background
 
     (At,Ax, source)=one_d_viscous_matrix_fugacity_BG_only(ϕ,tau,X[1],ur,dtT,drT,drur,dtur,n,dn_dmu,dn_dT,tauDiffusion,κ)
 
-        
+
     Ainv= inv(At)
 
 
     A_mul_B!(A_i[1], Ainv,Ax)
-    
-    
+
+
     jgemvavx!(Source, Ainv,source)
 
-    end 
+    end
 
 
 
@@ -50,7 +50,7 @@ ur .*(1  .+ ur .^2) .*r .*tau,
 
 (1  .+ ur .^2) .^2 .*tauDiffusion .*r .*tau))
         #########################################################################################################################################################################
-        
+
     Ax=SMatrix{2,2}(
         (ur .*(1  .+ ur .^2) .^1.5 .*r .*tau .*dn_dmu,
 
@@ -61,13 +61,13 @@ ur .*(1  .+ ur .^2) .*r .*tau,
 ur .*(1  .+ ur .^2) .^1.5 .*tauDiffusion .*r .*tau)
     )
         #########################################################################################################################################################################
-    
+
     source=SVector{2}(
     (X[2] .*(sqrt.(1  .+ ur .^2) .*tau  .+ ur .^2 .*sqrt.(1  .+ ur .^2) .*tau  .+ r .*(ur  .+ ur .^3  .+ dtur .*tau))  .+ (1  .+ ur .^2) .*n .*(ur .*sqrt.(1  .+ ur .^2) .*tau  .+ r .*(1  .+ ur .^2  .+ dtur .*ur .*tau  .+ drur .*sqrt.(1  .+ ur .^2) .*tau))  .+ (1  .+ ur .^2) .*(dtT  .+ dtT .*ur .^2  .+ drT .*ur .*sqrt.(1  .+ ur .^2)) .*r .*tau .*dn_dT,
 
 (sqrt.(1  .+ ur .^2)  .- ur .*(dtur .*tauDiffusion  .+ dtur .*ur .^2 .*tauDiffusion  .+ ur .*sqrt.(1  .+ ur .^2) .*( .-1  .+ drur .*tauDiffusion))) .*r .*X[2] .*tau)
     )
-        
+
     return (At,Ax, source)
 end
 

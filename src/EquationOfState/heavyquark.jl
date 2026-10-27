@@ -1,4 +1,4 @@
-Base.@kwdef struct Heavy_Quark{T,S<:CharmHadronList} <:EquationOfState 
+Base.@kwdef struct Heavy_Quark{T,S<:CharmHadronList} <:EquationOfState
     mass::T = 1.5
     eos::FluiduMEoS{T} = FluiduMEoS()
     hadron_list::S = HadronResonaceGas_ccbar(readresonancelist(), 30.)

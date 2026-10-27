@@ -19,7 +19,6 @@ function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; charm, delta_pipi::B
 
     T = ϕ[1]
     uτ = sqrt(1 + ϕ[2]^2 + ϕ[3]^2)
-    # the charm coefficients come first: a @fastmath medium EOS compiles differently in the other order
 
     if params.eos isa ConformalEOS
         ch = charm_moments(T, clamp(ϕ[7], -α_max, α_max), charm)

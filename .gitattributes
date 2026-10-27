@@ -1,7 +1,4 @@
-# Written by the scripts in deriv/ (code and rendered derivations); GitHub folds them in diffs.
-src/Matrix/*_generated.jl linguist-generated=true
-deriv/rendered/*.nb linguist-generated=true
+# Written by the scripts in deriv/ (rendered derivations); GitHub folds them in diffs.
 deriv/rendered/viscous.tex linguist-generated=true
 deriv/rendered/hq_2p1d.tex linguist-generated=true
-deriv/rendered/hq_consistent_2p1d.tex linguist-generated=true
 deriv/rendered/two_way.tex linguist-generated=true

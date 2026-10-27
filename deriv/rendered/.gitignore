@@ -1,5 +1,5 @@
 # LaTeX build by-products of derivations.tex (the .tex fragments, derivations.tex,
-# derivations.pdf and the .nb notebooks are tracked)
+# derivations.pdf are tracked; the .nb notebooks are written locally)
 *.aux
 *.log
 *.toc
@@ -10,3 +10,4 @@
 *.blg
 *.bbl
 *.xdv
+*.nb

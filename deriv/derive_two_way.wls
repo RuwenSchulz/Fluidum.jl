@@ -18,14 +18,14 @@
            Nabla.(n u + nu) = 0,  (Ds/T) Delta^mu_l Nabla_m T_Q^{ml} + nu^mu = 0
      S4  S3 + charm second moment on a prescribed background (consistent m2):
            (Ds/2T) Delta^mu_a Delta^nu_b Nabla_l S^{lab} + dM^{mu nu} = 0,
-           dM = pi_Q + Pi_Q Delta,
+           dM = pi_Q + piB_Q Delta,
            S = I31 (u Delta)_sym + A (u u nu)_sym + B (Delta nu)_sym + C (u dM)_sym
          (traceless channels + trace channel, as in the 1+1D derivation of the
          consistent second moment)
      S5  the two-way system: fluid rows Nabla_mu (T_m + T_Q)^{mu nu} = 0, charm rows
          as S4, medium pi/Pi rows as S2, all fields evolved together.
-           T_Q = (n h - P0) uu + P0 Delta + h (u nu + nu u) + c dM,  P0 = n T
-         c is a symbolic switch: c = 1 <=> c_M = Ds/T, c = 0 drops dM from T_Q.
+           T_Q = (n h - P0) uu + P0 Delta + h (u nu + nu u),  P0 = n T
+         The second moment dM does not enter T_Q (c_M = 0): it is evolved, but passive.
 
    EOS, symbolic.  Medium pp[T] (e = T pp' - pp); charm nQ[T,alpha], hQ[T];
    second-moment coefficients i31Q[T,alpha], aQf[T], bQf[T], cQf[T] (Boltzmann:
@@ -40,28 +40,25 @@
      G0/G1  metric compatibility; divergence check  Nabla.(X,0,0,0) = X' + X/tau
      G2     algebraic constraints of every constructed tensor
      G3     quasi-linearity (no second derivatives) of every row
-     G-reduce   generic-EOS rows == the other generators and the hand-written matrices
+     G-reduce   generic-EOS rows == the hand-written and the other generated matrices
      G-chart    2+1D (axisymmetric, on the x axis) == 1+1D; 1+1D (u^r=0) == 0+1D
      G-conserve S5 fluid rows == Nabla.(T_m+T_Q) (independent sqrt(-g) route),
-                charm row == Nabla.N, c=0 kills the dM columns, n->0 gives S2
+                charm row == Nabla.N, the dM columns of the other rows vanish, n->0 gives S2
      G-bjorken  closed forms (ideal, IS, generic EOS)
      G-twoway   rest/homogeneous: no momentum exchange; drag: Newton's third law
      G-export   every free symbol of the generated Julia is a function argument
    The check functions are in derive_two_way_gates.wls; the export and its own checks
    are in derive_two_way_export.wls.
 
+   Writes the generated blocks of src/Matrix/1d_viscous_HQ_cilindrical_BG.jl,
+   1d_viscous_HQ_cilindrical_BG_m2.jl, 2d_viscous_HQ_BG.jl, 2d_viscous_HQ_BG_m2.jl,
+   1d_two_way_cilindrical.jl and 2d_two_way.jl, only when every check passed and all three
+   charts ran.
+
    Run:   wolframscript -file deriv/derive_two_way.wls [--charts=bj,cyl,car] [--no-export]
-   Env:   TWOWAY_OUT          scratch output directory (char speeds, Julia helpers; the .jl and
-                              CSVs too when a check fails) [default $TemporaryDirectory/derive_two_way_out]
-          TWOWAY_JL           where the generated .jl goes [default, when every check passed and all
-                              three charts ran: src/Matrix/two_way_generated.jl]
-          TWOWAY_REFDIR       where the reference-state CSVs go [default, same condition:
-                              $FLUIDUM_REFPOINTS_DIR/two_way_refpoints]
-          FLUIDUM_REFPOINTS_DIR  [default $TemporaryDirectory/fluidum_refpoints]
-          FLUIDUM_MATRIX_DIR  where the hand-written matrices are read from [default src/Matrix]
+   Env:   TWOWAY_OUT          scratch directory (char speeds, Julia helpers, the export's own check)
+                              [default $TemporaryDirectory/derive_two_way_out]
           FLUIDUM_DERIV_PROJECT  Julia project for the Julia-side checks [default the package root]
-          FLUIDUM_EXTERNAL_REFPOINTS  directory with the reference CSVs of the 1+1D first- and
-                              second-moment derivations; unset, the checks that use them are skipped
           TWOWAY_NORM_LOG     optional file that logs the size and time of every simplification
    ============================================================================ *)
 
@@ -71,11 +68,9 @@ t0run = AbsoluteTime[];
 PKG = ParentDirectory[DirectoryName[$InputFileName]];   (* the Fluidum.jl package root *)
 DERIV = DirectoryName[$InputFileName];
 envOr[k_, d_] := With[{v = Environment[k]}, If[StringQ[v] && v =!= "", v, d]];
-REFDIR = envOr["FLUIDUM_REFPOINTS_DIR", FileNameJoin[{$TemporaryDirectory, "fluidum_refpoints"}]];
 juliaProject = envOr["FLUIDUM_DERIV_PROJECT", PKG];
 outDir = envOr["TWOWAY_OUT", FileNameJoin[{$TemporaryDirectory, "derive_two_way_out"}]];
-matDir = envOr["FLUIDUM_MATRIX_DIR", FileNameJoin[{PKG, "src", "Matrix"}]];
-csvDir = envOr["FLUIDUM_EXTERNAL_REFPOINTS", ""];
+matDir = FileNameJoin[{PKG, "src", "Matrix"}];
 If[!DirectoryQ[outDir], CreateDirectory[outDir, CreateIntermediateDirectories -> True]];
 args = Rest[$ScriptCommandLine];
 chartsArg = SelectFirst[args, StringStartsQ[#, "--charts="] &, "--charts=bj,cyl,car"];
@@ -182,7 +177,8 @@ stateCYL = Module[{f, ut, ur, prr, ptr, ptt, pl, pf, pe, lv, phv, etv},
   f[h_] := h[tau, rr];
   ur = f[urc]; ut = Sqrt[1 + ur^2];
   prr = -ut^2 (f[pffc] + f[peec]); ptr = (ur/ut) prr; ptt = (ur/ut) ptr;
-  pl = f[plc]; pf = f[pphc]; pe = -(pl + pf);
+  (* charm: as the medium, independent pi_Q^phi_phi, pi_Q^eta_eta (orthonormal); the radial one from the trace *)
+  pf = f[pffQc]; pe = f[peeQc]; pl = -(pf + pe);
   lv = {ur, ut, 0, 0}; phv = {0, 0, 1/rr, 0}; etv = {0, 0, 0, 1/tau};
   <|"name" -> "1p1d", "geo" -> CYL, "cs" -> {tau, rr}, "f" -> f,
     "T" -> f[TTc], "u" -> {ut, ur, 0, 0},
@@ -190,7 +186,7 @@ stateCYL = Module[{f, ut, ur, prr, ptr, ptt, pl, pf, pe, lv, phv, etv},
     "PiB" -> f[PiBc], "al" -> f[alc], "nu" -> {ur f[nurc]/ut, f[nurc], 0, 0},
     "piQ" -> pl Outer[Times, lv, lv] + pf Outer[Times, phv, phv] + pe Outer[Times, etv, etv],
     "PiQ" -> f[PiQc], "triad" -> {lv, phv, etv},
-    "med" -> {TTc, urc, pffc, peec, PiBc}, "ch" -> {alc, nurc}, "m2" -> {plc, pphc, PiQc},
+    "med" -> {TTc, urc, pffc, peec, PiBc}, "ch" -> {alc, nurc}, "m2" -> {pffQc, peeQc, PiQc},
     "uheads" -> {urc}, "bg" -> {TTc, urc}|>];
 
 stateCAR = Module[{f, ux, uy, ut, pxx, ptx, pty, ptt, qxx, qxy, qyy, qtx, qty, qtt, qet},
@@ -199,26 +195,26 @@ stateCAR = Module[{f, ux, uy, ut, pxx, ptx, pty, ptt, qxx, qxy, qyy, qtx, qty, q
   (* medium: as in derive_2p1d_viscous.wls, independent pi^{yy}, pi^eta_eta, pi^{xy} *)
   pxx = (2 ux uy f[pxyk] - (1 + ux^2) f[pyyk] - ut^2 f[peek])/(1 + uy^2);
   ptx = (ux pxx + uy f[pxyk])/ut; pty = (ux f[pxyk] + uy f[pyyk])/ut; ptt = (ux ptx + uy pty)/ut;
-  (* charm: the layout of the 2+1D second moment in HQ_2p1d_BG_m2.jl, independent
-     piQ^{xx}, piQ^{xy}, piQ^{yy}; tau-row from orthogonality, piQ^eta_eta from the trace *)
-  qxx = f[qxxk]; qxy = f[qxyk]; qyy = f[qyyk];
+  (* charm: as the medium, independent pi_Q^{yy}, pi_Q^eta_eta, pi_Q^{xy}; pi_Q^{xx} from the trace,
+     the tau row from orthogonality *)
+  qyy = f[pyyQk]; qet = f[peeQk]; qxy = f[pxyQk];
+  qxx = (2 ux uy qxy - (1 + ux^2) qyy - ut^2 qet)/(1 + uy^2);
   qtx = (ux qxx + uy qxy)/ut; qty = (ux qxy + uy qyy)/ut; qtt = (ux qtx + uy qty)/ut;
-  qet = qtt - qxx - qyy;
   <|"name" -> "2p1d", "geo" -> CAR, "cs" -> {tau, xx, yy}, "f" -> f,
     "T" -> f[TTk], "u" -> {ut, ux, uy, 0},
     "piM" -> {{ptt, ptx, pty, 0}, {ptx, pxx, f[pxyk], 0}, {pty, f[pxyk], f[pyyk], 0}, {0, 0, 0, f[peek]/tau^2}},
     "PiB" -> f[PiBk], "al" -> f[alk],
     "nu" -> {(ux f[nuxk] + uy f[nuyk])/ut, f[nuxk], f[nuyk], 0},
     "piQ" -> {{qtt, qtx, qty, 0}, {qtx, qxx, qxy, 0}, {qty, qxy, qyy, 0}, {0, 0, 0, qet/tau^2}},
-    "PiQ" -> f[PiQk], "qet" -> qet,
+    "PiQ" -> f[PiQk], "qxx" -> qxx,
     "med" -> {TTk, uxk, uyk, pyyk, peek, pxyk, PiBk}, "ch" -> {alk, nuxk, nuyk},
-    "m2" -> {qxxk, qxyk, qyyk, PiQk},
+    "m2" -> {pyyQk, peeQk, pxyQk, PiQk},
     "uheads" -> {uxk, uyk}, "bg" -> {TTk, uxk, uyk}|>];
 
 allHeads[st_] := Join[st["med"], st["ch"], st["m2"]];
 
 (* ======================================================== the physics ====== *)
-(* One builder, every chart.  csw is the c switch; wv the 2-D corotation switch. *)
+(* One builder, every chart.  wv is the 2-D corotation switch. *)
 build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dttr, sig, Pm, em,
     Tm, Dpi, Esh, Ebu, piM, PiB, n, h, P0, eQ, nu, piQ, PiQ, dM, TQ, consM, consQ, cont, fm,
     i31, aa, bb, cq, Sten, LHS, tr, TL, pre, W = 0, NPu, aV, omg, pgw},
@@ -242,8 +238,7 @@ build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dtt
   n = nQ[Tf, st["al"]]; h = hQ[Tf]; P0 = n Tf; eQ = n h - P0;
   nu = st["nu"]; piQ = st["piQ"]; PiQ = st["PiQ"];
   dM = piQ + PiQ Dup;
-  TQ = Table[eQ u[[a]] u[[b]] + P0 Dup[[a, b]] + h (u[[a]] nu[[b]] + nu[[a]] u[[b]]) + csw dM[[a, b]],
-    {a, 4}, {b, 4}];
+  TQ = Table[eQ u[[a]] u[[b]] + P0 Dup[[a, b]] + h (u[[a]] nu[[b]] + nu[[a]] u[[b]]), {a, 4}, {b, 4}];
   consQ = divT2[geo, TQ];
   cont = divV[geo, n u + nu];
   fm = Table[(Ds/Tf) Sum[Dmix[[m, l]] consQ[[l]], {l, 4}] + nu[[m]], {m, 4}];
@@ -258,8 +253,8 @@ build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dtt
   tr = Sum[Dlo[[a, b]] LHS[[a, b]], {a, 4}, {b, 4}];
   TL = LHS - Dup tr/3;
   pre = Ds/(2 Tf);
-  (* the 2-D corotation coupling W = (pi_Q g omega) + transpose, as in hq2d_m2_rows with
-     vorticity = true.  It is part of the covariant row; wv = 0 subtracts it (see rows). *)
+  (* the 2-D corotation coupling W = (pi_Q g omega) + transpose.  It is part of the covariant
+     row; wv = 0 subtracts it (see rows).  The export sets wv = 1. *)
   If[st["name"] === "2p1d",
     aV = DcovV[geo, u, u];
     NPu = Table[Sum[gi[[a, l]] gradV[geo, u][[l, n2]], {l, 4}] + u[[a]] aV[[n2]], {a, 4}, {n2, 4}];
@@ -285,24 +280,24 @@ rows[st_, B_] := Module[{nm = st["name"], E = B["Esh"], cons, ch, m2, f = st["f"
      <|"medM" -> {B["consM"][[1]], B["consM"][[2]], E[[3, 3]]/rr^2, E[[4, 4]]/tau^2, B["Ebu"]},
        "medQ" -> {B["consQ"][[1]], B["consQ"][[2]], 0, 0, 0},
        "ch" -> {B["cont"], B["fm"][[2]]},
-       "m2" -> {B["pre"] (lo[[1]] . B["LHS"] . lo[[1]] - B["tr"]/3) + f[plc],
-                B["pre"] (lo[[2]] . B["LHS"] . lo[[2]] - B["tr"]/3) + f[pphc],
+       "m2" -> {B["pre"] (lo[[2]] . B["LHS"] . lo[[2]] - B["tr"]/3) + f[pffQc],
+                B["pre"] (lo[[3]] . B["LHS"] . lo[[3]] - B["tr"]/3) + f[peeQc],
                 B["pre"] B["tr"]/3 + f[PiQc]}|>,
    "2p1d",
      <|"medM" -> {B["consM"][[1]], B["consM"][[2]], B["consM"][[3]], E[[3, 3]], E[[4, 4]]/tau^2,
                   E[[2, 3]], B["Ebu"]},
        "medQ" -> {B["consQ"][[1]], B["consQ"][[2]], B["consQ"][[3]], 0, 0, 0, 0},
        "ch" -> {B["cont"], B["fm"][[2]], B["fm"][[3]]},
-       "m2" -> {B["pre"] B["TL"][[2, 2]] + f[qxxk] - (1 - wv) B["tauM"] B["W"][[2, 2]],
-                B["pre"] B["TL"][[2, 3]] + f[qxyk] - (1 - wv) B["tauM"] B["W"][[2, 3]],
-                B["pre"] B["TL"][[3, 3]] + f[qyyk] - (1 - wv) B["tauM"] B["W"][[3, 3]],
+       "m2" -> {B["pre"] B["TL"][[3, 3]] + f[pyyQk] - (1 - wv) B["tauM"] B["W"][[3, 3]],
+                tau^2 (B["pre"] B["TL"][[4, 4]] - (1 - wv) B["tauM"] B["W"][[4, 4]]) + f[peeQk],
+                B["pre"] B["TL"][[2, 3]] + f[pxyQk] - (1 - wv) B["tauM"] B["W"][[2, 3]],
                 B["pre"] B["tr"]/3 + f[PiQk]}|>]];
 
 (* quasi-linear coefficient extraction *)
 coefs[eqs_, varH_, cs_] := Module[{As, src, vars = (# @@ cs) & /@ varH},
   As = Table[Table[D[eqs[[i]], D[vars[[j]], c]], {i, Length[eqs]}, {j, Length[vars]}], {c, cs}];
   (* quasi-linear: the source is the row at zero first derivatives of the evolved fields
-     (gate Gc-extract re-assembles A.dphi + src and compares with the raw row) *)
+     (check Gc-extract re-assembles A.dphi + src and compares with the raw row) *)
   src = eqs /. Flatten[Table[D[v, c] -> 0, {c, cs}, {v, vars}]];
   {As, src}];
 (* The simplification rule depends on size only, so a regeneration is byte-identical: an entry of
@@ -373,8 +368,8 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
   sys["S4"] = <|"eqs" -> Join[R["ch"], R["m2"]], "vars" -> Join[ch, m2]|>;
   sys["S5"] = <|"eqs" -> Join[R["medM"] + R["medQ"], R["ch"], R["m2"]], "vars" -> Join[med, ch, m2]|>;
   (* in 0+1D there is no transverse current: S3 is the continuity row alone *)
-  gate["S3-free-" <> nm, FreeQ[sys["S3"]["eqs"], csw] && FreeQ[sys["S3"]["eqs"], Alternatives @@ m2],
-    "S3 rows carry no second-moment field and no c (c enters only through dM)"];
+  gate["S3-free-" <> nm, FreeQ[sys["S3"]["eqs"], Alternatives @@ m2],
+    "S3 rows carry no second-moment field"];
   gate["S34-nomedpi-" <> nm, FreeQ[Join[R["ch"], R["m2"]], Alternatives @@ (Rest[med] /. {urc -> Nothing, uxk -> Nothing, uyk -> Nothing})],
     "charm rows never see the medium pi or Pi (so S3/S4 need only T, u as background)"];
 
@@ -402,17 +397,11 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
     gate["Gc-total-" <> nm, z[[1]], "S5 fluid rows == Nabla_mu (T_m + T_Q)^{mu nu}, sqrt(-g) route (" <> z[[2]] <> ")"];
     z = zeroTest[S5["eqs"][[nmed + 1]] - divValt[geo, B["Nvec"]], hds, st["uheads"], 20];
     gate["Gc-number-" <> nm, z[[1]], "charm row == Nabla.N, sqrt(-g) route (" <> z[[2]] <> ")"];
-    (* c = 0: the dM columns of every non-m2 row vanish, and no dM field survives in their source *)
+    (* dM is not in T_Q: the dM columns of every non-m2 row vanish, and no dM field survives in their source *)
     Anon = Table[S5["A"][[k]][[1 ;; nmed + nch, nmed + nch + 1 ;; nmed + nch + nm2]], {k, Length[cs]}];
     srcnon = S5["src"][[1 ;; nmed + nch]];
-    gate["Gc-c0-" <> nm, Simplify[Anon /. csw -> 0] === ConstantArray[0, Dimensions[Anon]] &&
-        FreeQ[srcnon /. csw -> 0, Alternatives @@ m2],
-      "c = 0: dM columns of the fluid + first-moment rows vanish identically, and their sources carry no dM"];
-    gate["Gc-c1-" <> nm, (Simplify[Anon /. csw -> 1] =!= ConstantArray[0, Dimensions[Anon]]) || nm === "0p1d",
-      "c = 1: the dM columns are LIVE (the gate above is not vacuous)" <>
-        If[nm === "0p1d", "  [0+1D: dM enters only the energy row's source]", ""]];
-    If[nm === "0p1d", gate["Gc-c1src-0p1d", !FreeQ[srcnon /. csw -> 1, Alternatives @@ m2],
-        "0+1D, c = 1: dM enters the energy row's source (Bjorken work of the charm stress)"]];
+    gate["Gc-dM-" <> nm, Simplify[Anon] === ConstantArray[0, Dimensions[Anon]] && FreeQ[srcnon, Alternatives @@ m2],
+      "the second moment is passive: dM columns of the fluid + first-moment rows vanish identically, and their sources carry no dM"];
     (* charm off: n -> 0 (so i31 -> 0), nu -> 0, dM -> 0 ==> S5 fluid block == S2, charm cols of fluid rows = 0 *)
     offQ = Join[{nQ -> Function[{a1, a2}, 0], i31Q -> Function[{a1, a2}, 0]}, chOff, m2Off];
     S2m = sys["S2"];
@@ -438,9 +427,9 @@ Get[FileNameJoin[{DirectoryName[$InputFileName], "derive_two_way_gates.wls"}]];
 Get[FileNameJoin[{DirectoryName[$InputFileName], "derive_two_way_export.wls"}]];
 
 Print[""]; Print["================ summary ================  (", stamp[], ")"];
-Print["  ", pass, " passed, ", fail, " failed  (", pass + fail, " gates evaluated)"];
+Print["  ", pass, " passed, ", fail, " failed  (", pass + fail, " checks evaluated)"];
 If[fail > 0, Print["  FAILED: ", Select[gateLog, ! #[[2]] &][[All, 1]]]];
 If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* deriv/rendered/: PDF fragment + notebook *)
   Get[FileNameJoin[{DERIV, "render.wl"}]]; renderTwoWay[]];
-If[pass + fail < 20, Print["  too few gates evaluated -- treating as FAIL"]; Exit[1]];
+If[pass + fail < 20, Print["  too few checks evaluated -- treating as FAIL"]; Exit[1]];
 Exit[If[fail == 0, 0, 1]];

@@ -4,7 +4,7 @@
 
 Script: \texttt{deriv/derive\_2p1d\_viscous.wls}
 
-Writes: \texttt{src/Matrix/viscous\_generated.jl}
+Writes: \texttt{two\_d\_viscous\_matrix\_derived} in \texttt{src/Matrix/2d\_viscous.jl}; the 1+1D system is the control, compared entry by entry with \texttt{one\_d\_viscous\_matrix} (V-G4).
 
 \subsection{Setup}
 
@@ -262,28 +262,6 @@ S^{(\delta)}_{4} &= \frac{{\pi^{yy}} {u^{\tau}}}{{\tau}} \\
 S^{(\delta)}_{5} &= \frac{{\pi^{\eta}{}_{\eta}} {u^{\tau}}}{{\tau}^3} \\
 S^{(\delta)}_{6} &= \frac{{\pi^{xy}} {u^{\tau}}}{{\tau}}
 \end{align*}
-\subsubsection{Co-rotating terms (diagnostics)}
-
-Not part of the system above; exported alone so that a test can ask whether a 2+1D matrix carries them. The projected vorticity coupling, without a factor $\tau_{\pi}$ (\texttt{two\_d\_viscous\_vorticity}):
-
-\[
-2\,\pi_{\lambda}{}^{\langle\mu}\omega^{\nu\rangle\lambda},\qquad \omega^{\mu\nu} = \tfrac{1}{2}\Delta^{\mu\alpha}\Delta^{\nu\beta}(\nabla_{\alpha}u_{\beta} - \nabla_{\beta}u_{\alpha})
-\]
-and the unprojected commutator (\texttt{two\_d\_viscous\_notebook\_commutator}):
-
-\[
-\tau_{\pi}\bigl(\omega^{\mu}{}_{\lambda}\pi^{\lambda\nu} - \pi^{\mu\lambda}\omega_{\lambda}{}^{\nu}\bigr),\qquad \omega_{\mu\nu} = \tfrac{1}{2}(\nabla_{\mu}u_{\nu} - \nabla_{\nu}u_{\mu})
-\]
-Both carry no source (V-GV-src, V-GN-src). Nonzero entries of their matrices, $A^{(\omega)}$ for the first and $A^{(\mathrm{c})}$ for the second, rows and columns as above:
-
-\[
-\arraycolsep=2.5pt
-A^{(\omega)}_t = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix},\qquad A^{(\omega)}_x = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix},\qquad A^{(\omega)}_y = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix}
-\]
-\[
-\arraycolsep=2.5pt
-A^{(\mathrm{c})}_t = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix},\qquad A^{(\mathrm{c})}_x = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix},\qquad A^{(\mathrm{c})}_y = \begin{pmatrix}\cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot\end{pmatrix}
-\]
 \subsection{Checks}
 
 {\small
@@ -315,15 +293,10 @@ id & what it tests & \\
 \texttt{V-\allowbreak{}G5-\allowbreak{}pi} & pi\textasciicircum{}eta\_\allowbreak{}eta row on Bjorken =\allowbreak{}=\allowbreak{} tauS pi' + pi + 4 eta/\allowbreak{}(3 tau) + dpp pi/\allowbreak{}tau  (theta =\allowbreak{} 1/\allowbreak{}tau) & PASS \\
 \texttt{V-\allowbreak{}G5-\allowbreak{}Pi} & bulk row on Bjorken =\allowbreak{}=\allowbreak{} tauB Pi' + Pi + zeta/\allowbreak{}tau & PASS \\
 \texttt{V-\allowbreak{}G5-\allowbreak{}mom} & the x,\allowbreak{} y and xy rows vanish identically on Bjorken flow & PASS \\
-\texttt{V-\allowbreak{}GV-\allowbreak{}anti} & omega is antisymmetric & PASS \\
-\texttt{V-\allowbreak{}GV-\allowbreak{}perp} & omega is transverse to u & PASS \\
-\texttt{V-\allowbreak{}GV-\allowbreak{}src} & the vorticity term is purely a gradient term (no source) & PASS \\
-\texttt{V-\allowbreak{}GN-\allowbreak{}anti} & the notebook's omega is antisymmetric & PASS \\
-\texttt{V-\allowbreak{}GN-\allowbreak{}src} & the notebook's commutator is purely a gradient term (no source) & PASS \\
 \bottomrule
 \end{longtable}
 }
-28 passed, 0 failed (28 checks evaluated).
+23 passed, 0 failed (23 checks evaluated).
 
 Not checked in this script: the slab limit (2+1D at $u^{y} = 0$, $\partial_{y} = 0$ against 1+1D at $r \to \infty$); it is a numerical comparison of the two generated routines.
 

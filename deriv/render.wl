@@ -370,7 +370,7 @@ renderViscous[] := Module[{ut1, ut2, p1, p2, items, prepNo},
   p2 = rdPrep[#, subK, ut2, "2+1D"] &;
   items = {
     {"sec", "Viscous hydrodynamics: Israel--Stewart with $\\delta_{\\pi\\pi}$"},
-    {"text", "Script: \\texttt{deriv/derive\\_2p1d\\_viscous.wls}"}, {"text", "Writes: \\texttt{src/Matrix/viscous\\_generated.jl}"},
+    {"text", "Script: \\texttt{deriv/derive\\_2p1d\\_viscous.wls}"}, {"text", "Writes: \\texttt{two\\_d\\_viscous\\_matrix\\_derived} in \\texttt{src/Matrix/2d\\_viscous.jl}; the 1+1D system is the control, compared entry by entry with \\texttt{one\\_d\\_viscous\\_matrix} (V-G4)."},
     {"sub", "Setup"},
     {"text", "Milne coordinates, boost invariant. Two charts:"},
     {"eq", {rdDiag[CYL], rdDiag[CAR]}},
@@ -415,16 +415,6 @@ renderViscous[] := Module[{ut1, ut2, p1, p2, items, prepNo},
     {"entries", rdMat[AxDK, "A^{(\\delta)}_x", p2]},
     {"entries", rdMat[AyDK, "A^{(\\delta)}_y", p2]},
     {"entries", rdVec[srcDK, "S^{(\\delta)}", p2]},
-    {"subsub", "Co-rotating terms (diagnostics)"},
-    {"text", "Not part of the system above; exported alone so that a test can ask whether a 2+1D matrix carries them. The projected vorticity coupling, without a factor $\\tau_{\\pi}$ (\\texttt{two\\_d\\_viscous\\_vorticity}):"},
-    {"eq", {"2\\,\\pi_{\\lambda}{}^{\\langle\\mu}\\omega^{\\nu\\rangle\\lambda},\\qquad \\omega^{\\mu\\nu} = \\tfrac{1}{2}\\Delta^{\\mu\\alpha}\\Delta^{\\nu\\beta}(\\nabla_{\\alpha}u_{\\beta} - \\nabla_{\\beta}u_{\\alpha})"}},
-    {"text", "and the unprojected commutator (\\texttt{two\\_d\\_viscous\\_notebook\\_commutator}):"},
-    {"eq", {"\\tau_{\\pi}\\bigl(\\omega^{\\mu}{}_{\\lambda}\\pi^{\\lambda\\nu} - \\pi^{\\mu\\lambda}\\omega_{\\lambda}{}^{\\nu}\\bigr),\\qquad \\omega_{\\mu\\nu} = \\tfrac{1}{2}(\\nabla_{\\mu}u_{\\nu} - \\nabla_{\\nu}u_{\\mu})"}},
-    {"text", "Both carry no source (V-GV-src, V-GN-src). Nonzero entries of their matrices, $A^{(\\omega)}$ for the first and $A^{(\\mathrm{c})}$ for the second, rows and columns as above:"},
-    {"sparsity", {{"A^{(\\omega)}_t", rdNZ[Map[p2, AtV, {2}]]}, {"A^{(\\omega)}_x", rdNZ[Map[p2, AxV, {2}]]},
-      {"A^{(\\omega)}_y", rdNZ[Map[p2, AyV, {2}]]}}},
-    {"sparsity", {{"A^{(\\mathrm{c})}_t", rdNZ[Map[p2, AtN, {2}]]}, {"A^{(\\mathrm{c})}_x", rdNZ[Map[p2, AxN, {2}]]},
-      {"A^{(\\mathrm{c})}_y", rdNZ[Map[p2, AyN, {2}]]}}},
     {"sub", "Checks"},
     {"checks", gateLog, {}},
     {"text", "Not checked in this script: the slab limit (2+1D at $u^{y} = 0$, $\\partial_{y} = 0$ against 1+1D at $r \\to \\infty$); it is a numerical comparison of the two generated routines."},
@@ -453,7 +443,7 @@ renderHQ[] := Module[{jr, pr, items},
   pr = rdPrep[#, jr, rdUtCar, "2+1D"] &;
   items = {
     {"sec", "Charm first moment on a 2+1D background ($\\nabla\\alpha$ closure)"},
-    {"text", "Script: \\texttt{deriv/derive\\_hq\\_2p1d.wls}"}, {"text", "Writes: \\texttt{src/Matrix/HQ\\_2p1d\\_BG\\_generated.jl}"},
+    {"text", "Script: \\texttt{deriv/derive\\_hq\\_2p1d.wls}"}, {"text", "Writes: \\texttt{two\\_d\\_HQ\\_BG\\_matrix} and \\texttt{two\\_d\\_HQ\\_live\\_rows} in \\texttt{src/Matrix/2d\\_viscous\\_HQ\\_BG.jl}"},
     {"sub", "Setup"},
     Splice[rdHQSetupCommon[]],
     {"text", "Charm is a passive tracer:"},
@@ -481,36 +471,6 @@ renderHQ[] := Module[{jr, pr, items},
     {"source", {FileNameJoin[{DERIV, "derive_hq_2p1d.wls"}]}}};
   rdWrite["hq_2p1d", "Charm first moment on a 2+1D background (\[Del]\[Alpha] closure)", items]];
 
-renderHQC[] := Module[{jr, pr, items},
-  rdSymTeX = rdHQTeX[];
-  jr = jrepl /. {Verbatim[dn_da] -> rdDnda, Verbatim[dn_dT] -> rdDndT};
-  pr = rdPrep[#, jr, rdUtCar, "2+1D"] &;
-  items = {
-    {"sec", "Consistent charm first moment on a 2+1D background"},
-    {"text", "Script: \\texttt{deriv/derive\\_hq\\_consistent\\_2p1d.wls}"}, {"text", "Writes: \\texttt{src/Matrix/HQ\\_2p1d\\_BG\\_consistent\\_generated.jl}"},
-    {"sub", "Setup"},
-    Splice[rdHQSetupCommon[]],
-    {"text", "The first moment is the projected divergence of the charm stress tensor:"},
-    {"eq", {"\\nabla_{\\mu}(n\\,u^{\\mu} + \\nu^{\\mu}) = 0,\\qquad \\frac{D_{s}}{T}\\,\\Delta^{\\mu}{}_{\\lambda}\\nabla_{\\nu}T_{Q}^{\\nu\\lambda} + \\nu^{\\mu} = 0",
-      "T_{Q}^{\\alpha\\beta} = (n h - P_{0})\\,u^{\\alpha}u^{\\beta} + P_{0}\\,\\Delta^{\\alpha\\beta} + h\\,(u^{\\alpha}\\nu^{\\beta} + \\nu^{\\alpha}u^{\\beta}),\\qquad P_{0} = n T",
-      "n = n(T, \\alpha),\\quad h = h(T),\\qquad \\tau_{n} = D_{s}h/T,\\quad \\kappa = D_{s}\\,\\partial_{\\alpha}n"}},
-    {"text", "At rest the current relaxes to"},
-    {"eq", {"\\nu^{i} = -\\kappa\\,\\partial_{i}\\alpha - \\frac{D_{s}}{T}\\,(n + T\\,\\partial_{T}n)\\,\\partial_{i}T"}},
-    {"text", "Relative to the $\\nabla\\alpha$ row of the previous section, the current equation gains (HC-C3, HC-C5)"},
-    {"eq", {"\\frac{D_{s}}{T}(n + T\\,\\partial_{T}n)\\,\\nabla^{\\mu}_{\\perp}T + \\tau_{n} n\\,a^{\\mu} + \\tau_{n}\\Delta^{\\mu}{}_{\\lambda}\\,\\nu^{\\sigma}\\nabla_{\\sigma}u^{\\lambda} + \\nu^{\\mu}\\Bigl(\\tau_{n}\\theta + \\frac{D_{s}}{T}\\,Dh\\Bigr),\\qquad a^{\\mu} = Du^{\\mu}"}},
-    {"text", "Fields and rows as before:"},
-    {"eq", {"\\phi = " <> rdTuple[rdTeX /@ (varsK //. jr)] <> ",\\qquad \\nu^{\\tau} = " <> rdTeX[pr[nucar[[1]]]],
-      "A_t\\,\\partial_{\\tau}\\phi + A_x\\,\\partial_{x}\\phi + A_y\\,\\partial_{y}\\phi + S = 0"}},
-    {"sub", "Result"},
-    {"entries", rdMat[AtK, "A_t", pr]},
-    {"entries", rdMat[AxK, "A_x", pr]},
-    {"entries", rdMat[AyK, "A_y", pr]},
-    {"entries", rdVec[srcK, "S", pr]},
-    {"sub", "Checks"},
-    {"checks", gateLog, {}},
-    {"source", {FileNameJoin[{DERIV, "derive_hq_consistent_2p1d.wls"}]}}};
-  rdWrite["hq_consistent_2p1d", "Consistent charm first moment on a 2+1D background", items]];
-
 (* ============================================================================
    derive_two_way.wls (with _gates and _export)
    ============================================================================ *)
@@ -518,22 +478,22 @@ rdTwoWayTeX[] := Module[{fld, m},
   fld = <|"T" -> "T", "ur" -> "u^{r}", "ux" -> "u^{x}", "uy" -> "u^{y}",
     "piphi" -> "\\pi^{\\phi}{}_{\\phi}", "pieta" -> "\\pi^{\\eta}{}_{\\eta}", "piyy" -> "\\pi^{yy}",
     "pixy" -> "\\pi^{xy}", "PiB" -> "\\Pi", "al" -> "\\alpha", "nur" -> "\\nu^{r}", "nux" -> "\\nu^{x}",
-    "nuy" -> "\\nu^{y}", "pl" -> "\\pi_{Q}^{\\ell\\ell}", "pphi" -> "\\pi_{Q}^{\\hat\\phi\\hat\\phi}",
-    "PiQ" -> "\\Pi_{Q}", "qeta" -> "\\pi_{Q}{}^{\\eta}{}_{\\eta}", "pQxx" -> "\\pi_{Q}^{xx}",
-    "pQxy" -> "\\pi_{Q}^{xy}", "pQyy" -> "\\pi_{Q}^{yy}"|>;
+    "nuy" -> "\\nu^{y}", "piphiphiQ" -> "\\pi_{Q}{}^{\\phi}{}_{\\phi}",
+    "pietaetaQ" -> "\\pi_{Q}{}^{\\eta}{}_{\\eta}", "piBQ" -> "\\Pi_{Q}", "piyyQ" -> "\\pi_{Q}^{yy}",
+    "pizzQ" -> "\\pi_{Q}{}^{\\eta}{}_{\\eta}", "pixyQ" -> "\\pi_{Q}^{xy}"|>;
   m = Join[rdBaseTeX, fld, <|"pres" -> "P", "dtp" -> "P'(T)", "dtdtp" -> "P''(T)", "aSB" -> "a_{\\mathrm{SB}}",
     "zeta" -> "\\zeta", "visc" -> "\\eta", "tauS" -> "\\tau_{\\pi}", "tauB" -> "\\tau_{\\Pi}",
     "dpp" -> "\\delta_{\\pi\\pi}", "dPP" -> "\\delta_{\\Pi\\Pi}", "n" -> "n", "dndT" -> "(\\partial_{T} n)",
     "dnda" -> "(\\partial_{\\alpha} n)", "h" -> "h", "dhdT" -> "h'(T)", "I31" -> "I_{31}",
     "dI31dT" -> "(\\partial_{T} I_{31})", "dI31da" -> "(\\partial_{\\alpha} I_{31})", "aQ" -> "\\mathcal{A}",
     "bQ" -> "\\mathcal{B}", "dbQdT" -> "\\mathcal{B}'(T)", "cQ" -> "\\mathcal{C}", "dcQdT" -> "\\mathcal{C}'(T)",
-    "Ds" -> "D_{s}", "c" -> "c", "wv" -> "w_{\\omega}"|>];
+    "Ds" -> "D_{s}", "wv" -> "w_{\\omega}"|>];
   (* background derivatives named by the export: dt/dr/dx/dy + field name *)
   Do[m[d[[1]] <> f] = rdDeriv[d[[2]], fld[f]],
     {d, {{"dt", "\\tau"}, {"dr", "r"}, {"dx", "x"}, {"dy", "y"}}}, {f, {"T", "ur", "ux", "uy"}}];
   m];
 
-renderTwoWay[] := Module[{items, full, sysLab, chartLab, dirLab, fnItems, skipped, ids, stJ, fl, conv},
+renderTwoWay[] := Module[{items, full, sysLab, chartLab, dirLab, fnItems, stJ, fl, conv},
   rdSymTeX = rdTwoWayTeX[];
   stJ[st_] := (toJ[#, st] &);
   fl[st_, key_] := rdTuple[rdTeX /@ (fieldNames /@ st[key] /. s_String :> Symbol[s])];
@@ -541,25 +501,21 @@ renderTwoWay[] := Module[{items, full, sysLab, chartLab, dirLab, fnItems, skippe
     "S4" -> "S4, charm first and second moment on a background", "S5" -> "S5, two-way"|>;
   chartLab = <|"0p1d" -> "0+1D Bjorken", "1p1d" -> "1+1D cylindrical", "2p1d" -> "2+1D Cartesian"|>;
   dirLab = <|"0p1d" -> {"A_t"}, "1p1d" -> {"A_t", "A_r"}, "2p1d" -> {"A_t", "A_x", "A_y"}|>;
-  (* typeset in full: every 0+1D system and the 1+1D conformal ones *)
-  full[r_] := r["chart"] === "0p1d" || (r["chart"] === "1p1d" && r["conf"]);
+  (* typeset in full: the 1+1D charm systems and the 1+1D conformal two-way system *)
+  full[r_] := r["chart"] === "1p1d" && (r["sys"] =!= "S5" || r["conf"]);
   fnItems[fn_, r_] := Module[{nm = r["chart"], labs = dirLab[r["chart"]], phi, head, ents},
     phi = rdTuple[rdTeX /@ (Symbol /@ r["fields"])];
     head = {{"subsub", sysLab[r["sys"]] <> If[r["conf"], ", conformal", ""]},
-      {"text", "\\texttt{" <> rdEscId[fn] <> "}, fields $\\phi = " <> phi <> "$."}};
+      {"text", "\\texttt{" <> rdEscId[fn] <> "} in \\texttt{src/Matrix/" <> rdEscId[r["file"]] <> "}, fields $\\phi = " <> phi <> "$."}};
     If[full[r],
       ents = Join[Flatten[Table[rdMat[r["A"][[ic]], labs[[ic]], Identity], {ic, Length[labs]}], 1],
         rdVec[r["src"], "S", Identity]];
       Join[head, {{"entries", ents}}],
       Join[head, {{"sparsity", Append[Table[{labs[[ic]], rdNZ[r["A"][[ic]]]}, {ic, Length[labs]}],
         {"S", List /@ (# =!= 0 & /@ r["src"])}]}}]]];
-  ids = gateLog[[All, 1]];
-  skipped = Select[{"R-S3-1p1d-generator", "R-S4-1p1d-generator", "R-S4c-1p1d-generator"}, !MemberQ[ids, #] &];
-  skipped = {#, "These compare with reference CSVs of the 1+1D derivations of the consistent first and second moment and of the $c_M$ coupling, which are read only when \\texttt{FLUIDUM\\_EXTERNAL\\_REFPOINTS} names a directory holding them; it was " <>
-      If[csvDir === "", "unset", "set, but the CSVs were not found"] <> "."} & /@ skipped;
   items = {
     {"sec", "Medium, charm and the two-way coupled system"},
-    {"text", "Script: \\texttt{deriv/derive\\_two\\_way.wls}, with \\texttt{derive\\_two\\_way\\_gates.wls} and \\texttt{derive\\_two\\_way\\_export.wls}"}, {"text", "Writes: \\texttt{src/Matrix/two\\_way\\_generated.jl}"},
+    {"text", "Script: \\texttt{deriv/derive\\_two\\_way.wls}, with \\texttt{derive\\_two\\_way\\_gates.wls} and \\texttt{derive\\_two\\_way\\_export.wls}"}, {"text", "Writes: the charm and two-way matrices of \\texttt{src/Matrix} (one function per system, listed below)"},
     {"sub", "Setup"},
     {"text", "Three charts, boost invariant: 0+1D Bjorken (fields of $\\tau$ only), 1+1D cylindrical, 2+1D Cartesian Milne:"},
     {"eq", {rdDiag[BJ] <> ",\\quad u^{\\mu} = " <> rdTuple[rdTeX /@ stateBJ["u"]], rdDiag[CYL], rdDiag[CAR]}},
@@ -568,12 +524,12 @@ renderTwoWay[] := Module[{items, full, sysLab, chartLab, dirLab, fnItems, skippe
       "\\tau_{\\pi}\\,\\Delta^{\\mu\\nu}_{\\alpha\\beta}D\\pi^{\\alpha\\beta} + \\pi^{\\mu\\nu} + 2\\eta\\,\\sigma^{\\mu\\nu} + \\delta_{\\pi\\pi}\\,\\pi^{\\mu\\nu}\\theta = 0,\\qquad \\tau_{\\Pi}D\\Pi + \\Pi + \\zeta\\theta + \\delta_{\\Pi\\Pi}\\Pi\\theta = 0"}},
     {"text", "($D$, $\\theta$, $\\Delta^{\\mu\\nu}$, $\\Delta^{\\mu\\nu}_{\\alpha\\beta}$, $\\sigma^{\\mu\\nu}$ as in the viscous section.) Charm, with $n = n(T, \\alpha)$, $h = h(T)$, $P_{0} = nT$ and $\\delta M^{\\mu\\nu} = \\pi_{Q}^{\\mu\\nu} + \\Pi_{Q}\\Delta^{\\mu\\nu}$:"},
     {"eq", {"\\nabla_{\\mu}(n\\,u^{\\mu} + \\nu^{\\mu}) = 0,\\qquad \\frac{D_{s}}{T}\\,\\Delta^{\\mu}{}_{\\lambda}\\nabla_{\\nu}T_{Q}^{\\nu\\lambda} + \\nu^{\\mu} = 0",
-      "T_{Q}^{\\mu\\nu} = (n h - P_{0})\\,u^{\\mu}u^{\\nu} + P_{0}\\,\\Delta^{\\mu\\nu} + h\\,(u^{\\mu}\\nu^{\\nu} + \\nu^{\\mu}u^{\\nu}) + c\\,\\delta M^{\\mu\\nu}",
+      "T_{Q}^{\\mu\\nu} = (n h - P_{0})\\,u^{\\mu}u^{\\nu} + P_{0}\\,\\Delta^{\\mu\\nu} + h\\,(u^{\\mu}\\nu^{\\nu} + \\nu^{\\mu}u^{\\nu})",
       "S^{\\lambda\\alpha\\beta} = I_{31}\\,(u^{\\lambda}\\Delta^{\\alpha\\beta} + 2\\ \\text{perm.}) + \\mathcal{A}\\,(u^{\\lambda}u^{\\alpha}\\nu^{\\beta} + 2\\ \\text{perm.}) + \\mathcal{B}\\,(\\Delta^{\\lambda\\alpha}\\nu^{\\beta} + 2\\ \\text{perm.}) + \\mathcal{C}\\,(u^{\\lambda}\\delta M^{\\alpha\\beta} + 2\\ \\text{perm.})",
       "\\mathcal{E}^{\\mu\\nu} = \\Delta^{\\mu}{}_{\\alpha}\\Delta^{\\nu}{}_{\\beta}\\nabla_{\\lambda}S^{\\lambda\\alpha\\beta}:\\qquad \\frac{D_{s}}{2T}\\Bigl(\\mathcal{E}^{\\mu\\nu} - \\tfrac{1}{3}\\Delta^{\\mu\\nu}\\mathcal{E}^{\\lambda}{}_{\\lambda}\\Bigr) + \\pi_{Q}^{\\mu\\nu} = 0,\\qquad \\frac{D_{s}}{2T}\\,\\tfrac{1}{3}\\mathcal{E}^{\\lambda}{}_{\\lambda} + \\Pi_{Q} = 0"}},
-    {"text", "``2 perm.'' are the two other placements of the lone index. $I_{31}(T, \\alpha)$, $\\mathcal{A}(T)$, $\\mathcal{B}(T)$, $\\mathcal{C}(T)$ stay symbolic (Boltzmann: $I_{31} = nTh$, $\\mathcal{A} = m^{2} + 5Th$, $\\mathcal{B} = Th$, $\\mathcal{C} = m K_{4}/K_{3}$). $c = 1$ is $c_{M} = D_{s}/T$; $c = 0$ drops $\\delta M$ from $T_{Q}$. In 2+1D the traceless rows also carry"},
+    {"text", "``2 perm.'' are the two other placements of the lone index. $I_{31}(T, \\alpha)$, $\\mathcal{A}(T)$, $\\mathcal{B}(T)$, $\\mathcal{C}(T)$ stay symbolic (Boltzmann: $I_{31} = nTh$, $\\mathcal{A} = m^{2} + 5Th$, $\\mathcal{B} = Th$, $\\mathcal{C} = m K_{4}/K_{3}$). The second moment $\\delta M$ is evolved but does not enter $T_{Q}$. In 2+1D the traceless rows also carry"},
     {"eq", {"-(1 - w_{\\omega})\\,\\tau_{M}W^{\\mu\\nu},\\qquad \\tau_{M} = \\frac{D_{s}\\mathcal{C}}{2T},\\qquad W^{\\mu\\nu} = \\pi_{Q}^{\\mu}{}_{\\lambda}\\omega^{\\lambda\\nu} + \\pi_{Q}^{\\nu}{}_{\\lambda}\\omega^{\\lambda\\mu},\\qquad \\omega^{\\mu\\nu} = \\tfrac{1}{2}(\\Delta^{\\mu\\lambda}\\nabla_{\\lambda}u^{\\nu} - \\Delta^{\\nu\\lambda}\\nabla_{\\lambda}u^{\\mu})"}},
-    {"text", "so $w_{\\omega} = 1$ is the covariant row and $w_{\\omega} = 0$ removes the corotation coupling. The five systems:"},
+    {"text", "so $w_{\\omega} = 1$ is the covariant row, which is exported; $w_{\\omega} = 0$ removes the corotation coupling. The five systems (S1, S2 and every 0+1D system are derived for the checks; S3, S4, S5 in 1+1D and 2+1D are exported, with $\\delta_{\\Pi\\Pi} = 0$):"},
     {"eq", {"\\text{S1}:\\ \\nabla_{\\mu}T_{m}^{\\mu\\nu} = 0,\\ \\pi = \\Pi = 0\\qquad \\text{S2}:\\ \\text{S1} + \\text{the }\\pi, \\Pi\\text{ equations}",
       "\\text{S3}:\\ \\text{charm number} + \\text{first moment, background }T, u\\qquad \\text{S4}:\\ \\text{S3} + \\text{second moment, background }T, u",
       "\\text{S5}:\\ \\nabla_{\\mu}(T_{m} + T_{Q})^{\\mu\\nu} = 0,\\ \\text{the }\\pi, \\Pi\\text{ equations, the charm rows of S4; all fields evolved}"}},
@@ -583,27 +539,27 @@ renderTwoWay[] := Module[{items, full, sysLab, chartLab, dirLab, fnItems, skippe
     {"eq", {"\\text{0+1D}:\\ " <> fl[stateBJ, "med"] <> ",\\ " <> fl[stateBJ, "ch"] <> ",\\ " <> fl[stateBJ, "m2"],
       "\\text{1+1D}:\\ " <> fl[stateCYL, "med"] <> ",\\ " <> fl[stateCYL, "ch"] <> ",\\ " <> fl[stateCYL, "m2"],
       "\\text{2+1D}:\\ " <> fl[stateCAR, "med"] <> ",\\ " <> fl[stateCAR, "ch"] <> ",\\ " <> fl[stateCAR, "m2"]}},
-    {"text", "Rows, in the same order: the fluid rows $\\nabla_{\\mu}T^{\\mu\\tau}$, $\\nabla_{\\mu}T^{\\mu i}$ ($T_{m} + T_{Q}$ in S5); the shear rows $E^{\\eta\\eta}$ (0+1D), $E^{\\phi\\phi}$, $E^{\\eta\\eta}$ (1+1D), $E^{yy}$, $E^{\\eta\\eta}$, $E^{xy}$ (2+1D); the bulk row; $\\nabla_{\\mu}N^{\\mu}$; the current components; the traceless second-moment rows, components $\\hat\\eta\\hat\\eta$ (0+1D), $\\ell\\ell$, $\\hat\\phi\\hat\\phi$ (1+1D), $xx$, $xy$, $yy$ (2+1D); the trace row."},
+    {"text", "Rows, in the same order: the fluid rows $\\nabla_{\\mu}T^{\\mu\\tau}$, $\\nabla_{\\mu}T^{\\mu i}$ ($T_{m} + T_{Q}$ in S5); the shear rows $E^{\\eta\\eta}$ (0+1D), $E^{\\phi\\phi}$, $E^{\\eta\\eta}$ (1+1D), $E^{yy}$, $E^{\\eta\\eta}$, $E^{xy}$ (2+1D); the bulk row; $\\nabla_{\\mu}N^{\\mu}$; the current components; the traceless second-moment rows, components $\\eta\\eta$ (0+1D), $\\phi\\phi$, $\\eta\\eta$ (1+1D), $yy$, $\\eta\\eta$, $xy$ (2+1D), as the medium's shear rows; the trace row."},
     {"text", "In 0+1D the tensors are diagonal and $\\nu = 0$:"},
     {"eq", {"\\pi^{\\mu\\nu} = \\mathrm{diag}" <> rdTuple[rdTeX /@ Diagonal[toJ[stateBJ["piM"], stateBJ]]] <>
       ",\\qquad \\pi_{Q}^{\\mu\\nu} = \\mathrm{diag}" <> rdTuple[rdTeX /@ Diagonal[toJ[stateBJ["piQ"], stateBJ]]]}},
-    {"text", "In 1+1D the medium $\\pi^{\\mu\\nu}$ is as in the viscous section, and the charm stress is spanned by an orthonormal triad transverse to $u$:"},
-    {"eq", {"\\pi_{Q}^{\\mu\\nu} = \\pi_{Q}^{\\ell\\ell}\\,\\ell^{\\mu}\\ell^{\\nu} + \\pi_{Q}^{\\hat\\phi\\hat\\phi}\\,\\hat\\phi^{\\mu}\\hat\\phi^{\\nu} - (\\pi_{Q}^{\\ell\\ell} + \\pi_{Q}^{\\hat\\phi\\hat\\phi})\\,\\hat\\eta^{\\mu}\\hat\\eta^{\\nu}",
+    {"text", "In 1+1D the medium $\\pi^{\\mu\\nu}$ is as in the viscous section, and so is the charm stress: $\\pi_{Q}{}^{\\phi}{}_{\\phi}$ and $\\pi_{Q}{}^{\\eta}{}_{\\eta}$ are independent, the radial component follows from the trace. With the orthonormal triad transverse to $u$,"},
+    {"eq", {"\\pi_{Q}^{\\mu\\nu} = -(\\pi_{Q}{}^{\\phi}{}_{\\phi} + \\pi_{Q}{}^{\\eta}{}_{\\eta})\\,\\ell^{\\mu}\\ell^{\\nu} + \\pi_{Q}{}^{\\phi}{}_{\\phi}\\,\\hat\\phi^{\\mu}\\hat\\phi^{\\nu} + \\pi_{Q}{}^{\\eta}{}_{\\eta}\\,\\hat\\eta^{\\mu}\\hat\\eta^{\\nu}",
       "\\ell^{\\mu} = " <> rdTuple[rdTeX /@ (toJ[stateCYL["triad"][[1]], stateCYL] /. Sqrt[1 + ur^2] -> utau)] <>
       ",\\quad \\hat\\phi^{\\mu} = " <> rdTuple[rdTeX /@ stateCYL["triad"][[2]]] <> ",\\quad \\hat\\eta^{\\mu} = " <>
       rdTuple[rdTeX /@ stateCYL["triad"][[3]]]}},
-    {"text", "In 2+1D the medium $\\pi^{\\mu\\nu}$ is as in the viscous section; $\\pi_{Q}^{xx}$, $\\pi_{Q}^{xy}$, $\\pi_{Q}^{yy}$ are independent, the $\\tau$ row follows from $u_{\\mu}\\pi_{Q}^{\\mu\\nu} = 0$ and"},
-    {"eq", {"\\pi_{Q}{}^{\\eta}{}_{\\eta} = " <> rdTeX[TimeConstrained[Simplify[toJ[stateCAR["qet"], stateCAR]], 20,
-        toJ[stateCAR["qet"], stateCAR]] /. rdUtTW2[[1]]]}},
+    {"text", "In 2+1D the medium $\\pi^{\\mu\\nu}$ is as in the viscous section, and so is the charm stress: $\\pi_{Q}^{yy}$, $\\pi_{Q}{}^{\\eta}{}_{\\eta}$, $\\pi_{Q}^{xy}$ are independent, the $\\tau$ row follows from $u_{\\mu}\\pi_{Q}^{\\mu\\nu} = 0$ and"},
+    {"eq", {"\\pi_{Q}^{xx} = " <> rdTeX[TimeConstrained[Simplify[toJ[stateCAR["qxx"], stateCAR]], 20,
+        toJ[stateCAR["qxx"], stateCAR]] /. rdUtTW2[[1]]]}},
     {"sub", "Result"},
-    {"text", "Every 0+1D system and the 1+1D conformal systems in full; the generic 1+1D systems and every 2+1D system as the pattern of nonzero entries ($\\bullet$), rows and columns in the field order given. Their entries are in \\texttt{src/Matrix/two\\_way\\_generated.jl}, one function per system."}};
+    {"text", "The 1+1D charm systems and the 1+1D conformal two-way system in full; the generic 1+1D two-way system and every 2+1D system as the pattern of nonzero entries ($\\bullet$), rows and columns in the field order given. Their entries are in the generated block of the file named with each function."}};
   Do[Module[{fns = Select[exported[[All, 1]], renderSys[#]["chart"] === nm &]},
       AppendTo[items, {"sub", chartLab[nm]}];
       Do[items = Join[items, fnItems[fn, renderSys[fn]]], {fn, fns}]],
-    {nm, Select[{"0p1d", "1p1d", "2p1d"}, KeyExistsQ[results, #] &]}];
+    {nm, Select[{"1p1d", "2p1d"}, KeyExistsQ[results, #] &]}];
   items = Join[items, {
     {"sub", "Checks"},
-    {"checks", gateLog, skipped},
+    {"checks", gateLog, {}},
     {"text", "Not a check: the characteristic speeds of S5 are computed and reported (\\texttt{two\\_way\\_char\\_speeds.tsv} in the scratch directory)."},
     {"source", {FileNameJoin[{DERIV, "derive_two_way.wls"}], FileNameJoin[{DERIV, "derive_two_way_gates.wls"}],
       FileNameJoin[{DERIV, "derive_two_way_export.wls"}]}}}];

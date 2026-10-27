@@ -4,7 +4,7 @@
 
 Script: \texttt{deriv/derive\_hq\_2p1d.wls}
 
-Writes: \texttt{src/Matrix/HQ\_2p1d\_BG\_generated.jl}
+Writes: \texttt{two\_d\_HQ\_BG\_matrix} and \texttt{two\_d\_HQ\_live\_rows} in \texttt{src/Matrix/2d\_viscous\_HQ\_BG.jl}
 
 \subsection{Setup}
 
@@ -124,7 +124,7 @@ id & what it tests & \\
 \texttt{H-\allowbreak{}G4-\allowbreak{}At} & cylindrical A\_\allowbreak{}t * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped A\_\allowbreak{}t & PASS \\
 \texttt{H-\allowbreak{}G4-\allowbreak{}Ax} & cylindrical A\_\allowbreak{}x * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped A\_\allowbreak{}x & PASS \\
 \texttt{H-\allowbreak{}G4-\allowbreak{}src} & cylindrical src  * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped source & PASS \\
-\texttt{H-\allowbreak{}G4src} & cylindrical A\_\allowbreak{}t,\allowbreak{} A\_\allowbreak{}x,\allowbreak{} src * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} HQ\_\allowbreak{}const\_\allowbreak{}BG.jl READ FROM THE FILE & PASS \\
+\texttt{H-\allowbreak{}G4src} & cylindrical A\_\allowbreak{}t,\allowbreak{} A\_\allowbreak{}x,\allowbreak{} src * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} 1d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}cilindrical\_\allowbreak{}BG.jl READ FROM THE FILE & PASS \\
 \texttt{H-\allowbreak{}G2car-\allowbreak{}uu} & u.u =\allowbreak{}=\allowbreak{} -1 & PASS \\
 \texttt{H-\allowbreak{}G2car-\allowbreak{}un} & u.nu =\allowbreak{}=\allowbreak{} 0 & PASS \\
 \texttt{H-\allowbreak{}G3car} & Cartesian system is quasi-linear & PASS \\

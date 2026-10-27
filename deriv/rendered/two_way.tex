@@ -4,7 +4,7 @@
 
 Script: \texttt{deriv/derive\_two\_way.wls}, with \texttt{derive\_two\_way\_gates.wls} and \texttt{derive\_two\_way\_export.wls}
 
-Writes: \texttt{src/Matrix/two\_way\_generated.jl}
+Writes: the charm and two-way matrices of \texttt{src/Matrix} (one function per system, listed below)
 
 \subsection{Setup}
 
@@ -25,16 +25,16 @@ T_{m}^{\mu\nu} = (e + P + \Pi)\,u^{\mu}u^{\nu} + (P + \Pi)\,g^{\mu\nu} + \pi^{\m
 
 \begin{gather*}
 \nabla_{\mu}(n\,u^{\mu} + \nu^{\mu}) = 0,\qquad \frac{D_{s}}{T}\,\Delta^{\mu}{}_{\lambda}\nabla_{\nu}T_{Q}^{\nu\lambda} + \nu^{\mu} = 0 \\
-T_{Q}^{\mu\nu} = (n h - P_{0})\,u^{\mu}u^{\nu} + P_{0}\,\Delta^{\mu\nu} + h\,(u^{\mu}\nu^{\nu} + \nu^{\mu}u^{\nu}) + c\,\delta M^{\mu\nu} \\
+T_{Q}^{\mu\nu} = (n h - P_{0})\,u^{\mu}u^{\nu} + P_{0}\,\Delta^{\mu\nu} + h\,(u^{\mu}\nu^{\nu} + \nu^{\mu}u^{\nu}) \\
 S^{\lambda\alpha\beta} = I_{31}\,(u^{\lambda}\Delta^{\alpha\beta} + 2\ \text{perm.}) + \mathcal{A}\,(u^{\lambda}u^{\alpha}\nu^{\beta} + 2\ \text{perm.}) + \mathcal{B}\,(\Delta^{\lambda\alpha}\nu^{\beta} + 2\ \text{perm.}) + \mathcal{C}\,(u^{\lambda}\delta M^{\alpha\beta} + 2\ \text{perm.}) \\
 \mathcal{E}^{\mu\nu} = \Delta^{\mu}{}_{\alpha}\Delta^{\nu}{}_{\beta}\nabla_{\lambda}S^{\lambda\alpha\beta}:\qquad \frac{D_{s}}{2T}\Bigl(\mathcal{E}^{\mu\nu} - \tfrac{1}{3}\Delta^{\mu\nu}\mathcal{E}^{\lambda}{}_{\lambda}\Bigr) + \pi_{Q}^{\mu\nu} = 0,\qquad \frac{D_{s}}{2T}\,\tfrac{1}{3}\mathcal{E}^{\lambda}{}_{\lambda} + \Pi_{Q} = 0
 \end{gather*}
-``2 perm.'' are the two other placements of the lone index. $I_{31}(T, \alpha)$, $\mathcal{A}(T)$, $\mathcal{B}(T)$, $\mathcal{C}(T)$ stay symbolic (Boltzmann: $I_{31} = nTh$, $\mathcal{A} = m^{2} + 5Th$, $\mathcal{B} = Th$, $\mathcal{C} = m K_{4}/K_{3}$). $c = 1$ is $c_{M} = D_{s}/T$; $c = 0$ drops $\delta M$ from $T_{Q}$. In 2+1D the traceless rows also carry
+``2 perm.'' are the two other placements of the lone index. $I_{31}(T, \alpha)$, $\mathcal{A}(T)$, $\mathcal{B}(T)$, $\mathcal{C}(T)$ stay symbolic (Boltzmann: $I_{31} = nTh$, $\mathcal{A} = m^{2} + 5Th$, $\mathcal{B} = Th$, $\mathcal{C} = m K_{4}/K_{3}$). The second moment $\delta M$ is evolved but does not enter $T_{Q}$. In 2+1D the traceless rows also carry
 
 \[
 -(1 - w_{\omega})\,\tau_{M}W^{\mu\nu},\qquad \tau_{M} = \frac{D_{s}\mathcal{C}}{2T},\qquad W^{\mu\nu} = \pi_{Q}^{\mu}{}_{\lambda}\omega^{\lambda\nu} + \pi_{Q}^{\nu}{}_{\lambda}\omega^{\lambda\mu},\qquad \omega^{\mu\nu} = \tfrac{1}{2}(\Delta^{\mu\lambda}\nabla_{\lambda}u^{\nu} - \Delta^{\nu\lambda}\nabla_{\lambda}u^{\mu})
 \]
-so $w_{\omega} = 1$ is the covariant row and $w_{\omega} = 0$ removes the corotation coupling. The five systems:
+so $w_{\omega} = 1$ is the covariant row, which is exported; $w_{\omega} = 0$ removes the corotation coupling. The five systems (S1, S2 and every 0+1D system are derived for the checks; S3, S4, S5 in 1+1D and 2+1D are exported, with $\delta_{\Pi\Pi} = 0$):
 
 \begin{gather*}
 \text{S1}:\ \nabla_{\mu}T_{m}^{\mu\nu} = 0,\ \pi = \Pi = 0\qquad \text{S2}:\ \text{S1} + \text{the }\pi, \Pi\text{ equations} \\
@@ -49,229 +49,127 @@ Medium, charm first moment, charm second moment, chart by chart:
 
 \begin{gather*}
 \text{0+1D}:\ ({T}, {\pi^{\eta}{}_{\eta}}, {\Pi}),\ ({\alpha}),\ ({\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}}) \\
-\text{1+1D}:\ ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\Pi}),\ ({\alpha}, {\nu^{r}}),\ ({\pi_{Q}^{\ell\ell}}, {\pi_{Q}^{\hat\phi\hat\phi}}, {\Pi_{Q}}) \\
-\text{2+1D}:\ ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\Pi}),\ ({\alpha}, {\nu^{x}}, {\nu^{y}}),\ ({\pi_{Q}^{xx}}, {\pi_{Q}^{xy}}, {\pi_{Q}^{yy}}, {\Pi_{Q}})
+\text{1+1D}:\ ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\Pi}),\ ({\alpha}, {\nu^{r}}),\ ({\pi_{Q}{}^{\phi}{}_{\phi}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}}) \\
+\text{2+1D}:\ ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\Pi}),\ ({\alpha}, {\nu^{x}}, {\nu^{y}}),\ ({\pi_{Q}^{yy}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\pi_{Q}^{xy}}, {\Pi_{Q}})
 \end{gather*}
-Rows, in the same order: the fluid rows $\nabla_{\mu}T^{\mu\tau}$, $\nabla_{\mu}T^{\mu i}$ ($T_{m} + T_{Q}$ in S5); the shear rows $E^{\eta\eta}$ (0+1D), $E^{\phi\phi}$, $E^{\eta\eta}$ (1+1D), $E^{yy}$, $E^{\eta\eta}$, $E^{xy}$ (2+1D); the bulk row; $\nabla_{\mu}N^{\mu}$; the current components; the traceless second-moment rows, components $\hat\eta\hat\eta$ (0+1D), $\ell\ell$, $\hat\phi\hat\phi$ (1+1D), $xx$, $xy$, $yy$ (2+1D); the trace row.
+Rows, in the same order: the fluid rows $\nabla_{\mu}T^{\mu\tau}$, $\nabla_{\mu}T^{\mu i}$ ($T_{m} + T_{Q}$ in S5); the shear rows $E^{\eta\eta}$ (0+1D), $E^{\phi\phi}$, $E^{\eta\eta}$ (1+1D), $E^{yy}$, $E^{\eta\eta}$, $E^{xy}$ (2+1D); the bulk row; $\nabla_{\mu}N^{\mu}$; the current components; the traceless second-moment rows, components $\eta\eta$ (0+1D), $\phi\phi$, $\eta\eta$ (1+1D), $yy$, $\eta\eta$, $xy$ (2+1D), as the medium's shear rows; the trace row.
 
 In 0+1D the tensors are diagonal and $\nu = 0$:
 
 \[
 \pi^{\mu\nu} = \mathrm{diag}(0, -\frac{{\pi^{\eta}{}_{\eta}}}{2}, -\frac{{\pi^{\eta}{}_{\eta}}}{2}, \frac{{\pi^{\eta}{}_{\eta}}}{{\tau}^2}),\qquad \pi_{Q}^{\mu\nu} = \mathrm{diag}(0, -\frac{{\pi_{Q}{}^{\eta}{}_{\eta}}}{2}, -\frac{{\pi_{Q}{}^{\eta}{}_{\eta}}}{2}, \frac{{\pi_{Q}{}^{\eta}{}_{\eta}}}{{\tau}^2})
 \]
-In 1+1D the medium $\pi^{\mu\nu}$ is as in the viscous section, and the charm stress is spanned by an orthonormal triad transverse to $u$:
+In 1+1D the medium $\pi^{\mu\nu}$ is as in the viscous section, and so is the charm stress: $\pi_{Q}{}^{\phi}{}_{\phi}$ and $\pi_{Q}{}^{\eta}{}_{\eta}$ are independent, the radial component follows from the trace. With the orthonormal triad transverse to $u$,
 
 \begin{gather*}
-\pi_{Q}^{\mu\nu} = \pi_{Q}^{\ell\ell}\,\ell^{\mu}\ell^{\nu} + \pi_{Q}^{\hat\phi\hat\phi}\,\hat\phi^{\mu}\hat\phi^{\nu} - (\pi_{Q}^{\ell\ell} + \pi_{Q}^{\hat\phi\hat\phi})\,\hat\eta^{\mu}\hat\eta^{\nu} \\
+\pi_{Q}^{\mu\nu} = -(\pi_{Q}{}^{\phi}{}_{\phi} + \pi_{Q}{}^{\eta}{}_{\eta})\,\ell^{\mu}\ell^{\nu} + \pi_{Q}{}^{\phi}{}_{\phi}\,\hat\phi^{\mu}\hat\phi^{\nu} + \pi_{Q}{}^{\eta}{}_{\eta}\,\hat\eta^{\mu}\hat\eta^{\nu} \\
 \ell^{\mu} = ({u^{r}}, {u^{\tau}}, 0, 0),\quad \hat\phi^{\mu} = (0, 0, \frac{1}{{r}}, 0),\quad \hat\eta^{\mu} = (0, 0, 0, \frac{1}{{\tau}})
 \end{gather*}
-In 2+1D the medium $\pi^{\mu\nu}$ is as in the viscous section; $\pi_{Q}^{xx}$, $\pi_{Q}^{xy}$, $\pi_{Q}^{yy}$ are independent, the $\tau$ row follows from $u_{\mu}\pi_{Q}^{\mu\nu} = 0$ and
+In 2+1D the medium $\pi^{\mu\nu}$ is as in the viscous section, and so is the charm stress: $\pi_{Q}^{yy}$, $\pi_{Q}{}^{\eta}{}_{\eta}$, $\pi_{Q}^{xy}$ are independent, the $\tau$ row follows from $u_{\mu}\pi_{Q}^{\mu\nu} = 0$ and
 
 \[
-\pi_{Q}{}^{\eta}{}_{\eta} = -\frac{{\pi_{Q}^{xx}} \left(u^{y}\right)^2+{\pi_{Q}^{xx}}-2 {\pi_{Q}^{xy}} {u^{x}} {u^{y}}+{\pi_{Q}^{yy}} \left(u^{x}\right)^2+{\pi_{Q}^{yy}}}{\left(u^{\tau}\right)^2}
+\pi_{Q}^{xx} = -\frac{-2 {\pi_{Q}^{xy}} {u^{x}} {u^{y}}+{\pi_{Q}^{yy}} \left(u^{x}\right)^2+{\pi_{Q}^{yy}}+{\pi_{Q}{}^{\eta}{}_{\eta}} \left(u^{x}\right)^2+{\pi_{Q}{}^{\eta}{}_{\eta}} \left(u^{y}\right)^2+{\pi_{Q}{}^{\eta}{}_{\eta}}}{\left(u^{y}\right)^2+1}
 \]
 \subsection{Result}
 
-Every 0+1D system and the 1+1D conformal systems in full; the generic 1+1D systems and every 2+1D system as the pattern of nonzero entries ($\bullet$), rows and columns in the field order given. Their entries are in \texttt{src/Matrix/two\_way\_generated.jl}, one function per system.
+The 1+1D charm systems and the 1+1D conformal two-way system in full; the generic 1+1D two-way system and every 2+1D system as the pattern of nonzero entries ($\bullet$), rows and columns in the field order given. Their entries are in the generated block of the file named with each function.
 
-\subsection{0+1D Bjorken}
-
-\subsubsection{S1, ideal hydro}
-
-\texttt{ideal\_\allowbreak{}0p1d\_\allowbreak{}generated}, fields $\phi = ({T})$.
-
-\begin{align*}
-(A_t)_{11} &= {P''(T)} {T} \\
-S_{1} &= \frac{{P'(T)} {T}}{{\tau}}
-\end{align*}
-\subsubsection{S1, ideal hydro, conformal}
-
-\texttt{ideal\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T})$.
-
-\begin{align*}
-(A_t)_{11} &= 12 {a_{\mathrm{SB}}} {T}^3 \\
-S_{1} &= \frac{4 {a_{\mathrm{SB}}} {T}^4}{{\tau}}
-\end{align*}
-\subsubsection{S2, viscous hydro}
-
-\texttt{viscous\_\allowbreak{}0p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {\pi^{\eta}{}_{\eta}}, {\Pi})$.
-
-\begin{align*}
-(A_t)_{11} &= {P''(T)} {T} \\
-(A_t)_{22} &= \frac{{\tau_{\pi}}}{{\tau}^2} \\
-(A_t)_{33} &= {\tau_{\Pi}} \\
-S_{1} &= \frac{{P'(T)} {T}+{\Pi}+{\pi^{\eta}{}_{\eta}}}{{\tau}} \\
-S_{2} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}+3 {\pi^{\eta}{}_{\eta}} {\tau}+4 {\eta}}{3 {\tau}^3} \\
-S_{3} &= \frac{{\delta_{\Pi\Pi}} {\Pi}+{\Pi} {\tau}+{\zeta}}{{\tau}}
-\end{align*}
-\subsubsection{S2, viscous hydro, conformal}
-
-\texttt{viscous\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {\pi^{\eta}{}_{\eta}})$.
-
-\begin{align*}
-(A_t)_{11} &= 12 {a_{\mathrm{SB}}} {T}^3 \\
-(A_t)_{22} &= \frac{{\tau_{\pi}}}{{\tau}^2} \\
-S_{1} &= \frac{4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}}{{\tau}} \\
-S_{2} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}+3 {\pi^{\eta}{}_{\eta}} {\tau}+4 {\eta}}{3 {\tau}^3}
-\end{align*}
-\subsubsection{S3, charm first moment on a background}
-
-\texttt{hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}0p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha})$.
-
-\begin{align*}
-(A_t)_{11} &= {(\partial_{\alpha} n)} \\
-S_{1} &= {(\partial_{T} n)} {(\partial_{\tau} T)}+\frac{{n}}{{\tau}}
-\end{align*}
-\subsubsection{S4, charm first and second moment on a background}
-
-\texttt{hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}0p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
-
-\begin{align*}
-(A_t)_{11} &= {(\partial_{\alpha} n)} \\
-(A_t)_{22} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-(A_t)_{31} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}}}{2 {T}} \\
-(A_t)_{33} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-S_{1} &= {(\partial_{T} n)} {(\partial_{\tau} T)}+\frac{{n}}{{\tau}} \\
-S_{2} &= \frac{{D_{s}} (4 {\mathcal{C}} {\Pi_{Q}}+7 {\mathcal{C}} {\pi_{Q}{}^{\eta}{}_{\eta}}+3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {\tau}+4 {I_{31}})}{6 {T} {\tau}}+{\pi_{Q}{}^{\eta}{}_{\eta}} \\
-S_{3} &= \frac{{D_{s}} ({\mathcal{C}} (5 {\Pi_{Q}}+2 {\pi_{Q}{}^{\eta}{}_{\eta}})+3 {(\partial_{\tau} T)} {\tau} ({\mathcal{C}'(T)} {\Pi_{Q}}+{(\partial_{T} I_{31})})+5 {I_{31}})}{6 {T} {\tau}}+{\Pi_{Q}}
-\end{align*}
-\subsubsection{S5, two-way}
-
-\texttt{two\_\allowbreak{}way\_\allowbreak{}0p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {\pi^{\eta}{}_{\eta}}, {\Pi}, {\alpha}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
-
-\begin{align*}
-(A_t)_{11} &= ({h'(T)}-1) {n}+{(\partial_{T} n)} ({h}-{T})+{P''(T)} {T} \\
-(A_t)_{14} &= {(\partial_{\alpha} n)} ({h}-{T}) \\
-(A_t)_{22} &= \frac{{\tau_{\pi}}}{{\tau}^2} \\
-(A_t)_{33} &= {\tau_{\Pi}} \\
-(A_t)_{41} &= {(\partial_{T} n)} \\
-(A_t)_{44} &= {(\partial_{\alpha} n)} \\
-(A_t)_{51} &= \frac{{\mathcal{C}'(T)} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}}{2 {T}} \\
-(A_t)_{55} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-(A_t)_{61} &= \frac{{D_{s}} ({\mathcal{C}'(T)} {\Pi_{Q}}+{(\partial_{T} I_{31})})}{2 {T}} \\
-(A_t)_{64} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}}}{2 {T}} \\
-(A_t)_{66} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-S_{1} &= \frac{{c} {\Pi_{Q}}+{c} {\pi_{Q}{}^{\eta}{}_{\eta}}+{P'(T)} {T}+{h} {n}+{\Pi}+{\pi^{\eta}{}_{\eta}}}{{\tau}} \\
-S_{2} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}+3 {\pi^{\eta}{}_{\eta}} {\tau}+4 {\eta}}{3 {\tau}^3} \\
-S_{3} &= \frac{{\delta_{\Pi\Pi}} {\Pi}+{\Pi} {\tau}+{\zeta}}{{\tau}} \\
-S_{4} &= \frac{{n}}{{\tau}} \\
-S_{5} &= \frac{4 {\mathcal{C}} {D_{s}} {\Pi_{Q}}+7 {\mathcal{C}} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}+4 {D_{s}} {I_{31}}+6 {\pi_{Q}{}^{\eta}{}_{\eta}} {T} {\tau}}{6 {T} {\tau}} \\
-S_{6} &= \frac{5 {\mathcal{C}} {D_{s}} {\Pi_{Q}}+2 {\mathcal{C}} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}+5 {D_{s}} {I_{31}}+6 {\Pi_{Q}} {T} {\tau}}{6 {T} {\tau}}
-\end{align*}
-\subsubsection{S5, two-way, conformal}
-
-\texttt{two\_\allowbreak{}way\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {\pi^{\eta}{}_{\eta}}, {\alpha}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
-
-\begin{align*}
-(A_t)_{11} &= 12 {a_{\mathrm{SB}}} {T}^3+({h'(T)}-1) {n}+{(\partial_{T} n)} ({h}-{T}) \\
-(A_t)_{13} &= {(\partial_{\alpha} n)} ({h}-{T}) \\
-(A_t)_{22} &= \frac{{\tau_{\pi}}}{{\tau}^2} \\
-(A_t)_{31} &= {(\partial_{T} n)} \\
-(A_t)_{33} &= {(\partial_{\alpha} n)} \\
-(A_t)_{41} &= \frac{{\mathcal{C}'(T)} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}}{2 {T}} \\
-(A_t)_{44} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-(A_t)_{51} &= \frac{{D_{s}} ({\mathcal{C}'(T)} {\Pi_{Q}}+{(\partial_{T} I_{31})})}{2 {T}} \\
-(A_t)_{53} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}}}{2 {T}} \\
-(A_t)_{55} &= \frac{{\mathcal{C}} {D_{s}}}{2 {T}} \\
-S_{1} &= \frac{4 {a_{\mathrm{SB}}} {T}^4+{c} {\Pi_{Q}}+{c} {\pi_{Q}{}^{\eta}{}_{\eta}}+{h} {n}+{\pi^{\eta}{}_{\eta}}}{{\tau}} \\
-S_{2} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}+3 {\pi^{\eta}{}_{\eta}} {\tau}+4 {\eta}}{3 {\tau}^3} \\
-S_{3} &= \frac{{n}}{{\tau}} \\
-S_{4} &= \frac{4 {\mathcal{C}} {D_{s}} {\Pi_{Q}}+7 {\mathcal{C}} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}+4 {D_{s}} {I_{31}}+6 {\pi_{Q}{}^{\eta}{}_{\eta}} {T} {\tau}}{6 {T} {\tau}} \\
-S_{5} &= \frac{5 {\mathcal{C}} {D_{s}} {\Pi_{Q}}+2 {\mathcal{C}} {D_{s}} {\pi_{Q}{}^{\eta}{}_{\eta}}+5 {D_{s}} {I_{31}}+6 {\Pi_{Q}} {T} {\tau}}{6 {T} {\tau}}
-\end{align*}
 \subsection{1+1D cylindrical}
 
-\subsubsection{S1, ideal hydro}
-
-\texttt{ideal\_\allowbreak{}1p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet \\ \bullet & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet \\ \bullet & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet\end{pmatrix}
-\]
-\subsubsection{S1, ideal hydro, conformal}
-
-\texttt{ideal\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}})$.
-
-\begin{align*}
-(A_t)_{11} &= 4 {a_{\mathrm{SB}}} {T}^3 \left(4 \left(u^{r}\right)^2+3\right) \\
-(A_t)_{12} &= 8 {a_{\mathrm{SB}}} {T}^4 {u^{r}} \\
-(A_t)_{21} &= 16 {a_{\mathrm{SB}}} {T}^3 {u^{r}} {u^{\tau}} \\
-(A_t)_{22} &= \frac{4 {a_{\mathrm{SB}}} {T}^4 \left(2 \left(u^{r}\right)^2+1\right)}{{u^{\tau}}} \\
-(A_r)_{11} &= 16 {a_{\mathrm{SB}}} {T}^3 {u^{r}} {u^{\tau}} \\
-(A_r)_{12} &= \frac{4 {a_{\mathrm{SB}}} {T}^4 \left(2 \left(u^{r}\right)^2+1\right)}{{u^{\tau}}} \\
-(A_r)_{21} &= 4 {a_{\mathrm{SB}}} {T}^3 \left(4 \left(u^{r}\right)^2+1\right) \\
-(A_r)_{22} &= 8 {a_{\mathrm{SB}}} {T}^4 {u^{r}} \\
-S_{1} &= \frac{4 {a_{\mathrm{SB}}} {T}^4 \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)}{{r} {\tau}} \\
-S_{2} &= \frac{4 {a_{\mathrm{SB}}} {T}^4 {u^{r}} ({r} {u^{\tau}}+{\tau} {u^{r}})}{{r} {\tau}}
-\end{align*}
-\subsubsection{S2, viscous hydro}
-
-\texttt{viscous\_\allowbreak{}1p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\Pi})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
-\subsubsection{S2, viscous hydro, conformal}
-
-\texttt{viscous\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}})$.
-
-\begin{align*}
-(A_t)_{11} &= 4 {a_{\mathrm{SB}}} {T}^3 \left(4 \left(u^{r}\right)^2+3\right) \\
-(A_t)_{12} &= -2 {u^{r}} \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right) \\
-(A_t)_{13} &= -\left(u^{r}\right)^2 \\
-(A_t)_{14} &= -\left(u^{r}\right)^2 \\
-(A_t)_{21} &= 16 {a_{\mathrm{SB}}} {T}^3 {u^{r}} {u^{\tau}} \\
-(A_t)_{22} &= -\frac{\left(2 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)}{{u^{\tau}}} \\
-(A_t)_{23} &= -{u^{r}} {u^{\tau}} \\
-(A_t)_{24} &= -{u^{r}} {u^{\tau}} \\
-(A_t)_{32} &= \frac{{u^{r}} (3 {\delta_{\pi\pi}} {\pi^{\phi}{}_{\phi}}-2 {\eta})}{3 {r}^2 {u^{\tau}}} \\
-(A_t)_{33} &= \frac{{\tau_{\pi}} {u^{\tau}}}{{r}^2} \\
-(A_t)_{42} &= \frac{{u^{r}} (3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}-2 {\eta})}{3 {\tau}^2 {u^{\tau}}} \\
-(A_t)_{44} &= \frac{{\tau_{\pi}} {u^{\tau}}}{{\tau}^2} \\
-(A_r)_{11} &= 16 {a_{\mathrm{SB}}} {T}^3 {u^{r}} {u^{\tau}} \\
-(A_r)_{12} &= -\frac{\left(2 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)}{{u^{\tau}}} \\
-(A_r)_{13} &= -{u^{r}} {u^{\tau}} \\
-(A_r)_{14} &= -{u^{r}} {u^{\tau}} \\
-(A_r)_{21} &= 4 {a_{\mathrm{SB}}} {T}^3 \left(4 \left(u^{r}\right)^2+1\right) \\
-(A_r)_{22} &= -2 {u^{r}} \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right) \\
-(A_r)_{23} &= -\left(u^{r}\right)^2-1 \\
-(A_r)_{24} &= -\left(u^{r}\right)^2-1 \\
-(A_r)_{32} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\phi}{}_{\phi}}-2 {\eta}}{3 {r}^2} \\
-(A_r)_{33} &= \frac{{\tau_{\pi}} {u^{r}}}{{r}^2} \\
-(A_r)_{42} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}-2 {\eta}}{3 {\tau}^2} \\
-(A_r)_{44} &= \frac{{\tau_{\pi}} {u^{r}}}{{\tau}^2} \\
-S_{1} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(4 {a_{\mathrm{SB}}} {T}^4 \left(\left(u^{r}\right)^2+1\right) ({r} {u^{\tau}}+{\tau} {u^{r}}) - {\pi^{\phi}{}_{\phi}} {u^{r}} \left({r} {u^{r}} {u^{\tau}}+{\tau} \left(u^{r}\right)^2+{\tau}\right)\\
-  &\quad - {\pi^{\eta}{}_{\eta}} \left({r} \left(\left(u^{r}\right)^2-1\right) {u^{\tau}}+{\tau} \left(\left(u^{r}\right)^3+{u^{r}}\right)\right)\Bigr) \\
-S_{2} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(- {\pi^{\eta}{}_{\eta}} \left(\left(u^{r}\right)^2+1\right) ({r} {u^{r}}+{\tau} {u^{\tau}}) + 4 {a_{\mathrm{SB}}} {T}^4 {u^{r}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\\
-  &\quad - {\pi^{\phi}{}_{\phi}} \left({r} \left(\left(u^{r}\right)^3+{u^{r}}\right)+{\tau} \left(\left(u^{r}\right)^2+2\right) {u^{\tau}}\right)\Bigr) \\
-S_{3} &= \frac{3 {\pi^{\phi}{}_{\phi}} ({r} ({\delta_{\pi\pi}} {u^{\tau}}+{\tau})+{\delta_{\pi\pi}} {\tau} {u^{r}})-2 {r} {u^{\tau}} {\eta}+4 {\tau} {u^{r}} {\eta}}{3 {r}^3 {\tau}} \\
-S_{4} &= \frac{3 {\pi^{\eta}{}_{\eta}} ({r} ({\delta_{\pi\pi}} {u^{\tau}}+{\tau})+{\delta_{\pi\pi}} {\tau} {u^{r}})+4 {r} {u^{\tau}} {\eta}-2 {\tau} {u^{r}} {\eta}}{3 {r} {\tau}^3}
-\end{align*}
 \subsubsection{S3, charm first moment on a background}
 
-\texttt{hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}1p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha}, {\nu^{r}})$.
+\texttt{one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} in \texttt{src/Matrix/1d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}cilindrical\_\allowbreak{}BG.jl}, fields $\phi = ({\alpha}, {\nu^{r}})$.
 
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet \\ \bullet & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet \\ \bullet & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet\end{pmatrix}
-\]
+\begin{align*}
+(A_t)_{11} &= {(\partial_{\alpha} n)} {u^{\tau}} \\
+(A_t)_{12} &= \frac{{u^{r}}}{{u^{\tau}}} \\
+(A_t)_{21} &= {(\partial_{\alpha} n)} {D_{s}} {u^{r}} {u^{\tau}} \\
+(A_t)_{22} &= \frac{{D_{s}} {h} {u^{\tau}}}{{T}} \\
+(A_r)_{11} &= {(\partial_{\alpha} n)} {u^{r}} \\
+(A_r)_{12} &= 1 \\
+(A_r)_{21} &= {(\partial_{\alpha} n)} {D_{s}} \left(\left(u^{r}\right)^2+1\right) \\
+(A_r)_{22} &= \frac{{D_{s}} {h} {u^{r}}}{{T}} \\
+S_{1} &= {(\partial_{r} u^{r})} {n} + {(\partial_{T} n)} {(\partial_{r} T)} {u^{r}} + \frac{{n} {u^{r}}+{\nu^{r}}}{{r}} - \frac{{(\partial_{\tau} u^{r})} {\nu^{r}} \left(u^{r}\right)^2}{\left(u^{\tau}\right)^3} + \frac{{(\partial_{\tau} u^{r})} {\nu^{r}}}{{u^{\tau}}} + \frac{{(\partial_{\tau} u^{r})} {n} {u^{r}}}{{u^{\tau}}}\\
+  &\quad + \frac{{n} \left(u^{r}\right)^2+{n}+{\nu^{r}} {u^{r}}}{{\tau} {u^{\tau}}} + {(\partial_{T} n)} {(\partial_{\tau} T)} {u^{\tau}} \\
+S_{2} &= {\nu^{r}}\\
+  &\quad + \frac{1}{{T} {u^{\tau}}}{D_{s}}\Bigl(\left(\left(u^{r}\right)^2+1\right) ({(\partial_{T} n)} {T}+{n}) ({(\partial_{r} T)} {u^{\tau}}+{(\partial_{\tau} T)} {u^{r}})\\
+  &\quad + {h'(T)} {\nu^{r}} \left({(\partial_{r} T)} {u^{r}} {u^{\tau}}+{(\partial_{\tau} T)} \left(u^{r}\right)^2+{(\partial_{\tau} T)}\right)\Bigr)\\
+  &\quad + \frac{1}{{r} {T} {\tau} \left(u^{\tau}\right)^3}{D_{s}} {h}\Bigl({\nu^{r}} {\tau} {u^{r}} \left(u^{\tau}\right)^3 + {n} {r} {\tau} \left(\left(u^{r}\right)^2+1\right) \left({(\partial_{r} u^{r})} {u^{r}} {u^{\tau}}+{(\partial_{\tau} u^{r})} \left(u^{r}\right)^2+{(\partial_{\tau} u^{r})}\right)\\
+  &\quad + {\nu^{r}} {r} \left(\left(u^{r}\right)^2 ({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+2)+2 {(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} \left(\left(u^{r}\right)^2+1\right) {u^{r}}+\left(u^{r}\right)^4+1\right)\Bigr)
+\end{align*}
 \subsubsection{S4, charm first and second moment on a background}
 
-\texttt{hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}1p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha}, {\nu^{r}}, {\pi_{Q}^{\ell\ell}}, {\pi_{Q}^{\hat\phi\hat\phi}}, {\Pi_{Q}})$.
+\texttt{one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} in \texttt{src/Matrix/1d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}cilindrical\_\allowbreak{}BG\_\allowbreak{}m2.jl}, fields $\phi = ({\alpha}, {\nu^{r}}, {\pi_{Q}{}^{\phi}{}_{\phi}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
 
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
+\begin{align*}
+(A_t)_{11} &= {(\partial_{\alpha} n)} {u^{\tau}} \\
+(A_t)_{12} &= \frac{{u^{r}}}{{u^{\tau}}} \\
+(A_t)_{21} &= {(\partial_{\alpha} n)} {D_{s}} {u^{r}} {u^{\tau}} \\
+(A_t)_{22} &= \frac{{D_{s}} {h} {u^{\tau}}}{{T}} \\
+(A_t)_{32} &= -\frac{{\mathcal{B}} {D_{s}} {u^{r}}}{3 {T} {u^{\tau}}} \\
+(A_t)_{33} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
+(A_t)_{42} &= -\frac{{\mathcal{B}} {D_{s}} {u^{r}}}{3 {T} {u^{\tau}}} \\
+(A_t)_{44} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
+(A_t)_{51} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}} {u^{\tau}}}{2 {T}} \\
+(A_t)_{52} &= \frac{5 {\mathcal{B}} {D_{s}} {u^{r}}}{6 {T} {u^{\tau}}} \\
+(A_t)_{55} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
+(A_r)_{11} &= {(\partial_{\alpha} n)} {u^{r}} \\
+(A_r)_{12} &= 1 \\
+(A_r)_{21} &= {(\partial_{\alpha} n)} {D_{s}} \left(\left(u^{r}\right)^2+1\right) \\
+(A_r)_{22} &= \frac{{D_{s}} {h} {u^{r}}}{{T}} \\
+(A_r)_{32} &= -\frac{{\mathcal{B}} {D_{s}}}{3 {T}} \\
+(A_r)_{33} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
+(A_r)_{42} &= -\frac{{\mathcal{B}} {D_{s}}}{3 {T}} \\
+(A_r)_{44} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
+(A_r)_{51} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}} {u^{r}}}{2 {T}} \\
+(A_r)_{52} &= \frac{5 {\mathcal{B}} {D_{s}}}{6 {T}} \\
+(A_r)_{55} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
+S_{1} &= {(\partial_{r} u^{r})} {n} + {(\partial_{T} n)} {(\partial_{r} T)} {u^{r}} + \frac{{n} {u^{r}}+{\nu^{r}}}{{r}} - \frac{{(\partial_{\tau} u^{r})} {\nu^{r}} \left(u^{r}\right)^2}{\left(u^{\tau}\right)^3} + \frac{{(\partial_{\tau} u^{r})} {\nu^{r}}}{{u^{\tau}}} + \frac{{(\partial_{\tau} u^{r})} {n} {u^{r}}}{{u^{\tau}}}\\
+  &\quad + \frac{{n} \left(u^{r}\right)^2+{n}+{\nu^{r}} {u^{r}}}{{\tau} {u^{\tau}}} + {(\partial_{T} n)} {(\partial_{\tau} T)} {u^{\tau}} \\
+S_{2} &= {\nu^{r}}\\
+  &\quad + \frac{1}{{T} {u^{\tau}}}{D_{s}}\Bigl(\left(\left(u^{r}\right)^2+1\right) ({(\partial_{T} n)} {T}+{n}) ({(\partial_{r} T)} {u^{\tau}}+{(\partial_{\tau} T)} {u^{r}})\\
+  &\quad + {h'(T)} {\nu^{r}} \left({(\partial_{r} T)} {u^{r}} {u^{\tau}}+{(\partial_{\tau} T)} \left(u^{r}\right)^2+{(\partial_{\tau} T)}\right)\Bigr)\\
+  &\quad + \frac{1}{{r} {T} {\tau} \left(u^{\tau}\right)^3}{D_{s}} {h}\Bigl({\nu^{r}} {\tau} {u^{r}} \left(u^{\tau}\right)^3 + {n} {r} {\tau} \left(\left(u^{r}\right)^2+1\right) \left({(\partial_{r} u^{r})} {u^{r}} {u^{\tau}}+{(\partial_{\tau} u^{r})} \left(u^{r}\right)^2+{(\partial_{\tau} u^{r})}\right)\\
+  &\quad + {\nu^{r}} {r} \left(\left(u^{r}\right)^2 ({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+2)+2 {(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} \left(\left(u^{r}\right)^2+1\right) {u^{r}}+\left(u^{r}\right)^4+1\right)\Bigr) \\
+S_{3} &= {\pi_{Q}{}^{\phi}{}_{\phi}}\\
+  &\quad - \frac{1}{6 {r} {T} {\tau} \left(u^{\tau}\right)^3}{D_{s}}\Bigl(2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} + 2 {\mathcal{B}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} - 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {r} {\tau} + 2 {\mathcal{B}} {\nu^{r}} {r} {u^{r}}\\
+  &\quad + 2 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} {u^{r}} + 2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2 - 6 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {r} {\tau} \left(u^{r}\right)^2\\
+  &\quad + 2 {\mathcal{B}} {\nu^{r}} {r} \left(u^{r}\right)^3 + 2 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^3 - 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {r} {\tau} \left(u^{r}\right)^4 - 4 {\mathcal{B}} {\nu^{r}} {\tau} {u^{\tau}}\\
+  &\quad + 2 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} {u^{\tau}} + 2 {\mathcal{A}} {(\partial_{r} u^{r})} {\nu^{r}} {r} {\tau} {u^{r}} {u^{\tau}} - 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {r} {\tau} {u^{r}} {u^{\tau}} - 4 {\mathcal{B}} {\nu^{r}} {\tau} \left(u^{r}\right)^2 {u^{\tau}}\\
+  &\quad + 2 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2 {u^{\tau}} - 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {r} {\tau} \left(u^{r}\right)^3 {u^{\tau}}\\
+  &\quad + 2 {I_{31}} \left(\left(u^{r}\right)^2+1\right) \left({r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}+\left(u^{r}\right)^2+1\right)-2 {\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {\mathcal{C}} \left(\left(u^{r}\right)^2+1\right)\Bigl(- 4 {\Pi_{Q}} {\tau} {u^{r}} {u^{\tau}} - 7 {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} {u^{r}} {u^{\tau}} - 2 {\pi_{Q}{}^{\eta}{}_{\eta}} {r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}-\left(u^{r}\right)^2-1\right)\\
+  &\quad + 2 {\Pi_{Q}} {r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}+\left(u^{r}\right)^2+1\right)\\
+  &\quad - {\pi_{Q}{}^{\phi}{}_{\phi}} {r} \left(5 {(\partial_{r} u^{r})} {\tau} {u^{\tau}}+5 {(\partial_{\tau} u^{r})} {\tau} {u^{r}}+3 \left(u^{r}\right)^2+3\right)\Bigr)\Bigr) \\
+S_{4} &= {\pi_{Q}{}^{\eta}{}_{\eta}}\\
+  &\quad + \frac{1}{6 {r} {T} {\tau} \left(u^{\tau}\right)^3}{D_{s}}\Bigl(- 2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} - 2 {\mathcal{B}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} + 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {r} {\tau} + 4 {\mathcal{B}} {\nu^{r}} {r} {u^{r}}\\
+  &\quad - 2 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} {u^{r}} - 2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2 + 6 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {r} {\tau} \left(u^{r}\right)^2\\
+  &\quad + 4 {\mathcal{B}} {\nu^{r}} {r} \left(u^{r}\right)^3 - 2 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^3 + 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {r} {\tau} \left(u^{r}\right)^4 - 2 {\mathcal{B}} {\nu^{r}} {\tau} {u^{\tau}}\\
+  &\quad - 2 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} {u^{\tau}} - 2 {\mathcal{A}} {(\partial_{r} u^{r})} {\nu^{r}} {r} {\tau} {u^{r}} {u^{\tau}} + 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {r} {\tau} {u^{r}} {u^{\tau}} - 2 {\mathcal{B}} {\nu^{r}} {\tau} \left(u^{r}\right)^2 {u^{\tau}}\\
+  &\quad - 2 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2 {u^{\tau}} + 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {r} {\tau} \left(u^{r}\right)^3 {u^{\tau}}\\
+  &\quad - 2 {I_{31}} \left(\left(u^{r}\right)^2+1\right) \left({r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}-2 \left(u^{r}\right)^2-2\right)+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {\mathcal{C}} \left(\left(u^{r}\right)^2+1\right)\Bigl(2 {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} ({u^{\tau}} ({(\partial_{r} u^{r})} {r}-{u^{r}})+{(\partial_{\tau} u^{r})} {r} {u^{r}})\\
+  &\quad - 2 {\Pi_{Q}} \left({r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}-2 \left(u^{r}\right)^2-2\right)+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {\pi_{Q}{}^{\eta}{}_{\eta}} \left({r} \left(5 {(\partial_{r} u^{r})} {\tau} {u^{\tau}}+5 {(\partial_{\tau} u^{r})} {\tau} {u^{r}}+7 \left(u^{r}\right)^2+7\right)+3 {\tau} {u^{r}} {u^{\tau}}\right)\Bigr)\Bigr) \\
+S_{5} &= {\Pi_{Q}}\\
+  &\quad + \frac{1}{6 {r} {T} {\tau} \left(u^{\tau}\right)^3}{D_{s}}\Bigl(3 {(\partial_{T} I_{31})} {(\partial_{\tau} T)} {r} {\tau} + 2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} + 5 {\mathcal{B}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} + 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\Pi_{Q}} {r} {\tau} + 5 {\mathcal{B}} {\nu^{r}} {r} {u^{r}}\\
+  &\quad + 5 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} {u^{r}} + 6 {(\partial_{T} I_{31})} {(\partial_{\tau} T)} {r} {\tau} \left(u^{r}\right)^2 + 2 {\mathcal{A}} {(\partial_{\tau} u^{r})} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2\\
+  &\quad + 6 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\Pi_{Q}} {r} {\tau} \left(u^{r}\right)^2 + 5 {\mathcal{B}} {\nu^{r}} {r} \left(u^{r}\right)^3 + 5 {\mathcal{B}'(T)} {(\partial_{\tau} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^3\\
+  &\quad + 3 {(\partial_{T} I_{31})} {(\partial_{\tau} T)} {r} {\tau} \left(u^{r}\right)^4 + 3 {\mathcal{C}'(T)} {(\partial_{\tau} T)} {\Pi_{Q}} {r} {\tau} \left(u^{r}\right)^4 + 5 {\mathcal{B}} {\nu^{r}} {\tau} {u^{\tau}} + 5 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} {u^{\tau}}\\
+  &\quad + 3 {(\partial_{T} I_{31})} {(\partial_{r} T)} {r} {\tau} {u^{r}} {u^{\tau}} + 2 {\mathcal{A}} {(\partial_{r} u^{r})} {\nu^{r}} {r} {\tau} {u^{r}} {u^{\tau}} + 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\Pi_{Q}} {r} {\tau} {u^{r}} {u^{\tau}} + 5 {\mathcal{B}} {\nu^{r}} {\tau} \left(u^{r}\right)^2 {u^{\tau}}\\
+  &\quad + 5 {\mathcal{B}'(T)} {(\partial_{r} T)} {\nu^{r}} {r} {\tau} \left(u^{r}\right)^2 {u^{\tau}} + 3 {(\partial_{T} I_{31})} {(\partial_{r} T)} {r} {\tau} \left(u^{r}\right)^3 {u^{\tau}} + 3 {\mathcal{C}'(T)} {(\partial_{r} T)} {\Pi_{Q}} {r} {\tau} \left(u^{r}\right)^3 {u^{\tau}}\\
+  &\quad + 5 {I_{31}} \left(\left(u^{r}\right)^2+1\right) \left({r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}+\left(u^{r}\right)^2+1\right)+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {\mathcal{C}} \left(\left(u^{r}\right)^2+1\right)\Bigl(5 {\Pi_{Q}} \left({r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}+\left(u^{r}\right)^2+1\right)+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad - 2\Bigl({\pi_{Q}{}^{\eta}{}_{\eta}} {r} \left({(\partial_{r} u^{r})} {\tau} {u^{\tau}}+{(\partial_{\tau} u^{r})} {\tau} {u^{r}}-\left(u^{r}\right)^2-1\right)\\
+  &\quad + {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} ({u^{\tau}} ({(\partial_{r} u^{r})} {r}-{u^{r}})+{(\partial_{\tau} u^{r})} {r} {u^{r}})\Bigr)\Bigr)\Bigr)
+\end{align*}
 \subsubsection{S5, two-way}
 
-\texttt{two\_\allowbreak{}way\_\allowbreak{}1p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\Pi}, {\alpha}, {\nu^{r}}, {\pi_{Q}^{\ell\ell}}, {\pi_{Q}^{\hat\phi\hat\phi}}, {\Pi_{Q}})$.
+\texttt{one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} in \texttt{src/Matrix/1d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}cilindrical.jl}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\Pi}, {\alpha}, {\nu^{r}}, {\pi_{Q}{}^{\phi}{}_{\phi}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
 
 \[
 \arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix}
+A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_r = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix}
 \]
 \[
 \arraycolsep=2.5pt
@@ -279,27 +177,23 @@ S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bulle
 \]
 \subsubsection{S5, two-way, conformal}
 
-\texttt{two\_\allowbreak{}way\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\alpha}, {\nu^{r}}, {\pi_{Q}^{\ell\ell}}, {\pi_{Q}^{\hat\phi\hat\phi}}, {\Pi_{Q}})$.
+\texttt{one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} in \texttt{src/Matrix/1d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}cilindrical.jl}, fields $\phi = ({T}, {u^{r}}, {\pi^{\phi}{}_{\phi}}, {\pi^{\eta}{}_{\eta}}, {\alpha}, {\nu^{r}}, {\pi_{Q}{}^{\phi}{}_{\phi}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\Pi_{Q}})$.
 
 \begin{align*}
 (A_t)_{11} &= 2 {h'(T)} {\nu^{r}} {u^{r}} + 4 {a_{\mathrm{SB}}} {T}^3 \left(4 \left(u^{r}\right)^2+3\right) + {n} \left({h'(T)} \left(u^{r}\right)^2+{h'(T)}-1\right)\\
   &\quad + {(\partial_{T} n)} \left({h} \left(u^{r}\right)^2+{h}-{T}\right) \\
-(A_t)_{12} &= 2 \left({u^{r}} \left(4 {a_{\mathrm{SB}}} {T}^4+{c} {\Pi_{Q}}+{c} {\pi_{Q}^{\ell\ell}}-{\pi^{\eta}{}_{\eta}}-{\pi^{\phi}{}_{\phi}}\right)+{h} ({n} {u^{r}}+{\nu^{r}})\right) \\
+(A_t)_{12} &= 2 {h} ({n} {u^{r}}+{\nu^{r}})-2 {u^{r}} \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right) \\
 (A_t)_{13} &= -\left(u^{r}\right)^2 \\
 (A_t)_{14} &= -\left(u^{r}\right)^2 \\
 (A_t)_{15} &= {(\partial_{\alpha} n)} \left({h} \left(u^{r}\right)^2+{h}-{T}\right) \\
 (A_t)_{16} &= 2 {h} {u^{r}} \\
-(A_t)_{17} &= {c} \left(u^{r}\right)^2 \\
-(A_t)_{19} &= {c} \left(u^{r}\right)^2 \\
 (A_t)_{21} &= \frac{{u^{r}} \left(\left(u^{r}\right)^2+1\right) \left(16 {a_{\mathrm{SB}}} {T}^3+{(\partial_{T} n)} {h}\right)+{h'(T)} \left({n} \left(\left(u^{r}\right)^2+1\right) {u^{r}}+2 {\nu^{r}} \left(u^{r}\right)^2+{\nu^{r}}\right)}{{u^{\tau}}} \\
-(A_t)_{22} &= \frac{1}{\left(u^{\tau}\right)^3}\Bigl(- \left(2 \left(u^{r}\right)^4+3 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4-{c} {\Pi_{Q}}-{c} {\pi_{Q}^{\ell\ell}}+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)\\
+(A_t)_{22} &= \frac{1}{\left(u^{\tau}\right)^3}\Bigl(- \left(2 \left(u^{r}\right)^4+3 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)\\
   &\quad + {h} \left(2 {n} \left(u^{r}\right)^4+3 {n} \left(u^{r}\right)^2+{n}+2 {\nu^{r}} \left(u^{r}\right)^3+3 {\nu^{r}} {u^{r}}\right)\Bigr) \\
 (A_t)_{23} &= -{u^{r}} {u^{\tau}} \\
 (A_t)_{24} &= -{u^{r}} {u^{\tau}} \\
 (A_t)_{25} &= {(\partial_{\alpha} n)} {h} {u^{r}} {u^{\tau}} \\
 (A_t)_{26} &= \frac{{h} \left(2 \left(u^{r}\right)^2+1\right)}{{u^{\tau}}} \\
-(A_t)_{27} &= {c} {u^{r}} {u^{\tau}} \\
-(A_t)_{29} &= {c} {u^{r}} {u^{\tau}} \\
 (A_t)_{32} &= \frac{{u^{r}} (3 {\delta_{\pi\pi}} {\pi^{\phi}{}_{\phi}}-2 {\eta})}{3 {r}^2 {u^{\tau}}} \\
 (A_t)_{33} &= \frac{{\tau_{\pi}} {u^{\tau}}}{{r}^2} \\
 (A_t)_{42} &= \frac{{u^{r}} (3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}-2 {\eta})}{3 {\tau}^2 {u^{\tau}}} \\
@@ -309,41 +203,35 @@ S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bulle
 (A_t)_{55} &= {(\partial_{\alpha} n)} {u^{\tau}} \\
 (A_t)_{56} &= \frac{{u^{r}}}{{u^{\tau}}} \\
 (A_t)_{61} &= \frac{{D_{s}} {u^{\tau}} ({h'(T)} {\nu^{r}}+{u^{r}} ({(\partial_{T} n)} {T}+{n}))}{{T}} \\
-(A_t)_{62} &= \frac{{D_{s}} \left({c} \left(\left(u^{r}\right)^2+1\right) ({\Pi_{Q}}+{\pi_{Q}^{\ell\ell}})+{h} \left({n} \left(u^{r}\right)^2+{n}+{\nu^{r}} {u^{r}}\right)\right)}{{T} {u^{\tau}}} \\
+(A_t)_{62} &= \frac{{D_{s}} {h} \left({n} \left(u^{r}\right)^2+{n}+{\nu^{r}} {u^{r}}\right)}{{T} {u^{\tau}}} \\
 (A_t)_{65} &= {(\partial_{\alpha} n)} {D_{s}} {u^{r}} {u^{\tau}} \\
 (A_t)_{66} &= \frac{{D_{s}} {h} {u^{\tau}}}{{T}} \\
-(A_t)_{67} &= \frac{{c} {D_{s}} {u^{r}} {u^{\tau}}}{{T}} \\
-(A_t)_{69} &= \frac{{c} {D_{s}} {u^{r}} {u^{\tau}}}{{T}} \\
-(A_t)_{71} &= \frac{{D_{s}} \left(4 {\mathcal{B}'(T)} {\nu^{r}} {u^{r}}+3 {\mathcal{C}'(T)} {\pi_{Q}^{\ell\ell}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} {u^{\tau}}} \\
-(A_t)_{72} &= \frac{{D_{s}} \left(4 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+4 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (4 {\mathcal{C}} {\Pi_{Q}}+7 {\mathcal{C}} {\pi_{Q}^{\ell\ell}}+4 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
-(A_t)_{76} &= \frac{2 {\mathcal{B}} {D_{s}} {u^{r}}}{3 {T} {u^{\tau}}} \\
+(A_t)_{71} &= \frac{{D_{s}} \left(3 {\mathcal{C}'(T)} {\pi_{Q}{}^{\phi}{}_{\phi}} \left(\left(u^{r}\right)^2+1\right)-2 {\mathcal{B}'(T)} {\nu^{r}} {u^{r}}\right)}{6 {T} {u^{\tau}}} \\
+(A_t)_{72} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+2 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (2 {\mathcal{C}} {\Pi_{Q}}-2 {\mathcal{C}} {\pi_{Q}{}^{\eta}{}_{\eta}}-5 {\mathcal{C}} {\pi_{Q}{}^{\phi}{}_{\phi}}+2 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
+(A_t)_{76} &= -\frac{{\mathcal{B}} {D_{s}} {u^{r}}}{3 {T} {u^{\tau}}} \\
 (A_t)_{77} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
-(A_t)_{81} &= \frac{{D_{s}} \left(3 {\mathcal{C}'(T)} {\pi_{Q}^{\hat\phi\hat\phi}} \left(\left(u^{r}\right)^2+1\right)-2 {\mathcal{B}'(T)} {\nu^{r}} {u^{r}}\right)}{6 {T} {u^{\tau}}} \\
-(A_t)_{82} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+2 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (2 {\mathcal{C}} {\Pi_{Q}}+2 {\mathcal{C}} {\pi_{Q}^{\ell\ell}}-3 {\mathcal{C}} {\pi_{Q}^{\hat\phi\hat\phi}}+2 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
+(A_t)_{81} &= \frac{{D_{s}} \left(3 {\mathcal{C}'(T)} {\pi_{Q}{}^{\eta}{}_{\eta}} \left(\left(u^{r}\right)^2+1\right)-2 {\mathcal{B}'(T)} {\nu^{r}} {u^{r}}\right)}{6 {T} {u^{\tau}}} \\
+(A_t)_{82} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+2 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (2 {\mathcal{C}} {\Pi_{Q}}-5 {\mathcal{C}} {\pi_{Q}{}^{\eta}{}_{\eta}}-2 {\mathcal{C}} {\pi_{Q}{}^{\phi}{}_{\phi}}+2 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
 (A_t)_{86} &= -\frac{{\mathcal{B}} {D_{s}} {u^{r}}}{3 {T} {u^{\tau}}} \\
 (A_t)_{88} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
 (A_t)_{91} &= \frac{{D_{s}} \left(5 {\mathcal{B}'(T)} {\nu^{r}} {u^{r}}+3 {\mathcal{C}'(T)} {\Pi_{Q}} \left(\left(u^{r}\right)^2+1\right)+3 {(\partial_{T} I_{31})} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} {u^{\tau}}} \\
-(A_t)_{92} &= \frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+5 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (5 {\mathcal{C}} {\Pi_{Q}}+2 {\mathcal{C}} {\pi_{Q}^{\ell\ell}}+5 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
+(A_t)_{92} &= \frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} \left(\left(u^{r}\right)^2+1\right)+5 {\mathcal{B}} {\nu^{r}}+{u^{r}} \left(\left(u^{r}\right)^2+1\right) (5 {\mathcal{C}} {\Pi_{Q}}-2 {\mathcal{C}} ({\pi_{Q}{}^{\eta}{}_{\eta}}+{\pi_{Q}{}^{\phi}{}_{\phi}})+5 {I_{31}})\right)}{6 {T} \left(u^{\tau}\right)^3} \\
 (A_t)_{95} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}} {u^{\tau}}}{2 {T}} \\
 (A_t)_{96} &= \frac{5 {\mathcal{B}} {D_{s}} {u^{r}}}{6 {T} {u^{\tau}}} \\
 (A_t)_{99} &= \frac{{\mathcal{C}} {D_{s}} {u^{\tau}}}{2 {T}} \\
 (A_r)_{11} &= \frac{{u^{r}} \left(\left(u^{r}\right)^2+1\right) \left(16 {a_{\mathrm{SB}}} {T}^3+{(\partial_{T} n)} {h}\right)+{h'(T)} \left({n} \left(\left(u^{r}\right)^2+1\right) {u^{r}}+2 {\nu^{r}} \left(u^{r}\right)^2+{\nu^{r}}\right)}{{u^{\tau}}} \\
-(A_r)_{12} &= \frac{1}{\left(u^{\tau}\right)^3}\Bigl(- \left(2 \left(u^{r}\right)^4+3 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4-{c} {\Pi_{Q}}-{c} {\pi_{Q}^{\ell\ell}}+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)\\
+(A_r)_{12} &= \frac{1}{\left(u^{\tau}\right)^3}\Bigl(- \left(2 \left(u^{r}\right)^4+3 \left(u^{r}\right)^2+1\right) \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right)\\
   &\quad + {h} \left(2 {n} \left(u^{r}\right)^4+3 {n} \left(u^{r}\right)^2+{n}+2 {\nu^{r}} \left(u^{r}\right)^3+3 {\nu^{r}} {u^{r}}\right)\Bigr) \\
 (A_r)_{13} &= -{u^{r}} {u^{\tau}} \\
 (A_r)_{14} &= -{u^{r}} {u^{\tau}} \\
 (A_r)_{15} &= {(\partial_{\alpha} n)} {h} {u^{r}} {u^{\tau}} \\
 (A_r)_{16} &= \frac{{h} \left(2 \left(u^{r}\right)^2+1\right)}{{u^{\tau}}} \\
-(A_r)_{17} &= {c} {u^{r}} {u^{\tau}} \\
-(A_r)_{19} &= {c} {u^{r}} {u^{\tau}} \\
 (A_r)_{21} &= 16 {a_{\mathrm{SB}}} {T}^3 \left(u^{r}\right)^2+4 {a_{\mathrm{SB}}} {T}^3+{h'(T)} {n} \left(u^{r}\right)^2+2 {h'(T)} {\nu^{r}} {u^{r}}+{(\partial_{T} n)} {h} \left(u^{r}\right)^2+{(\partial_{T} n)} {T}+{n} \\
-(A_r)_{22} &= 2 \left({u^{r}} \left(4 {a_{\mathrm{SB}}} {T}^4+{c} {\Pi_{Q}}+{c} {\pi_{Q}^{\ell\ell}}-{\pi^{\eta}{}_{\eta}}-{\pi^{\phi}{}_{\phi}}\right)+{h} ({n} {u^{r}}+{\nu^{r}})\right) \\
+(A_r)_{22} &= 2 {h} ({n} {u^{r}}+{\nu^{r}})-2 {u^{r}} \left(-4 {a_{\mathrm{SB}}} {T}^4+{\pi^{\eta}{}_{\eta}}+{\pi^{\phi}{}_{\phi}}\right) \\
 (A_r)_{23} &= -\left(u^{r}\right)^2-1 \\
 (A_r)_{24} &= -\left(u^{r}\right)^2-1 \\
 (A_r)_{25} &= {(\partial_{\alpha} n)} \left({h} \left(u^{r}\right)^2+{T}\right) \\
 (A_r)_{26} &= 2 {h} {u^{r}} \\
-(A_r)_{27} &= {c} \left(\left(u^{r}\right)^2+1\right) \\
-(A_r)_{29} &= {c} \left(\left(u^{r}\right)^2+1\right) \\
 (A_r)_{32} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\phi}{}_{\phi}}-2 {\eta}}{3 {r}^2} \\
 (A_r)_{33} &= \frac{{\tau_{\pi}} {u^{r}}}{{r}^2} \\
 (A_r)_{42} &= \frac{3 {\delta_{\pi\pi}} {\pi^{\eta}{}_{\eta}}-2 {\eta}}{3 {\tau}^2} \\
@@ -353,94 +241,48 @@ S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bulle
 (A_r)_{55} &= {(\partial_{\alpha} n)} {u^{r}} \\
 (A_r)_{56} &= 1 \\
 (A_r)_{61} &= \frac{{D_{s}} \left({h'(T)} {\nu^{r}} {u^{r}}+{(\partial_{T} n)} {T} \left(\left(u^{r}\right)^2+1\right)+{n} \left(\left(u^{r}\right)^2+1\right)\right)}{{T}} \\
-(A_r)_{62} &= \frac{{D_{s}} \left({c} {u^{r}} ({\Pi_{Q}}+{\pi_{Q}^{\ell\ell}})+{h} {n} {u^{r}}+\frac{{h} {\nu^{r}} \left(\left(u^{r}\right)^2+2\right)}{\left(u^{\tau}\right)^2}\right)}{{T}} \\
+(A_r)_{62} &= \frac{{D_{s}} {h} \left({n} {u^{r}} \left(\left(u^{r}\right)^2+1\right)+{\nu^{r}} \left(\left(u^{r}\right)^2+2\right)\right)}{{T} \left(u^{\tau}\right)^2} \\
 (A_r)_{65} &= {(\partial_{\alpha} n)} {D_{s}} \left(\left(u^{r}\right)^2+1\right) \\
 (A_r)_{66} &= \frac{{D_{s}} {h} {u^{r}}}{{T}} \\
-(A_r)_{67} &= \frac{{c} {D_{s}} \left(\left(u^{r}\right)^2+1\right)}{{T}} \\
-(A_r)_{69} &= \frac{{c} {D_{s}} \left(\left(u^{r}\right)^2+1\right)}{{T}} \\
-(A_r)_{71} &= \frac{{D_{s}} (4 {\mathcal{B}'(T)} {\nu^{r}}+3 {\mathcal{C}'(T)} {\pi_{Q}^{\ell\ell}} {u^{r}})}{6 {T}} \\
-(A_r)_{72} &= \frac{{D_{s}} \left(4 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (4 {\Pi_{Q}}+7 {\pi_{Q}^{\ell\ell}})+4 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
-(A_r)_{76} &= \frac{2 {\mathcal{B}} {D_{s}}}{3 {T}} \\
+(A_r)_{71} &= -\frac{{D_{s}} (2 {\mathcal{B}'(T)} {\nu^{r}}-3 {\mathcal{C}'(T)} {\pi_{Q}{}^{\phi}{}_{\phi}} {u^{r}})}{6 {T}} \\
+(A_r)_{72} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (2 {\Pi_{Q}}-2 {\pi_{Q}{}^{\eta}{}_{\eta}}-5 {\pi_{Q}{}^{\phi}{}_{\phi}})+2 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
+(A_r)_{76} &= -\frac{{\mathcal{B}} {D_{s}}}{3 {T}} \\
 (A_r)_{77} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
-(A_r)_{81} &= -\frac{{D_{s}} (2 {\mathcal{B}'(T)} {\nu^{r}}-3 {\mathcal{C}'(T)} {\pi_{Q}^{\hat\phi\hat\phi}} {u^{r}})}{6 {T}} \\
-(A_r)_{82} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (2 {\Pi_{Q}}+2 {\pi_{Q}^{\ell\ell}}-3 {\pi_{Q}^{\hat\phi\hat\phi}})+2 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
+(A_r)_{81} &= -\frac{{D_{s}} (2 {\mathcal{B}'(T)} {\nu^{r}}-3 {\mathcal{C}'(T)} {\pi_{Q}{}^{\eta}{}_{\eta}} {u^{r}})}{6 {T}} \\
+(A_r)_{82} &= -\frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (2 {\Pi_{Q}}-5 {\pi_{Q}{}^{\eta}{}_{\eta}}-2 {\pi_{Q}{}^{\phi}{}_{\phi}})+2 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
 (A_r)_{86} &= -\frac{{\mathcal{B}} {D_{s}}}{3 {T}} \\
 (A_r)_{88} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
 (A_r)_{91} &= \frac{{D_{s}} (5 {\mathcal{B}'(T)} {\nu^{r}}+3 {u^{r}} ({\mathcal{C}'(T)} {\Pi_{Q}}+{(\partial_{T} I_{31})}))}{6 {T}} \\
-(A_r)_{92} &= \frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (5 {\Pi_{Q}}+2 {\pi_{Q}^{\ell\ell}})+5 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
+(A_r)_{92} &= \frac{{D_{s}} \left(2 {\mathcal{A}} {\nu^{r}} {u^{r}}+{\mathcal{C}} \left(\left(u^{r}\right)^2+1\right) (5 {\Pi_{Q}}-2 ({\pi_{Q}{}^{\eta}{}_{\eta}}+{\pi_{Q}{}^{\phi}{}_{\phi}}))+5 {I_{31}} \left(\left(u^{r}\right)^2+1\right)\right)}{6 {T} \left(u^{\tau}\right)^2} \\
 (A_r)_{95} &= \frac{{(\partial_{\alpha} I_{31})} {D_{s}} {u^{r}}}{2 {T}} \\
 (A_r)_{96} &= \frac{5 {\mathcal{B}} {D_{s}}}{6 {T}} \\
 (A_r)_{99} &= \frac{{\mathcal{C}} {D_{s}} {u^{r}}}{2 {T}} \\
-S_{1} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(- {\pi^{\phi}{}_{\phi}} {\tau} {u^{r}} + {c} {\Pi_{Q}} {\tau} {u^{r}} + {c} {\pi_{Q}^{\ell\ell}} {\tau} {u^{r}} + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} {u^{r}} - {\pi^{\phi}{}_{\phi}} {\tau} \left(u^{r}\right)^3 + {c} {\Pi_{Q}} {\tau} \left(u^{r}\right)^3 + {c} {\pi_{Q}^{\ell\ell}} {\tau} \left(u^{r}\right)^3\\
-  &\quad + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} \left(u^{r}\right)^3 + {c} {\Pi_{Q}} {r} {u^{\tau}} - {c} {\pi_{Q}^{\ell\ell}} {r} {u^{\tau}} - {c} {\pi_{Q}^{\hat\phi\hat\phi}} {r} {u^{\tau}} + 4 {a_{\mathrm{SB}}} {r} {T}^4 {u^{\tau}} - {\pi^{\phi}{}_{\phi}} {r} \left(u^{r}\right)^2 {u^{\tau}} + {c} {\Pi_{Q}} {r} \left(u^{r}\right)^2 {u^{\tau}}\\
-  &\quad + {c} {\pi_{Q}^{\ell\ell}} {r} \left(u^{r}\right)^2 {u^{\tau}} + 4 {a_{\mathrm{SB}}} {r} {T}^4 \left(u^{r}\right)^2 {u^{\tau}} - {\pi^{\eta}{}_{\eta}} \left({r} \left(\left(u^{r}\right)^2-1\right) {u^{\tau}}+{\tau} \left(\left(u^{r}\right)^3+{u^{r}}\right)\right)\\
+S_{1} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(- {\pi^{\phi}{}_{\phi}} {\tau} {u^{r}} + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} {u^{r}} - {\pi^{\phi}{}_{\phi}} {\tau} \left(u^{r}\right)^3 + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} \left(u^{r}\right)^3 + 4 {a_{\mathrm{SB}}} {r} {T}^4 {u^{\tau}} - {\pi^{\phi}{}_{\phi}} {r} \left(u^{r}\right)^2 {u^{\tau}}\\
+  &\quad + 4 {a_{\mathrm{SB}}} {r} {T}^4 \left(u^{r}\right)^2 {u^{\tau}} - {\pi^{\eta}{}_{\eta}} \left({r} \left(\left(u^{r}\right)^2-1\right) {u^{\tau}}+{\tau} \left(\left(u^{r}\right)^3+{u^{r}}\right)\right)\\
   &\quad + {h} \left({n} \left(\left(u^{r}\right)^2+1\right) ({r} {u^{\tau}}+{\tau} {u^{r}})+{\nu^{r}} \left(2 {r} {u^{r}} {u^{\tau}}+2 {\tau} \left(u^{r}\right)^2+{\tau}\right)\right)\Bigr) \\
-S_{2} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(- {\pi^{\phi}{}_{\phi}} {r} {u^{r}} + {c} {\Pi_{Q}} {r} {u^{r}} + {c} {\pi_{Q}^{\ell\ell}} {r} {u^{r}} + 4 {a_{\mathrm{SB}}} {r} {T}^4 {u^{r}} - {\pi^{\phi}{}_{\phi}} {r} \left(u^{r}\right)^3 + {c} {\Pi_{Q}} {r} \left(u^{r}\right)^3 + {c} {\pi_{Q}^{\ell\ell}} {r} \left(u^{r}\right)^3\\
-  &\quad + 4 {a_{\mathrm{SB}}} {r} {T}^4 \left(u^{r}\right)^3 - 2 {\pi^{\phi}{}_{\phi}} {\tau} {u^{\tau}} + {c} {\pi_{Q}^{\ell\ell}} {\tau} {u^{\tau}} - {c} {\pi_{Q}^{\hat\phi\hat\phi}} {\tau} {u^{\tau}} - {\pi^{\phi}{}_{\phi}} {\tau} \left(u^{r}\right)^2 {u^{\tau}} + {c} {\Pi_{Q}} {\tau} \left(u^{r}\right)^2 {u^{\tau}}\\
-  &\quad + {c} {\pi_{Q}^{\ell\ell}} {\tau} \left(u^{r}\right)^2 {u^{\tau}} + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} \left(u^{r}\right)^2 {u^{\tau}} - {\pi^{\eta}{}_{\eta}} \left(\left(u^{r}\right)^2+1\right) ({r} {u^{r}}+{\tau} {u^{\tau}})\\
-  &\quad + {h} {n} {u^{r}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right) + {h} {\nu^{r}} \left(2 {r} \left(u^{r}\right)^2+{r}+2 {\tau} {u^{r}} {u^{\tau}}\right)\Bigr) \\
+S_{2} &= \frac{1}{{r} {\tau} {u^{\tau}}}\Bigl(- {\pi^{\phi}{}_{\phi}} {r} {u^{r}} + 4 {a_{\mathrm{SB}}} {r} {T}^4 {u^{r}} - {\pi^{\phi}{}_{\phi}} {r} \left(u^{r}\right)^3 + 4 {a_{\mathrm{SB}}} {r} {T}^4 \left(u^{r}\right)^3 - 2 {\pi^{\phi}{}_{\phi}} {\tau} {u^{\tau}} - {\pi^{\phi}{}_{\phi}} {\tau} \left(u^{r}\right)^2 {u^{\tau}}\\
+  &\quad + 4 {a_{\mathrm{SB}}} {T}^4 {\tau} \left(u^{r}\right)^2 {u^{\tau}} - {\pi^{\eta}{}_{\eta}} \left(\left(u^{r}\right)^2+1\right) ({r} {u^{r}}+{\tau} {u^{\tau}}) + {h} {n} {u^{r}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {h} {\nu^{r}} \left(2 {r} \left(u^{r}\right)^2+{r}+2 {\tau} {u^{r}} {u^{\tau}}\right)\Bigr) \\
 S_{3} &= \frac{3 {\pi^{\phi}{}_{\phi}} ({r} ({\delta_{\pi\pi}} {u^{\tau}}+{\tau})+{\delta_{\pi\pi}} {\tau} {u^{r}})-2 {r} {u^{\tau}} {\eta}+4 {\tau} {u^{r}} {\eta}}{3 {r}^3 {\tau}} \\
 S_{4} &= \frac{3 {\pi^{\eta}{}_{\eta}} ({r} ({\delta_{\pi\pi}} {u^{\tau}}+{\tau})+{\delta_{\pi\pi}} {\tau} {u^{r}})+4 {r} {u^{\tau}} {\eta}-2 {\tau} {u^{r}} {\eta}}{3 {r} {\tau}^3} \\
 S_{5} &= \frac{{n} {u^{r}}+{\nu^{r}}}{{r}}+\frac{{n} \left(u^{r}\right)^2+{n}+{\nu^{r}} {u^{r}}}{{\tau} {u^{\tau}}} \\
-S_{6} &= \frac{1}{{r} {T} {\tau} {u^{\tau}}}\Bigl({\nu^{r}} {r} {T} {\tau} {u^{\tau}} + {c} {D_{s}} \left(\left(u^{r}\right)^2+1\right) (2 {\pi_{Q}^{\ell\ell}} {r} {u^{r}}+{\pi_{Q}^{\ell\ell}} {\tau} {u^{\tau}}+{\pi_{Q}^{\hat\phi\hat\phi}} {r} {u^{r}}-{\pi_{Q}^{\hat\phi\hat\phi}} {\tau} {u^{\tau}})\\
-  &\quad + {D_{s}} {h} {\nu^{r}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\Bigr) \\
-S_{7} &= {\pi_{Q}^{\ell\ell}}\\
-  &\quad - \frac{1}{6 {r} {T} {\tau} {u^{\tau}}}{D_{s}}\Bigl(2 {\mathcal{B}} {\nu^{r}} ({r} {u^{r}}+{\tau} {u^{\tau}}) + 2 {I_{31}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\\
-  &\quad + {\mathcal{C}}\Bigl(- 5 {\pi_{Q}^{\ell\ell}} {r} \left(\left(u^{r}\right)^2+1\right) - 3 {\pi_{Q}^{\ell\ell}} {\tau} {u^{r}} {u^{\tau}} - 2 {\pi_{Q}^{\hat\phi\hat\phi}} \left({r} \left(u^{r}\right)^2+{r}-{\tau} {u^{r}} {u^{\tau}}\right)\\
-  &\quad + 2 {\Pi_{Q}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\Bigr)\Bigr) \\
-S_{8} &= {\pi_{Q}^{\hat\phi\hat\phi}}\\
+S_{6} &= \frac{{D_{s}} {h} {\nu^{r}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)}{{r} {T} {\tau} {u^{\tau}}}+{\nu^{r}} \\
+S_{7} &= {\pi_{Q}{}^{\phi}{}_{\phi}}\\
   &\quad + \frac{1}{6 {r} {T} {\tau} {u^{\tau}}}{D_{s}}\Bigl(- 2 {\mathcal{B}} {\nu^{r}} ({r} {u^{r}}-2 {\tau} {u^{\tau}}) - 2 {I_{31}} \left({r} \left(u^{r}\right)^2+{r}-2 {\tau} {u^{r}} {u^{\tau}}\right)\\
-  &\quad + {\mathcal{C}}\Bigl(2 {\pi_{Q}^{\ell\ell}} {r} \left(\left(u^{r}\right)^2+1\right) + 5 {\pi_{Q}^{\hat\phi\hat\phi}} {r} \left(\left(u^{r}\right)^2+1\right) + 7 {\pi_{Q}^{\hat\phi\hat\phi}} {\tau} {u^{r}} {u^{\tau}}\\
+  &\quad + {\mathcal{C}}\Bigl(- 2 {\pi_{Q}{}^{\eta}{}_{\eta}} {r} \left(\left(u^{r}\right)^2+1\right) + 3 {\pi_{Q}{}^{\phi}{}_{\phi}} {r} \left(\left(u^{r}\right)^2+1\right) + 7 {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} {u^{r}} {u^{\tau}}\\
   &\quad - 2 {\Pi_{Q}} \left({r} \left(u^{r}\right)^2+{r}-2 {\tau} {u^{r}} {u^{\tau}}\right)\Bigr)\Bigr) \\
+S_{8} &= {\pi_{Q}{}^{\eta}{}_{\eta}}\\
+  &\quad + \frac{1}{6 {r} {T} {\tau} {u^{\tau}}}{D_{s}}\Bigl(4 {I_{31}} {r} \left(\left(u^{r}\right)^2+1\right) - 2 {I_{31}} {\tau} {u^{r}} {u^{\tau}} + 2 {\mathcal{B}} {\nu^{r}} (2 {r} {u^{r}}-{\tau} {u^{\tau}})\\
+  &\quad + {\mathcal{C}} \left(4 {\Pi_{Q}} {r} \left(\left(u^{r}\right)^2+1\right)-2 {\Pi_{Q}} {\tau} {u^{r}} {u^{\tau}}+7 {\pi_{Q}{}^{\eta}{}_{\eta}} {r} \left(\left(u^{r}\right)^2+1\right)+3 {\pi_{Q}{}^{\eta}{}_{\eta}} {\tau} {u^{r}} {u^{\tau}}-2 {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} {u^{r}} {u^{\tau}}\right)\Bigr) \\
 S_{9} &= {\Pi_{Q}}\\
-  &\quad + \frac{1}{6 {r} {T} {\tau} {u^{\tau}}}{D_{s}}\Bigl(5 {\mathcal{B}} {\nu^{r}} ({r} {u^{r}}+{\tau} {u^{\tau}}) + 5 {I_{31}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right) + 5 {\mathcal{C}} {\Pi_{Q}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\\
-  &\quad - 2 {\mathcal{C}} \left({\pi_{Q}^{\ell\ell}} {r} \left(\left(u^{r}\right)^2+1\right)+{\pi_{Q}^{\hat\phi\hat\phi}} \left({r} \left(u^{r}\right)^2+{r}-{\tau} {u^{r}} {u^{\tau}}\right)\right)\Bigr)
+  &\quad + \frac{1}{6 {r} {T} {\tau} {u^{\tau}}}{D_{s}}\Bigl(5 {\mathcal{B}} {\nu^{r}} ({r} {u^{r}}+{\tau} {u^{\tau}}) + 5 {I_{31}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)\\
+  &\quad + {\mathcal{C}} \left(5 {\Pi_{Q}} \left({r} \left(u^{r}\right)^2+{r}+{\tau} {u^{r}} {u^{\tau}}\right)+2 {\pi_{Q}{}^{\eta}{}_{\eta}} {r} \left(\left(u^{r}\right)^2+1\right)+2 {\pi_{Q}{}^{\phi}{}_{\phi}} {\tau} {u^{r}} {u^{\tau}}\right)\Bigr)
 \end{align*}
 \subsection{2+1D Cartesian}
 
-\subsubsection{S1, ideal hydro}
-
-\texttt{ideal\_\allowbreak{}2p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \cdot \\ \bullet & \bullet & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet \\ \bullet & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
-\subsubsection{S1, ideal hydro, conformal}
-
-\texttt{ideal\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \cdot \\ \bullet & \bullet & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet \\ \bullet & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
-\subsubsection{S2, viscous hydro}
-
-\texttt{viscous\_\allowbreak{}2p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\Pi})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
-\]
-\[
-\arraycolsep=2.5pt
-S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
-\subsubsection{S2, viscous hydro, conformal}
-
-\texttt{viscous\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}})$.
-
-\[
-\arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet\end{pmatrix}
-\]
-\[
-\arraycolsep=2.5pt
-S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
-\]
 \subsubsection{S3, charm first moment on a background}
 
-\texttt{hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}2p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha}, {\nu^{x}}, {\nu^{y}})$.
+\texttt{two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} in \texttt{src/Matrix/2d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}BG.jl}, fields $\phi = ({\alpha}, {\nu^{x}}, {\nu^{y}})$.
 
 \[
 \arraycolsep=2.5pt
@@ -448,11 +290,11 @@ A_t = \begin{pmatrix}\bullet & \bullet & \bullet \\ \bullet & \bullet & \cdot \\
 \]
 \subsubsection{S4, charm first and second moment on a background}
 
-\texttt{hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}2p1d\_\allowbreak{}generated}, fields $\phi = ({\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{xx}}, {\pi_{Q}^{xy}}, {\pi_{Q}^{yy}}, {\Pi_{Q}})$.
+\texttt{two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} in \texttt{src/Matrix/2d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2.jl}, fields $\phi = ({\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{yy}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\pi_{Q}^{xy}}, {\Pi_{Q}})$.
 
 \[
 \arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \bullet & \bullet & \cdot & \bullet \\ \bullet & \cdot & \bullet & \cdot & \bullet & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet \\ \bullet & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet \\ \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \bullet \\ \bullet & \cdot & \bullet & \cdot & \cdot & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
+A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_y = \begin{pmatrix}\bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
 \]
 \[
 \arraycolsep=2.5pt
@@ -460,27 +302,27 @@ S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bulle
 \]
 \subsubsection{S5, two-way}
 
-\texttt{two\_\allowbreak{}way\_\allowbreak{}2p1d\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\Pi}, {\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{xx}}, {\pi_{Q}^{xy}}, {\pi_{Q}^{yy}}, {\Pi_{Q}})$.
+\texttt{two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} in \texttt{src/Matrix/2d\_\allowbreak{}two\_\allowbreak{}way.jl}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\Pi}, {\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{yy}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\pi_{Q}^{xy}}, {\Pi_{Q}})$.
 
 \[
 \arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
+A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
 \]
 \[
 \arraycolsep=2.5pt
-A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \bullet \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
+A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
 \]
 \subsubsection{S5, two-way, conformal}
 
-\texttt{two\_\allowbreak{}way\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{xx}}, {\pi_{Q}^{xy}}, {\pi_{Q}^{yy}}, {\Pi_{Q}})$.
+\texttt{two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} in \texttt{src/Matrix/2d\_\allowbreak{}two\_\allowbreak{}way.jl}, fields $\phi = ({T}, {u^{x}}, {u^{y}}, {\pi^{yy}}, {\pi^{\eta}{}_{\eta}}, {\pi^{xy}}, {\alpha}, {\nu^{x}}, {\nu^{y}}, {\pi_{Q}^{yy}}, {\pi_{Q}{}^{\eta}{}_{\eta}}, {\pi_{Q}^{xy}}, {\Pi_{Q}})$.
 
 \[
 \arraycolsep=2.5pt
-A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
+A_t = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad A_x = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet\end{pmatrix}
 \]
 \[
 \arraycolsep=2.5pt
-A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \cdot & \bullet \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet & \bullet \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \bullet & \bullet \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
+A_y = \begin{pmatrix}\bullet & \bullet & \bullet & \bullet & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \bullet & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \cdot & \bullet & \bullet & \cdot & \cdot & \bullet & \cdot \\ \bullet & \bullet & \bullet & \cdot & \cdot & \cdot & \bullet & \cdot & \bullet & \cdot & \cdot & \cdot & \bullet\end{pmatrix},\qquad S = \begin{pmatrix}\bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet \\ \bullet\end{pmatrix}
 \]
 \subsection{Checks}
 
@@ -495,15 +337,13 @@ id & what it tests & \\
 \texttt{G2-\allowbreak{}0p1d} & u.u=\allowbreak{}-1; u.pi=\allowbreak{}0,\allowbreak{} tr pi=\allowbreak{}0 (medium); u.nu=\allowbreak{}0; u.piQ=\allowbreak{}0,\allowbreak{} tr piQ=\allowbreak{}0; both symmetric & PASS \\
 \texttt{G-\allowbreak{}aQ-\allowbreak{}0p1d} & aQ' has identically vanishing coefficient in the second-moment rows (symbolic); dropped & PASS \\
 \texttt{G3-\allowbreak{}0p1d} & every row (medium,\allowbreak{} charm-in-T,\allowbreak{} first moment,\allowbreak{} second moment) is quasi-linear & PASS \\
-\texttt{S3-\allowbreak{}free-\allowbreak{}0p1d} & S3 rows carry no second-moment field and no c (c enters only through dM) & PASS \\
+\texttt{S3-\allowbreak{}free-\allowbreak{}0p1d} & S3 rows carry no second-moment field & PASS \\
 \texttt{S34-\allowbreak{}nomedpi-\allowbreak{}0p1d} & charm rows never see the medium pi or Pi (so S3/\allowbreak{}S4 need only T,\allowbreak{} u as background) & PASS \\
 \texttt{Gc-\allowbreak{}extract-\allowbreak{}0p1d} & A\_\allowbreak{}t dphi + A\_\allowbreak{}x dphi (+A\_\allowbreak{}y dphi) + src =\allowbreak{}=\allowbreak{} the raw rows (symbolic) & PASS \\
 \texttt{Gc-\allowbreak{}ctrl-\allowbreak{}0p1d} & control: the exact random-point zero test REJECTS a 1e-9-perturbed identity and a nonzero row & PASS \\
 \texttt{Gc-\allowbreak{}total-\allowbreak{}0p1d} & S5 fluid rows =\allowbreak{}=\allowbreak{} Nabla\_\allowbreak{}mu (T\_\allowbreak{}m + T\_\allowbreak{}Q)\textasciicircum{}\{mu nu\},\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
 \texttt{Gc-\allowbreak{}number-\allowbreak{}0p1d} & charm row =\allowbreak{}=\allowbreak{} Nabla.N,\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
-\texttt{Gc-\allowbreak{}c0-\allowbreak{}0p1d} & c =\allowbreak{} 0: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
-\texttt{Gc-\allowbreak{}c1-\allowbreak{}0p1d} & c =\allowbreak{} 1: the dM columns are LIVE (the gate above is not vacuous)  [0+1D: dM enters only the energy row's source] & PASS \\
-\texttt{Gc-\allowbreak{}c1src-\allowbreak{}0p1d} & 0+1D,\allowbreak{} c =\allowbreak{} 1: dM enters the energy row's source (Bjorken work of the charm stress) & PASS \\
+\texttt{Gc-\allowbreak{}dM-\allowbreak{}0p1d} & the second moment is passive: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
 \texttt{Gc-\allowbreak{}off-\allowbreak{}0p1d} & charm off (n,\allowbreak{} nu,\allowbreak{} dM -\textgreater{} 0): S5's medium block and medium sources =\allowbreak{}=\allowbreak{} S2 exactly; the charm rows' medium columns and sources vanish,\allowbreak{} so charm =\allowbreak{} 0 is an invariant subspace on which S5 IS S2 & PASS \\
 \texttt{G0-\allowbreak{}1p1d} & Nabla g =\allowbreak{}=\allowbreak{} 0 & PASS \\
 \texttt{G1-\allowbreak{}1p1d} & trap detector: Nabla.(X(tau,\allowbreak{}..),\allowbreak{}0,\allowbreak{}0,\allowbreak{}0) =\allowbreak{}=\allowbreak{} X' + X/\allowbreak{}tau (Christoffel AND sqrt(-g) routes) & PASS \\
@@ -511,38 +351,33 @@ id & what it tests & \\
 \texttt{G2-\allowbreak{}triad} & the (l,\allowbreak{} phihat,\allowbreak{} etahat) triad is orthonormal and transverse & PASS \\
 \texttt{G-\allowbreak{}aQ-\allowbreak{}1p1d} & aQ' has identically vanishing coefficient in the second-moment rows (symbolic); dropped & PASS \\
 \texttt{G3-\allowbreak{}1p1d} & every row (medium,\allowbreak{} charm-in-T,\allowbreak{} first moment,\allowbreak{} second moment) is quasi-linear & PASS \\
-\texttt{S3-\allowbreak{}free-\allowbreak{}1p1d} & S3 rows carry no second-moment field and no c (c enters only through dM) & PASS \\
+\texttt{S3-\allowbreak{}free-\allowbreak{}1p1d} & S3 rows carry no second-moment field & PASS \\
 \texttt{S34-\allowbreak{}nomedpi-\allowbreak{}1p1d} & charm rows never see the medium pi or Pi (so S3/\allowbreak{}S4 need only T,\allowbreak{} u as background) & PASS \\
 \texttt{Gc-\allowbreak{}extract-\allowbreak{}1p1d} & A\_\allowbreak{}t dphi + A\_\allowbreak{}x dphi (+A\_\allowbreak{}y dphi) + src =\allowbreak{}=\allowbreak{} the raw rows (symbolic) & PASS \\
 \texttt{Gc-\allowbreak{}ctrl-\allowbreak{}1p1d} & control: the exact random-point zero test REJECTS a 1e-9-perturbed identity and a nonzero row & PASS \\
 \texttt{Gc-\allowbreak{}total-\allowbreak{}1p1d} & S5 fluid rows =\allowbreak{}=\allowbreak{} Nabla\_\allowbreak{}mu (T\_\allowbreak{}m + T\_\allowbreak{}Q)\textasciicircum{}\{mu nu\},\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
 \texttt{Gc-\allowbreak{}number-\allowbreak{}1p1d} & charm row =\allowbreak{}=\allowbreak{} Nabla.N,\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
-\texttt{Gc-\allowbreak{}c0-\allowbreak{}1p1d} & c =\allowbreak{} 0: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
-\texttt{Gc-\allowbreak{}c1-\allowbreak{}1p1d} & c =\allowbreak{} 1: the dM columns are LIVE (the gate above is not vacuous) & PASS \\
+\texttt{Gc-\allowbreak{}dM-\allowbreak{}1p1d} & the second moment is passive: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
 \texttt{Gc-\allowbreak{}off-\allowbreak{}1p1d} & charm off (n,\allowbreak{} nu,\allowbreak{} dM -\textgreater{} 0): S5's medium block and medium sources =\allowbreak{}=\allowbreak{} S2 exactly; the charm rows' medium columns and sources vanish,\allowbreak{} so charm =\allowbreak{} 0 is an invariant subspace on which S5 IS S2 & PASS \\
 \texttt{G0-\allowbreak{}2p1d} & Nabla g =\allowbreak{}=\allowbreak{} 0 & PASS \\
 \texttt{G1-\allowbreak{}2p1d} & trap detector: Nabla.(X(tau,\allowbreak{}..),\allowbreak{}0,\allowbreak{}0,\allowbreak{}0) =\allowbreak{}=\allowbreak{} X' + X/\allowbreak{}tau (Christoffel AND sqrt(-g) routes) & PASS \\
 \texttt{G2-\allowbreak{}2p1d} & u.u=\allowbreak{}-1; u.pi=\allowbreak{}0,\allowbreak{} tr pi=\allowbreak{}0 (medium); u.nu=\allowbreak{}0; u.piQ=\allowbreak{}0,\allowbreak{} tr piQ=\allowbreak{}0; both symmetric & PASS \\
 \texttt{G-\allowbreak{}aQ-\allowbreak{}2p1d} & aQ' has identically vanishing coefficient in the second-moment rows (symbolic); dropped & PASS \\
 \texttt{G3-\allowbreak{}2p1d} & every row (medium,\allowbreak{} charm-in-T,\allowbreak{} first moment,\allowbreak{} second moment) is quasi-linear & PASS \\
-\texttt{S3-\allowbreak{}free-\allowbreak{}2p1d} & S3 rows carry no second-moment field and no c (c enters only through dM) & PASS \\
+\texttt{S3-\allowbreak{}free-\allowbreak{}2p1d} & S3 rows carry no second-moment field & PASS \\
 \texttt{S34-\allowbreak{}nomedpi-\allowbreak{}2p1d} & charm rows never see the medium pi or Pi (so S3/\allowbreak{}S4 need only T,\allowbreak{} u as background) & PASS \\
 \texttt{Gc-\allowbreak{}extract-\allowbreak{}2p1d} & A\_\allowbreak{}t dphi + A\_\allowbreak{}x dphi (+A\_\allowbreak{}y dphi) + src =\allowbreak{}=\allowbreak{} the raw rows (exact at 4 random rational points) & PASS \\
 \texttt{Gc-\allowbreak{}ctrl-\allowbreak{}2p1d} & control: the exact random-point zero test REJECTS a 1e-9-perturbed identity and a nonzero row & PASS \\
 \texttt{Gc-\allowbreak{}total-\allowbreak{}2p1d} & S5 fluid rows =\allowbreak{}=\allowbreak{} Nabla\_\allowbreak{}mu (T\_\allowbreak{}m + T\_\allowbreak{}Q)\textasciicircum{}\{mu nu\},\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
 \texttt{Gc-\allowbreak{}number-\allowbreak{}2p1d} & charm row =\allowbreak{}=\allowbreak{} Nabla.N,\allowbreak{} sqrt(-g) route (symbolic) & PASS \\
-\texttt{Gc-\allowbreak{}c0-\allowbreak{}2p1d} & c =\allowbreak{} 0: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
-\texttt{Gc-\allowbreak{}c1-\allowbreak{}2p1d} & c =\allowbreak{} 1: the dM columns are LIVE (the gate above is not vacuous) & PASS \\
+\texttt{Gc-\allowbreak{}dM-\allowbreak{}2p1d} & the second moment is passive: dM columns of the fluid + first-moment rows vanish identically,\allowbreak{} and their sources carry no dM & PASS \\
 \texttt{Gc-\allowbreak{}off-\allowbreak{}2p1d} & charm off (n,\allowbreak{} nu,\allowbreak{} dM -\textgreater{} 0): S5's medium block and medium sources =\allowbreak{}=\allowbreak{} S2 exactly; the charm rows' medium columns and sources vanish,\allowbreak{} so charm =\allowbreak{} 0 is an invariant subspace on which S5 IS S2 & PASS \\
-\texttt{R0-\allowbreak{}jl2wl} & Julia -\textgreater{} WL conversion of the shipped/\allowbreak{}generated matrices (0) & PASS \\
+\texttt{R0-\allowbreak{}jl2wl} & Julia -\textgreater{} WL conversion of the shipped matrices (0) & PASS \\
 \texttt{R-\allowbreak{}S2-\allowbreak{}1p1d-\allowbreak{}shipped} & S2 1+1D generic EOS,\allowbreak{} dpp =\allowbreak{} dPP =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} SHIPPED one\_\allowbreak{}d\_\allowbreak{}viscous\_\allowbreak{}matrix (1d\_\allowbreak{}viscous\_\allowbreak{}cilindrical.jl),\allowbreak{} entry by entry (55 entries,\allowbreak{} symbolic) & PASS \\
-\texttt{R-\allowbreak{}S2-\allowbreak{}1p1d-\allowbreak{}generator} & S2 1+1D,\allowbreak{} dpp =\allowbreak{} dPP =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} one\_\allowbreak{}d\_\allowbreak{}viscous\_\allowbreak{}matrix\_\allowbreak{}derived (derive\_\allowbreak{}2p1d\_\allowbreak{}viscous.wls output),\allowbreak{} entry by entry (55 entries,\allowbreak{} symbolic) & PASS \\
-\texttt{R-\allowbreak{}S2-\allowbreak{}2p1d-\allowbreak{}generator} & S2 2+1D,\allowbreak{} dpp =\allowbreak{} dPP =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} two\_\allowbreak{}d\_\allowbreak{}viscous\_\allowbreak{}matrix\_\allowbreak{}derived (derive\_\allowbreak{}2p1d\_\allowbreak{}viscous.wls output),\allowbreak{} entry by entry (154 entries,\allowbreak{} symbolic) & PASS \\
-\texttt{R-\allowbreak{}S3-\allowbreak{}2p1d-\allowbreak{}generator} & S3 2+1D =\allowbreak{}=\allowbreak{} hq2d\_\allowbreak{}matrices\_\allowbreak{}consistent (derive\_\allowbreak{}hq\_\allowbreak{}consistent\_\allowbreak{}2p1d.wls output),\allowbreak{} entry by entry (30 entries,\allowbreak{} symbolic) & PASS \\
+\texttt{R-\allowbreak{}S2-\allowbreak{}2p1d-\allowbreak{}generator} & S2 2+1D,\allowbreak{} dpp =\allowbreak{} dPP =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} two\_\allowbreak{}d\_\allowbreak{}viscous\_\allowbreak{}matrix\_\allowbreak{}derived (2d\_\allowbreak{}viscous.jl,\allowbreak{} from derive\_\allowbreak{}2p1d\_\allowbreak{}viscous.wls),\allowbreak{} entry by entry (154 entries,\allowbreak{} symbolic) & PASS \\
 \texttt{R-\allowbreak{}S2-\allowbreak{}1p1d-\allowbreak{}MIS} & S2 1+1D with dpp =\allowbreak{} 4/\allowbreak{}3 tauS,\allowbreak{} dPP =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} medium block of one\_\allowbreak{}d\_\allowbreak{}viscous\_\allowbreak{}matrix\_\allowbreak{}fugacity (:MIS,\allowbreak{} read from the .jl),\allowbreak{} entry by entry (55 entries,\allowbreak{} symbolic) & PASS \\
 \texttt{R-\allowbreak{}S2-\allowbreak{}1p1d-\allowbreak{}MIS-\allowbreak{}ctl} & control: dpp =\allowbreak{} 0 does NOT reproduce the :MIS medium block (the two 1-D media differ by delta\_\allowbreak{}pipi) & PASS \\
-\texttt{R-\allowbreak{}S4S3-\allowbreak{}1p1d} & S4 rows 1-2 at c =\allowbreak{} 0 =\allowbreak{}=\allowbreak{} S3 (so the first-moment block of S4/\allowbreak{}S5 is the gated consistent closure) & PASS \\
-\texttt{R-\allowbreak{}S4-\allowbreak{}2p1d-\allowbreak{}fluidum} & S4 2+1D second-moment rows =\allowbreak{}=\allowbreak{} Fluidum hq2d\_\allowbreak{}m2\_\allowbreak{}rows (projector =\allowbreak{} true),\allowbreak{} Julia,\allowbreak{} 24 states: wv=\allowbreak{}0 \textless{}-\textgreater{} vorticity=\allowbreak{}false: 4.220039818717633e-15,\allowbreak{} wv=\allowbreak{}1 \textless{}-\textgreater{} vorticity=\allowbreak{}true: 4.551222145397426e-15 & PASS \\
+\texttt{R-\allowbreak{}S4S3-\allowbreak{}1p1d} & S4 rows 1-2 =\allowbreak{}=\allowbreak{} S3 (so the first-moment block of S4/\allowbreak{}S5 is the consistent closure) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}1} & S5 2+1D axisymmetric on the x axis: tau-momentum (symbolic) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}2} & S5 2+1D axisymmetric on the x axis: x-momentum =\allowbreak{}=\allowbreak{} r-momentum (symbolic) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}3} & S5 2+1D axisymmetric on the x axis: y-momentum =\allowbreak{}=\allowbreak{} 0 (symbolic) & PASS \\
@@ -553,9 +388,9 @@ id & what it tests & \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}8} & S5 2+1D axisymmetric on the x axis: charm number (symbolic) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}9} & S5 2+1D axisymmetric on the x axis: nu\textasciicircum{}x row =\allowbreak{}=\allowbreak{} nu\textasciicircum{}r row (symbolic) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}10} & S5 2+1D axisymmetric on the x axis: nu\textasciicircum{}y row =\allowbreak{}=\allowbreak{} 0 (symbolic) & PASS \\
-\texttt{X-\allowbreak{}2to1-\allowbreak{}11} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}\{xx\} row =\allowbreak{}=\allowbreak{} (u\textasciicircum{}tau)\textasciicircum{}2 x (l l) row (symbolic) & PASS \\
-\texttt{X-\allowbreak{}2to1-\allowbreak{}12} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}\{xy\} row =\allowbreak{}=\allowbreak{} 0 (symbolic) & PASS \\
-\texttt{X-\allowbreak{}2to1-\allowbreak{}13} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}\{yy\} row =\allowbreak{}=\allowbreak{} (phi phi) row (symbolic) & PASS \\
+\texttt{X-\allowbreak{}2to1-\allowbreak{}11} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}\{yy\} row =\allowbreak{}=\allowbreak{} (phi phi) row (symbolic) & PASS \\
+\texttt{X-\allowbreak{}2to1-\allowbreak{}12} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}eta\_\allowbreak{}eta row =\allowbreak{}=\allowbreak{} (eta eta) row (symbolic) & PASS \\
+\texttt{X-\allowbreak{}2to1-\allowbreak{}13} & S5 2+1D axisymmetric on the x axis: piQ\textasciicircum{}\{xy\} row =\allowbreak{}=\allowbreak{} 0 (symbolic) & PASS \\
 \texttt{X-\allowbreak{}2to1-\allowbreak{}14} & S5 2+1D axisymmetric on the x axis: trace row (symbolic) & PASS \\
 \texttt{X-\allowbreak{}ctrl} & control: the same test REJECTS a wrong pairing (2+1D tau row vs 1+1D r row) & PASS \\
 \texttt{X-\allowbreak{}vort-\allowbreak{}axis} & the corotation coupling W vanishes identically on an axisymmetric state (so G-chart is blind to wv,\allowbreak{} as documented) & PASS \\
@@ -566,75 +401,43 @@ id & what it tests & \\
 \texttt{X-\allowbreak{}1to0-\allowbreak{}5} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: bulk (symbolic) & PASS \\
 \texttt{X-\allowbreak{}1to0-\allowbreak{}6} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: charm number (symbolic) & PASS \\
 \texttt{X-\allowbreak{}1to0-\allowbreak{}7} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: nu\textasciicircum{}r row =\allowbreak{}=\allowbreak{} 0 (symbolic) & PASS \\
-\texttt{X-\allowbreak{}1to0-\allowbreak{}8} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: (l l) row =\allowbreak{}=\allowbreak{} -1/\allowbreak{}2 (eta eta) row (symbolic) & PASS \\
-\texttt{X-\allowbreak{}1to0-\allowbreak{}9} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: (phi phi) row =\allowbreak{}=\allowbreak{} -1/\allowbreak{}2 (eta eta) row (symbolic) & PASS \\
+\texttt{X-\allowbreak{}1to0-\allowbreak{}8} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: (phi phi) row =\allowbreak{}=\allowbreak{} -1/\allowbreak{}2 (eta eta) row (symbolic) & PASS \\
+\texttt{X-\allowbreak{}1to0-\allowbreak{}9} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: (eta eta) row (symbolic) & PASS \\
 \texttt{X-\allowbreak{}1to0-\allowbreak{}10} & S5 1+1D at u\textasciicircum{}r =\allowbreak{} 0,\allowbreak{} no r-dependence: trace row (symbolic) & PASS \\
 \texttt{B-\allowbreak{}ideal-\allowbreak{}conf} & conformal ideal Bjorken: dT/\allowbreak{}dtau =\allowbreak{}=\allowbreak{} -T/\allowbreak{}(3 tau) & PASS \\
 \texttt{B-\allowbreak{}ideal-\allowbreak{}gen} & generic-EOS ideal Bjorken: dT/\allowbreak{}dtau =\allowbreak{}=\allowbreak{} -P'/\allowbreak{}(P'' tau) =\allowbreak{}=\allowbreak{} -c\_\allowbreak{}s\textasciicircum{}2 T/\allowbreak{}tau,\allowbreak{} c\_\allowbreak{}s\textasciicircum{}2 =\allowbreak{} P'/\allowbreak{}(T P'') & PASS \\
 \texttt{B-\allowbreak{}IS-\allowbreak{}gen} & generic IS Bjorken: T' =\allowbreak{} -(T P' + Pi + pi)/\allowbreak{}(tau T P''),\allowbreak{} tauS pi' =\allowbreak{} -pi - 4 visc/\allowbreak{}(3 tau) - dpp pi/\allowbreak{}tau,\allowbreak{} tauB Pi' =\allowbreak{} -Pi - zeta/\allowbreak{}tau - dPP Pi/\allowbreak{}tau & PASS \\
 \texttt{B-\allowbreak{}IS-\allowbreak{}conf} & conformal IS Bjorken: dT/\allowbreak{}dtau =\allowbreak{} -T/\allowbreak{}(3tau) - pi/\allowbreak{}(12 a T\textasciicircum{}3 tau),\allowbreak{} tauS dpi/\allowbreak{}dtau =\allowbreak{} -pi - 4 visc/\allowbreak{}(3 tau) - dpp pi/\allowbreak{}tau  [dpp =\allowbreak{} 4/\allowbreak{}3 tauS: the DNMR delta\_\allowbreak{}pipi form; no tau\_\allowbreak{}pipi,\allowbreak{} lambda\_\allowbreak{}1] & PASS \\
 \texttt{B-\allowbreak{}NS-\allowbreak{}conf} & first-order (NS) limit pi =\allowbreak{} -4 visc/\allowbreak{}(3 tau): dT/\allowbreak{}dtau =\allowbreak{} -T/\allowbreak{}(3tau) + (4/\allowbreak{}9)(eta/\allowbreak{}s)/\allowbreak{}tau\textasciicircum{}2,\allowbreak{} s =\allowbreak{} 4 a T\textasciicircum{}3 & PASS \\
-\texttt{B-\allowbreak{}twoway-\allowbreak{}energy} & S5 Bjorken energy row: d\_\allowbreak{}tau(e + e\_\allowbreak{}Q) + (e+P+Pi+pi + n h + c(piQ\textasciicircum{}eta\_\allowbreak{}eta + Pi\_\allowbreak{}Q))/\allowbreak{}tau & PASS \\
+\texttt{B-\allowbreak{}twoway-\allowbreak{}energy} & S5 Bjorken energy row: d\_\allowbreak{}tau(e + e\_\allowbreak{}Q) + (e+P+Pi+pi + n h)/\allowbreak{}tau & PASS \\
 \texttt{B-\allowbreak{}charm-\allowbreak{}number} & Bjorken charm number: (1/\allowbreak{}tau) d\_\allowbreak{}tau (n tau) =\allowbreak{} 0 & PASS \\
-\texttt{T-\allowbreak{}rest-\allowbreak{}1p1d} & nu =\allowbreak{} 0,\allowbreak{} dM =\allowbreak{} 0,\allowbreak{} grad alpha =\allowbreak{} 0,\allowbreak{} medium at rest: transverse momentum exchange Delta.Nabla.T\_\allowbreak{}Q =\allowbreak{}=\allowbreak{} 0 and the nu row is satisfied (c symbolic) & PASS \\
-\texttt{T-\allowbreak{}drag-\allowbreak{}1p1d} & drag: on shell,\allowbreak{} Nabla.T\_\allowbreak{}Q\textasciicircum{}i =\allowbreak{} -(T/\allowbreak{}Ds) nu\textasciicircum{}i (drag on charm) and the fluid row then gives Nabla.T\_\allowbreak{}m\textasciicircum{}i =\allowbreak{} +(T/\allowbreak{}Ds) nu\textasciicircum{}i (Newton III),\allowbreak{} exact,\allowbreak{} c symbolic & PASS \\
+\texttt{T-\allowbreak{}rest-\allowbreak{}1p1d} & nu =\allowbreak{} 0,\allowbreak{} dM =\allowbreak{} 0,\allowbreak{} grad alpha =\allowbreak{} 0,\allowbreak{} medium at rest: transverse momentum exchange Delta.Nabla.T\_\allowbreak{}Q =\allowbreak{}=\allowbreak{} 0 and the nu row is satisfied & PASS \\
+\texttt{T-\allowbreak{}drag-\allowbreak{}1p1d} & drag: on shell,\allowbreak{} Nabla.T\_\allowbreak{}Q\textasciicircum{}i =\allowbreak{} -(T/\allowbreak{}Ds) nu\textasciicircum{}i (drag on charm) and the fluid row then gives Nabla.T\_\allowbreak{}m\textasciicircum{}i =\allowbreak{} +(T/\allowbreak{}Ds) nu\textasciicircum{}i (Newton III),\allowbreak{} exact & PASS \\
 \texttt{T-\allowbreak{}split-\allowbreak{}1p1d} & fluid momentum rows =\allowbreak{}=\allowbreak{} Nabla.T\_\allowbreak{}m + Nabla.T\_\allowbreak{}Q identically & PASS \\
-\texttt{T-\allowbreak{}rest-\allowbreak{}2p1d} & nu =\allowbreak{} 0,\allowbreak{} dM =\allowbreak{} 0,\allowbreak{} grad alpha =\allowbreak{} 0,\allowbreak{} medium at rest: transverse momentum exchange Delta.Nabla.T\_\allowbreak{}Q =\allowbreak{}=\allowbreak{} 0 and the nu row is satisfied (c symbolic) & PASS \\
-\texttt{T-\allowbreak{}drag-\allowbreak{}2p1d} & drag: on shell,\allowbreak{} Nabla.T\_\allowbreak{}Q\textasciicircum{}i =\allowbreak{} -(T/\allowbreak{}Ds) nu\textasciicircum{}i (drag on charm) and the fluid row then gives Nabla.T\_\allowbreak{}m\textasciicircum{}i =\allowbreak{} +(T/\allowbreak{}Ds) nu\textasciicircum{}i (Newton III),\allowbreak{} exact,\allowbreak{} c symbolic & PASS \\
+\texttt{T-\allowbreak{}rest-\allowbreak{}2p1d} & nu =\allowbreak{} 0,\allowbreak{} dM =\allowbreak{} 0,\allowbreak{} grad alpha =\allowbreak{} 0,\allowbreak{} medium at rest: transverse momentum exchange Delta.Nabla.T\_\allowbreak{}Q =\allowbreak{}=\allowbreak{} 0 and the nu row is satisfied & PASS \\
+\texttt{T-\allowbreak{}drag-\allowbreak{}2p1d} & drag: on shell,\allowbreak{} Nabla.T\_\allowbreak{}Q\textasciicircum{}i =\allowbreak{} -(T/\allowbreak{}Ds) nu\textasciicircum{}i (drag on charm) and the fluid row then gives Nabla.T\_\allowbreak{}m\textasciicircum{}i =\allowbreak{} +(T/\allowbreak{}Ds) nu\textasciicircum{}i (Newton III),\allowbreak{} exact & PASS \\
 \texttt{T-\allowbreak{}split-\allowbreak{}2p1d} & fluid momentum rows =\allowbreak{}=\allowbreak{} Nabla.T\_\allowbreak{}m + Nabla.T\_\allowbreak{}Q identically & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}0p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}0p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}0p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}0p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}0p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}0p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}0p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}0p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}0p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}0p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}0p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}0p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}0p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}0p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}1p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}1p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}1p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}1p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}1p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}1p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}1p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}1p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}1p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}1p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}1p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}1p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}1p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}1p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}2p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}2p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}ideal\_\allowbreak{}2p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}ideal\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}2p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}2p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}viscous\_\allowbreak{}2p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}viscous\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}2p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}fm\_\allowbreak{}bg\_\allowbreak{}2p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}2p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}hq\_\allowbreak{}m2\_\allowbreak{}bg\_\allowbreak{}2p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}2p1d} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}2p1d\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}2p1d\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
-\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}2p1d\_\allowbreak{}conformal\_\allowbreak{}generated} & every free symbol is an argument or a field & PASS \\
-\texttt{E-\allowbreak{}jl} & the generated Julia (24 functions) parses,\allowbreak{} runs,\allowbreak{} and reproduces its 24-state CSVs: max rel err 1.6653345369377348e-15 & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}one\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (symbolic) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}consistent\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}HQ\_\allowbreak{}BG\_\allowbreak{}m2\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}same-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} & simplified exported entries =\allowbreak{}=\allowbreak{} derived entries (exact at 3 random rational points) & PASS \\
+\texttt{E-\allowbreak{}free-\allowbreak{}two\_\allowbreak{}d\_\allowbreak{}two\_\allowbreak{}way\_\allowbreak{}matrix\_\allowbreak{}conformal} & every free symbol is an argument or a field & PASS \\
+\texttt{E-\allowbreak{}jl} & the generated Julia (8 functions) parses,\allowbreak{} runs,\allowbreak{} and reproduces its 24-state CSVs: max rel err 1.4298582449629782e-15 & PASS \\
 \bottomrule
 \end{longtable}
 }
-141 passed, 0 failed (141 checks evaluated). Skipped: \texttt{R-\allowbreak{}S3-\allowbreak{}1p1d-\allowbreak{}generator}, \texttt{R-\allowbreak{}S4-\allowbreak{}1p1d-\allowbreak{}generator}, \texttt{R-\allowbreak{}S4c-\allowbreak{}1p1d-\allowbreak{}generator}. These compare with reference CSVs of the 1+1D derivations of the consistent first and second moment and of the $c_M$ coupling, which are read only when \texttt{FLUIDUM\_EXTERNAL\_REFPOINTS} names a directory holding them; it was unset.
+102 passed, 0 failed (102 checks evaluated).
 
 Not a check: the characteristic speeds of S5 are computed and reported (\texttt{two\_way\_char\_speeds.tsv} in the scratch directory).
 

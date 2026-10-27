@@ -1,5 +1,6 @@
 (* ============================================================================
-   julia_source_reader.wl -- read a Fluidum matrix out of its Julia source.
+   julia_source_reader.wl -- read a Fluidum matrix out of its Julia source, and write
+   generated code into it.
 
    A derivation is compared with the .jl file itself, not with a hand transcription
    of it, so that an edit to the code is seen by the comparison. Used by the
@@ -15,6 +16,17 @@
 
    Supported Julia: + - * / ^ (infix and `^(a,b)`), sqrt / exp / log (also `sqrt.(`),
    indexing, literals.  Anything else fails at ToExpression with an error.
+
+     spliceJulia[file, script, code]
+
+   replaces the lines between "# symbolic derivation in: deriv/<script>" and the next
+   "# end of symbolic derivation" in `file` by `code`, keeping the file's own line endings (CRLF or LF).  The
+   rest of the file is hand-written and left byte for byte as it is.
+
+     juliaNames[code, {"old" -> "new", ...}]
+
+   renames whole words of generated code, from the derivation's symbols to the field names of Fluidum's
+   layouts (initial_fields.jl).
    ============================================================================ *)
 
 juliaFunctionText[file_String, fname_String] := Module[{txt, p0, rest, pend},
@@ -82,3 +94,20 @@ juliaMatrices[file_String, fname_String] := Module[{body, hits, res = <||>, name
       res[name] = If[Length[dims] == 1, ents, Transpose[Partition[ents, dims[[1]]]]]],
     {h, hits}];
   res];
+
+spliceJulia[file_String, script_String, code_String] := Module[{txt, nl, beg, end, p0, p1, body},
+  txt = ByteArrayToString[ReadByteArray[file], "UTF-8"];
+  nl = If[StringContainsQ[txt, "\r\n"], "\r\n", "\n"];
+  beg = "# symbolic derivation in: deriv/" <> script <> nl;
+  end = "# end of symbolic derivation" <> nl;
+  p0 = StringPosition[txt, beg];
+  p1 = If[Length[p0] == 1, Select[StringPosition[txt, end], #[[1]] > p0[[1, 2]] &], {}];
+  If[Length[p0] != 1 || p1 === {},
+    Print["  spliceJulia: no single generated block for ", script, " in ", file]; Exit[1]];
+  body = StringReplace[StringTrim[code, "\n"], "\n" -> nl] <> nl;
+  txt = StringTake[txt, p0[[1, 2]]] <> body <> StringDrop[txt, p1[[1, 1]] - 1];
+  BinaryWrite[file, StringToByteArray[txt, "UTF-8"]]; Close[file];
+  Print["  wrote the generated block of ", file]];
+
+juliaNames[code_String, rules_List] :=
+  StringReplace[code, (RegularExpression["\\b" <> First[#] <> "\\b"] -> Last[#]) & /@ rules];

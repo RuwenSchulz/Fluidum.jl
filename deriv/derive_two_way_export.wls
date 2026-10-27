@@ -1,57 +1,58 @@
 (* ============================================================================
    derive_two_way_export.wls -- loaded by derive_two_way.wls last.
 
-   Writes (into the package when every check passed and all three charts ran,
-   into $TWOWAY_OUT otherwise; env TWOWAY_JL / TWOWAY_REFDIR override):
-     src/Matrix/two_way_generated.jl
-                                   one Julia function per system x chart (x conformal)
-     $FLUIDUM_REFPOINTS_DIR/two_way_refpoints/<function>.csv
-                                   24 random reference states each: inputs and the
-                                   numeric A_t, A_x, (A_y), source (17 digits)
+   Writes one Julia function per system the solver uses, into the generated block of
+   that system's matrix file in src/Matrix (only when every check passed and all three
+   charts ran):
+     S3  one_d_HQ_BG_consistent_matrix      1d_viscous_HQ_cilindrical_BG.jl
+         two_d_HQ_BG_consistent_matrix      2d_viscous_HQ_BG.jl
+     S4  one_d_HQ_BG_m2_matrix              1d_viscous_HQ_cilindrical_BG_m2.jl
+         two_d_HQ_BG_m2_matrix              2d_viscous_HQ_BG_m2.jl
+     S5  one_d_two_way_matrix(_conformal)   1d_two_way_cilindrical.jl
+         two_d_two_way_matrix(_conformal)   2d_two_way.jl
+   with dPP = 0 (no medium has delta_PiPi) and the 2+1D corotation coupling on (wv = 1).
    and checks
      E-same-<fn>   the simplified exported entries equal the derived ones
      E-free-<fn>   every free symbol of the generated expressions is an argument
-     E-jl          the generated Julia, run on the CSV inputs, reproduces the CSV
+     E-jl          the generated Julia, run on 24 random states per function (exact
+                   values from the derivation), reproduces them
    ============================================================================ *)
 
 If[doExport,
 Print[""]; Print["================ export ================  (", stamp[], ")"];
-(* Where: into the package and $FLUIDUM_REFPOINTS_DIR when every check so far passed
-   (TWOWAY_JL / TWOWAY_REFDIR override); into $TWOWAY_OUT otherwise, so a failing derivation never
-   overwrites the package file. *)
 toPkg = fail == 0 && SubsetQ[charts, {"bj", "cyl", "car"}];   (* a partial-chart run never writes the package *)
-jlFile = envOr["TWOWAY_JL", If[toPkg,
-    FileNameJoin[{PKG, "src", "Matrix", "two_way_generated.jl"}],
-    FileNameJoin[{outDir, "two_way_generated.jl"}]]];
-refDir = envOr["TWOWAY_REFDIR", If[toPkg,
-    FileNameJoin[{REFDIR, "two_way_refpoints"}],
-    FileNameJoin[{outDir, "refpoints"}]]];
-If[!toPkg, Print["  a gate failed or not all charts ran: writing to ", outDir, " ONLY, not into the package"]];
-Print["  writing ", jlFile, "  and  ", refDir];
+If[!toPkg, Print["  a check failed or not all charts ran: the export is checked, but src/Matrix is not written"]];
+refDir = FileNameJoin[{outDir, "refpoints"}];
+If[DirectoryQ[refDir], DeleteDirectory[refDir, DeleteContents -> True]];   (* this run's states only *)
+jlFile = FileNameJoin[{outDir, "generated.jl"}];
 
 bgArgs = <|"0p1d" -> {"T", "dtT"}, "1p1d" -> {"T", "ur", "dtT", "drT", "dtur", "drur"},
   "2p1d" -> {"T", "ux", "uy", "dtT", "dxT", "dyT", "dtux", "dxux", "dyux", "dtuy", "dxuy", "dyuy"}|>;
 geoArgs = <|"0p1d" -> {"tau"}, "1p1d" -> {"tau", "rr"}, "2p1d" -> {"tau"}|>;
 medGen = {"pres", "dtp", "dtdtp"}; medConf = {"aSB"};
-trGen = {"zeta", "visc", "tauS", "tauB", "dpp", "dPP"}; trConf = {"visc", "tauS", "dpp"};
+trGen = {"zeta", "visc", "tauS", "tauB", "dpp"}; trConf = {"visc", "tauS", "dpp"};
 chFM = {"n", "dndT", "dnda", "h", "dhdT"};
 chM2 = {"I31", "dI31dT", "dI31da", "aQ", "bQ", "dbQdT", "cQ", "dcQdT"};
-sysName = <|"S1" -> "ideal", "S2" -> "viscous", "S3" -> "hq_fm_bg", "S4" -> "hq_m2_bg", "S5" -> "two_way"|>;
+(* {system, chart, conformal} -> {function, file} *)
+exportSet = {
+  {"S3", "1p1d", False} -> {"one_d_HQ_BG_consistent_matrix", "1d_viscous_HQ_cilindrical_BG.jl"},
+  {"S4", "1p1d", False} -> {"one_d_HQ_BG_m2_matrix", "1d_viscous_HQ_cilindrical_BG_m2.jl"},
+  {"S5", "1p1d", False} -> {"one_d_two_way_matrix", "1d_two_way_cilindrical.jl"},
+  {"S5", "1p1d", True} -> {"one_d_two_way_matrix_conformal", "1d_two_way_cilindrical.jl"},
+  {"S3", "2p1d", False} -> {"two_d_HQ_BG_consistent_matrix", "2d_viscous_HQ_BG.jl"},
+  {"S4", "2p1d", False} -> {"two_d_HQ_BG_m2_matrix", "2d_viscous_HQ_BG_m2.jl"},
+  {"S5", "2p1d", False} -> {"two_d_two_way_matrix", "2d_two_way.jl"},
+  {"S5", "2p1d", True} -> {"two_d_two_way_matrix_conformal", "2d_two_way.jl"}};
 sysDoc = <|
-  "S1" -> "Ideal hydro: Nabla_mu T_m^{mu nu} = 0, T_m = (e+P) uu + P g, e = T P' - P.",
-  "S2" -> "Israel-Stewart hydro, Fluidum's term set: Nabla.T_m = 0,\n#   tauS Delta^{mn}_{ab} D pi^{ab} + pi^{mn} + 2 visc sigma^{mn} + dpp pi^{mn} theta = 0,\n#   tauB D Pi + Pi + zeta theta + dPP Pi theta = 0.\n#   dpp = 4/3 tauS is the 7-field 1-D :MIS kernel and the default of the two_way.jl wrappers;\n#   dpp = 0 is plain IS.  dPP = 0 in every hand-written medium.  Both stay arguments here.",
-  "S3" -> "Charm first moment on a prescribed background (T, u): Nabla.(n u + nu) = 0,\n#   (Ds/T) Delta^mu_l Nabla_m T_Q^{ml} + nu^mu = 0  (consistent closure, c = 0).",
-  "S4" -> "S3 + the consistent charm second moment on a prescribed background:\n#   (Ds/2T) Delta Delta Nabla.S + dM = 0 (traceless channels + trace); the nu row carries\n#   c (Ds/T) Delta Nabla.dM (c = 1 <=> c_M = Ds/T; c = 0 drops it).",
-  "S5" -> "The two-way system: Nabla_mu (T_m + T_Q)^{mu nu} = 0 (fluid rows), the medium pi/Pi rows of S2,\n#   the charm rows of S4.  T_Q = (n h - P0) uu + P0 Delta + h (u nu + nu u) + c dM, P0 = n T."|>;
+  "S3" -> "Charm first moment on a prescribed background, consistent closure",
+  "S4" -> "Charm first and second moment on a prescribed background",
+  "S5" -> "The two-way system, Nabla_mu (T_m + T_Q)^{mu nu} = 0 with the medium and charm rows"|>;
 
 argsFor[k_, nm_, conf_] := Module[{a},
   a = Switch[k,
-    "S1", If[conf, medConf, medGen],
-    "S2", If[conf, Join[medConf, trConf], Join[medGen, trGen]],
     "S3", Join[bgArgs[nm], chFM, {"Ds"}],
-    "S4", Join[bgArgs[nm], chFM, chM2, {"Ds"}, If[nm === "0p1d", {}, {"c"}], If[nm === "2p1d", {"wv"}, {}]],
-    "S5", Join[If[conf, Join[medConf, trConf], Join[medGen, trGen]], chFM, chM2, {"Ds", "c"},
-      If[nm === "2p1d", {"wv"}, {}]]];
+    "S4", Join[bgArgs[nm], chFM, chM2, {"Ds"}],
+    "S5", Join[If[conf, Join[medConf, trConf], Join[medGen, trGen]], chFM, chM2, {"Ds"}]];
   Join[geoArgs[nm], a]];
 
 utauRule[nm_] := Switch[nm, "0p1d", {}, "1p1d", {Power[1 + ur^2, p_] :> utau^(2 p)},
@@ -64,55 +65,35 @@ mat2jl[M_, name_] := Module[{n = Length[M], m = Length[First[M]]},
 vec2jl[V_, name_] := "    " <> name <> " = SVector{" <> ToString[Length[V]] <> "}((\n" <>
   StringRiffle[Table["        " <> jstr[V[[i]]], {i, Length[V]}], ",\n"] <> "))\n";
 
-exported = {};
-jlOut = "# ============================================================================
-# two_way_generated.jl -- GENERATED by deriv/derive_two_way.wls.  DO NOT EDIT.
-# This header is written by the generator (no date in it, so a regeneration is
-# byte-identical); regenerate with
-#     wolframscript -file deriv/derive_two_way.wls        (~5 min)
-# which writes this file, and the reference states in two_way_refpoints/ (see deriv/README.md),
-# only when every check passed.  The hand-written wrappers (EOS, transport, field layouts,
-# A_t^-1) are in two_way.jl.
-#
-# Every function returns the quasi-linear system in Fluidum's source-on-the-LHS
-# convention,
-#     A_t d_tau phi + A_x d_x phi (+ A_y d_y phi) + source = 0,
-# with phi = u (the field vector; layout in each docstring).  0+1D: (A_t, source);
-# 1+1D cylindrical: (A_t, A_r, source); 2+1D Cartesian: (A_t, A_x, A_y, source).
-#
-# EOS symbolic: medium pres = P(T), dtp = P', dtdtp = P''; conformal: P = aSB T^4, no bulk.
-# Charm: n(T,alpha) with dndT, dnda; h(T) with dhdT; P0 = n T; second-moment coefficients
-# I31(T,alpha), aQ(T), bQ(T), cQ(T) (Boltzmann: I31 = n T h, aQ = m^2 + 5 T h, bQ = T h,
-# cQ = m K4/K3; tau_M = Ds cQ/(2T)).  c = 1 <=> c_M = Ds/T, c = 0 drops dM from T_Q.
-# wv (2+1D second moment only): 1 = the covariant corotation coupling (the two_way.jl default),
-# 0 = the hq2d_m2_rows default (vorticity = false).
-# ============================================================================
+(* the derivation's field names -> the field names of Fluidum's layouts (two_way_1d, two_way_2d, ...) *)
+jlFieldNames = <|"0p1d" -> {},
+  "1p1d" -> {"al" -> "\[Alpha]", "piphi" -> "piphiphi", "pieta" -> "pietaeta", "PiB" -> "piB",
+             "piphiphiQ" -> "piphiphi_Q", "pietaetaQ" -> "pietaeta_Q", "piBQ" -> "piB_Q"},
+  "2p1d" -> {"al" -> "\[Alpha]", "pieta" -> "pizz", "PiB" -> "piB",
+             "piyyQ" -> "piyy_Q", "pizzQ" -> "pizz_Q", "pixyQ" -> "pixy_Q", "piBQ" -> "piB_Q"}|>;
+exported = {}; jlOut = ""; jlByFile = <||>;
 
-";
-
-Do[Module[{res = results[nm], st, sys, m, vars, fnames, conf, ff, nf, keep, A, src, args, fn, free, allowed,
-    body, ret, csvRows, hdr, dimA, ncs, piIdx},
-  st = res["st"]; ncs = Length[st["cs"]];
-  Do[Do[
-    If[conf && MemberQ[{"S3", "S4"}, k], Continue[]];
+Do[Module[{k, nm, conf, res, st, sys, m, vars, fnames, keep, A, src, args, fn, file, free, allowed,
+    body, csvRows, hdr, ncs, piIdx},
+  {k, nm, conf} = ex[[1]]; {fn, file} = ex[[2]];
+  res = results[nm]; st = res["st"]; ncs = Length[st["cs"]];
     sys = res["sys"][k];
     vars = sys["vars"]; fnames = fieldNames /@ vars;
-    m = toJ[{sys["A"], sys["src"]}, st];
+    m = toJ[{sys["A"], sys["src"]}, st] /. {dPP -> 0, wv -> 1};
     {A, src} = m;
     If[conf,
       piIdx = Flatten@Position[fnames, "PiB"];
       keep = Complement[Range[Length[vars]], piIdx];
       A = Table[A[[ic]][[keep, keep]], {ic, ncs}]; src = src[[keep]]; fnames = fnames[[keep]];
       {A, src} = {A, src} /. {pres -> aSB T^4, dtp -> 4 aSB T^3, dtdtp -> 12 aSB T^2, PiB -> 0, zeta -> 0}];
-    Print["  ", sysName[k], "_", nm, If[conf, "_conformal", ""], ": ", Length[fnames], " fields, simplifying ... (", stamp[], ")"];
+    Print["  ", fn, ": ", Length[fnames], " fields, simplifying ... (", stamp[], ")"];
     Module[{A0 = A, s0 = src, z},
       A = Map[norm, A, {3}]; src = norm /@ src;
       A = A /. utauRule[nm]; src = src /. utauRule[nm];
       (* the exported (simplified, u^tau-renamed) entries must equal the derived ones *)
       z = zeroJ[Flatten[{A, src} - {A0, s0}] /. utau -> Switch[nm, "1p1d", Sqrt[1 + ur^2], "2p1d", Sqrt[1 + ux^2 + uy^2], _, 1], 3, 5];
-      gate["E-same-" <> sysName[k] <> "_" <> nm <> If[conf, "_conformal", ""], z[[1]],
+      gate["E-same-" <> fn, z[[1]],
         "simplified exported entries == derived entries (" <> z[[2]] <> ")"]];
-    fn = sysName[k] <> "_" <> nm <> If[conf, "_conformal", ""] <> "_generated";
     args = argsFor[k, nm, conf];
     allowed = Join[args, fnames, If[nm === "0p1d", {}, {"utau"}]];
     free = Union@Cases[{A, src}, s_Symbol /; Context[s] === "Global`" :> SymbolName[s], {0, Infinity}];
@@ -120,20 +101,19 @@ Do[Module[{res = results[nm], st, sys, m, vars, fnames, conf, ff, nf, keep, A, s
         FreeQ[{A, src}, Derivative] && FreeQ[{A, src}, Alternatives @@ Join[eosHeads, allHeads[st]]],
       "every free symbol is an argument or a field" <> If[SubsetQ[allowed, free], "", ": EXTRA " <> ToString[Complement[free, allowed]]]];
     (* Julia *)
-    body = "\n\"\"\"\n    " <> fn <> "(u, " <> StringRiffle[args, ", "] <> ")\n\n" <>
-      sysDoc[k] <> "\n\n" <> st["name"] <> (Switch[nm, "0p1d", " Bjorken (Milne, boost invariant, homogeneous)",
-        "1p1d", " cylindrical Milne (tau, r, phi, eta), u = (u^tau, u^r, 0, 0)",
-        "2p1d", " Cartesian Milne (tau, x, y, eta), u = (u^tau, u^x, u^y, 0)"]) <>
-      If[conf, ", conformal medium (P = aSB T^4, no bulk)", ""] <> ".\n\nFields u = (" <>
-      StringRiffle[fnames, ", "] <> ")." <>
-      If[MemberQ[{"S3", "S4"}, k], "  Background (T, u) and its first derivatives are arguments.", ""] <>
-      "\nReturns " <> Switch[nm, "0p1d", "(A_t, source)", "1p1d", "(A_t, A_r, source)", "2p1d", "(A_t, A_x, A_y, source)"] <>
+    body = "\n\"\"\"\n    " <> fn <> "(u, " <> StringRiffle[args, ", "] <> ")\n" <>
+      sysDoc[k] <> "; " <> Switch[nm, "0p1d", "Bjorken", "1p1d", "1+1D cylindrical", "2p1d", "2+1D Cartesian"] <>
+      If[conf, ", conformal medium", ""] <> ".\nFields u = (" <>
+      StringRiffle[fnames, ", "] <> "); returns " <>
+      Switch[nm, "0p1d", "(A_t, source)", "1p1d", "(A_t, A_r, source)", "2p1d", "(A_t, A_x, A_y, source)"] <>
       ".\n\"\"\"\nfunction " <> fn <> "(u, " <> StringRiffle[args, ", "] <> ")\n    " <>
       StringRiffle[fnames, ", "] <> " = " <> StringRiffle[Table["u[" <> ToString[i] <> "]", {i, Length[fnames]}], ", "] <> "\n" <>
       Switch[nm, "0p1d", "", "1p1d", "    utau = sqrt(1 + ur^2)\n", "2p1d", "    utau = sqrt(1 + ux^2 + uy^2)\n"] <>
       StringJoin[Table[mat2jl[A[[ic]], {"At", "Ax", "Ay"}[[ic]]] <> "\n", {ic, ncs}]] <>
       vec2jl[src, "source"] <> "\n    return (" <> StringRiffle[Join[{"At", "Ax", "Ay"}[[1 ;; ncs]], {"source"}], ", "] <> ")\nend\n";
+    body = juliaNames[body, jlFieldNames[nm]];
     jlOut = jlOut <> body;
+    jlByFile[file] = Append[Lookup[jlByFile, file, {}], body];
     (* CSV *)
     SeedRandom[Hash[fn]];
     csvRows = Table[Module[{rep, vals},
@@ -148,7 +128,6 @@ Do[Module[{res = results[nm], st, sys, m, vars, fnames, conf, ff, nf, keep, A, s
             "h" | "cQ", RandomInteger[{160, 300}]/100, "dhdT" | "dbQdT", RandomInteger[{50, 300}]/100,
             "aQ", RandomInteger[{200, 500}]/100, "bQ", RandomInteger[{30, 150}]/100,
             "dcQdT", RandomInteger[{-200, 200}]/100, "Ds", RandomInteger[{5, 100}]/10,
-            "c" | "wv", RandomInteger[{0, 1}],
             "al", RandomInteger[{-20, 20}]/10,
             _, If[StringStartsQ[s, "d"], RandomInteger[{-500, 500}]/1000, RandomInteger[{-100, 100}]/10000]],
           {s, Join[fnames, args]}];
@@ -164,12 +143,12 @@ Do[Module[{res = results[nm], st, sys, m, vars, fnames, conf, ff, nf, keep, A, s
       Prepend[N[csvRows], hdr], "CSV"];
     AppendTo[exported, {fn, Length[fnames], fnames, args, ncs}];
     If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* kept for render.wl *)
-      renderSys[fn] = <|"A" -> A, "src" -> src, "fields" -> fnames, "chart" -> nm, "sys" -> k, "conf" -> conf|>];
-    , {conf, {False, True}}], {k, {"S1", "S2", "S3", "S4", "S5"}}];
-  ], {nm, Select[{"0p1d", "1p1d", "2p1d"}, KeyExistsQ[results, #] &]}];
+      renderSys[fn] = <|"A" -> A, "src" -> src, "fields" -> fnames, "chart" -> nm, "sys" -> k, "conf" -> conf,
+        "file" -> file|>];
+  ], {ex, Select[exportSet, KeyExistsQ[results, #[[1, 2]]] &]}];
 
 Export[jlFile, jlOut, "Text"];
-Print["  wrote ", jlFile, "  (", Length[exported], " functions)"];
+Print["  wrote ", jlFile, "  (", Length[exported], " functions, for the check below)"];
 
 (* E-jl: the generated Julia reproduces the CSV it was exported with *)
 Module[{chk, run, outs},
@@ -207,4 +186,8 @@ println(\"EJL \", worst)
     "the generated Julia (" <> ToString[Length[exported]] <> " functions) parses, runs, and reproduces its 24-state CSVs: max rel err " <>
       If[outs === {}, "julia failed", sci[outs[[1]]]]];
 ];
+(* into the package: each function into the generated block of its system's file *)
+If[toPkg && fail == 0,
+  KeyValueMap[spliceJulia[FileNameJoin[{matDir, #1}], "derive_two_way.wls", StringRiffle[#2, "\n"]] &, jlByFile],
+  Print["  NOT writing src/Matrix: a check failed or not all charts ran"]];
 ];

@@ -7,7 +7,7 @@
        Matrix/1d_viscous_cilindrical.jl   one_d_viscous_matrix   (5 fields)
        Matrix/2d_viscous.jl               two_d_viscous_matrix   (7 fields)
 
-   and writes them as `one_d_viscous_matrix_derived` and `two_d_viscous_matrix_derived`.
+   and writes the 2+1D one as `two_d_viscous_matrix_derived` into Matrix/2d_viscous.jl.
 
    Physics.  Israel-Stewart plus the DNMR term delta_pipi (symbol dpp; no other
    second-order term):
@@ -55,21 +55,15 @@
      V-G4  1-D: derived == `one_d_viscous_matrix`, entry by entry, symbolically, read out of
            Matrix/1d_viscous_cilindrical.jl (julia_source_reader.wl), with dpp symbolic
            (At + dpp dAt etc. of the file).  V-G4-0 / V-G4-1 repeat it at dpp = 0 and
-           dpp = 4/3 tauS.  The same comparison runs numerically in bench/bench_1p1d_viscous.jl.
+           dpp = 4/3 tauS.
      V-G4m 1-D at dpp = 4/3 tauS: derived == the medium block (rows/cols 1-5) of the 7-field
            :MIS kernel `one_d_viscous_matrix_fugacity`, read from its .jl
      V-G5  Bjorken: on u = (1,0,0,0) the derived 2-D rows collapse to the textbook
            0+1D equations, tauS pi' + pi + 4 eta/(3 tau) + dpp pi/tau = 0 for pi^eta_eta
      V-G6  the dpp split: (IS with dpp in eq. (2)) == M_IS + dpp M_dpp, both charts
-     V-GV, V-GN  the two co-rotating terms exported as diagnostics (see below) are
-           antisymmetric/transverse as constructed and carry no source
-
-   Also writes refpoints_viscous_generated.csv to $FLUIDUM_REFPOINTS_DIR (default a
-   temporary directory): the generated routines' outputs at 12 random states, evaluated
-   from the derivation.
 
    Run:    wolframscript -file deriv/derive_2p1d_viscous.wls
-   Writes: src/Matrix/viscous_generated.jl
+   Writes: the generated block of src/Matrix/2d_viscous.jl
    ============================================================================ *)
 
 $HistoryLength = 0;
@@ -79,10 +73,7 @@ gate[id_, ok_, msg_] := (If[TrueQ[ok], pass++, fail++];
   Print[If[TrueQ[ok], "  [PASS] ", "  [FAIL] "], "V-" <> id, "  ", msg]);
 PKG = ParentDirectory[DirectoryName[$InputFileName]];   (* the Fluidum.jl package root *)
 DERIV = DirectoryName[$InputFileName];
-REFDIR = With[{v = Environment["FLUIDUM_REFPOINTS_DIR"]},
-  If[StringQ[v] && v =!= "", v, FileNameJoin[{$TemporaryDirectory, "fluidum_refpoints"}]]];
 Get[FileNameJoin[{DERIV, "julia_source_reader.wl"}]];
-Get[FileNameJoin[{DERIV, "refpoints_csv.wl"}]];
 
 (* ---------------------------------------------------------------- geometry *)
 mkGeom[coords_, gdiag_] := Module[{g, ginv, Gam, n = 4},
@@ -283,57 +274,6 @@ gate["G5-Pi", Simplify[bjE[[7]] - row7want] === 0, "bulk row on Bjorken == tauB 
 gate["G5-mom", Simplify[{bjE[[2]], bjE[[3]], bjE[[6]]}] === {0, 0, 0},
   "the x, y and xy rows vanish identically on Bjorken flow"];
 
-(* ------------------------------------------------------ the co-rotating (vorticity) term ---
-   The DNMR/IS shear equation is often written with the Jaumann (co-rotating) derivative,
-   i.e. with the extra coupling  -+ 2 tauS pi_lam^{<mu} omega^{nu>lam}  where
-       omega^{mu nu} = (1/2) Delta^{mu al} Delta^{nu be} (Nabla_al u_be - Nabla_be u_al).
-   It vanishes identically on 1-D cylindrical flow, where the projected vorticity of a
-   radial flow is zero, so V-G4 cannot see it.  Exported on its own so a Julia test can
-   check whether a 2-D matrix carries it, and with which sign. *)
-Print["== vorticity term =="];
-omeg = With[{g = CAR["g"], Dl = ISK["Dl"], gru = gradV[CAR, uK]},
-   Module[{low = gru . g},   (* low[[al, be]] = Nabla_al u_be *)
-    Table[(1/2) Sum[Dl[[m, a]] Dl[[n2, b]] (low[[a, b]] - low[[b, a]]), {a, 4}, {b, 4}], {m, 4}, {n2, 4}]]];
-gate["GV-anti", Simplify[omeg + Transpose[omeg]] === ConstantArray[0, {4, 4}], "omega is antisymmetric"];
-gate["GV-perp", Simplify[(CAR["g"] . uK) . omeg] === {0, 0, 0, 0}, "omega is transverse to u"];
-Mvor = Table[Sum[piK[[m, r]] CAR["g"][[r, l]] omeg[[n2, l]], {r, 4}, {l, 4}], {m, 4}, {n2, 4}];
-With[{Dl = ISK["Dl"], Dud = ISK["Dud"], g = CAR["g"]},
-  Dlow2 = g . Dl . g;
-  Vor = Table[2 Sum[((1/2) (Dud[[a, c]] Dud[[b, d]] + Dud[[a, d]] Dud[[b, c]])
-        - (1/3) Dl[[a, b]] Dlow2[[c, d]]) Mvor[[c, d]], {c, 4}, {d, 4}], {a, 4}, {b, 4}]];
-VorL = lower2[CAR, Vor];
-eqsV = {0, 0, 0, VorL[[3, 3]], VorL[[4, 4]]/tau^2, VorL[[2, 3]], 0};
-{AsV, srcV} = coefs[eqsV, varsK, {tau, xx, yy}];
-{AtV, AxV, AyV} = AsV;
-gate["GV-src", Simplify[srcV] === {0, 0, 0, 0, 0, 0, 0}, "the vorticity term is purely a gradient term (no source)"];
-
-(* --------------------------------- the source notebook's co-rotating term -------------------
-   The Mathematica notebook viscous_hydro_2d_perturbations.nb, the presumed origin of
-   Matrix/2d_viscous.jl, writes its shear equation as
-
-     tauS u.Nabla pi + tauS [ u ** (udot.pi) - (udot.pi) ** u ]
-                     + tauS ( raise[omega,{1}].pi - pi.raise[omega,{2}] ) + 2 eta sigma + pi = 0
-
-   with  omega = (1/2)(Nabla_mu u_nu - Nabla_nu u_mu), unprojected (no Delta on either
-   index).  The DNMR coupling 2 tauS pi_lam^{<mu} omega^{nu>lam} is transverse and traceless,
-   so this is a different tensor.  Exported alone so a Julia test can check whether
-   `two_d_viscous_matrix` carries it.  The notebook's projector `del4index` is correctly
-   symmetrised, so its sigma is not the source of the sigma^{xy} defect of that matrix. *)
-Print["== the source notebook's commutator =="];
-omegaNB = With[{gru = gradV[CAR, uK], g = CAR["g"]},
-   Module[{low}, low = gru . g;                     (* low[[a,b]] = Nabla_a u_b *)
-    (1/2) (low - Transpose[low])]];
-gate["GN-anti", Simplify[omegaNB + Transpose[omegaNB]] === ConstantArray[0, {4, 4}],
-  "the notebook's omega is antisymmetric"];
-comm = With[{gi = CAR["ginv"]},
-   (gi . omegaNB) . piK - piK . (omegaNB . gi)];    (* omega^mu_lam pi^{lam nu} - pi^{mu lam} omega_lam^nu *)
-commL = lower2[CAR, comm];
-eqsN = {0, 0, 0, tauS commL[[3, 3]], tauS commL[[4, 4]]/tau^2, tauS commL[[2, 3]], 0};
-{AsN, srcN} = coefs[eqsN, varsK, {tau, xx, yy}];
-{AtN, AxN, AyN} = AsN;
-gate["GN-src", Simplify[srcN] === {0, 0, 0, 0, 0, 0, 0},
-  "the notebook's commutator is purely a gradient term (no source)"];
-
 (* The slab limit (2-D at u^y = 0, d_y = 0  ==  1-D at r -> Infinity) is not checked here:
    Limit[] on expressions with hundreds of terms costs more than the rest of the file.  It is
    a numerical comparison of the two generated routines at matched states and large R. *)
@@ -356,141 +296,27 @@ mat2jl[M_, name_, n_, sub_] := "    " <> name <> " = SMatrix{" <> ToString[n] <>
 vec2jl[V_, name_, n_, sub_] := "    " <> name <> " = SVector{" <> ToString[n] <> "}((\n" <>
    StringRiffle[Table["        " <> jstr[V[[i]], sub], {i, n}], ",\n"] <> "))\n";
 
-hdr = "# ============================================================================
-# viscous_generated.jl -- GENERATED by deriv/derive_2p1d_viscous.wls.  DO NOT EDIT.
-#
-# Israel-Stewart viscous hydrodynamics + the DNMR term delta_pipi (dpp) in boost-invariant
-# Milne coordinates, derived from scratch, in the source-on-the-LHS convention of every matrix
-# in this directory:
-#
-#     A_t d_tau phi + A_x d_x phi (+ A_y d_y phi) + src = 0
-#
-#   T^{mn} = (e+p+Pi) u^m u^n + (p+Pi) g^{mn} + pi^{mn},   e = T p'(T) - p(T)
-#   Nabla_m T^{mn} = 0
-#   tauS Delta^{mn}_{ab} D pi^{ab} + pi^{mn} + 2 eta sigma^{mn} + dpp pi^{mn} theta = 0
-#   tauB D Pi + Pi + zeta theta = 0
-#
-# dpp is the last argument, default `delta_pipi(tauS)` = 4/3 tauS; dpp = 0 is plain IS
-# (`delta_pipi = false` in the solver closures).  The system is linear in dpp and is emitted as
-# IS part + dpp * (dAt, ...);
-# dpp == 0 returns the IS part before the dpp part is evaluated.
-#
-# The 1-D routine reproduces `one_d_viscous_matrix` entry by entry: symbolically in check V-G4
-# of the generator, against the .jl file itself, and numerically in bench/bench_1p1d_viscous.jl.
-# The 2-D routine is the same construction in the Cartesian chart; it replaces the legacy
-# `two_d_viscous_matrix`, ten of whose entries are wrong (see Matrix/2d_viscous.jl).
-# Further checks of the generator: V-G4m (dpp = 4/3 tauS == the medium block of the 7-field
-# :MIS kernel `one_d_viscous_matrix_fugacity`), V-G5 (Bjorken), V-G6 (the dpp split).
-# The vorticity and notebook-commutator diagnostics below do not depend on dpp.
-# ============================================================================
-
-\"\"\"
-    one_d_viscous_matrix_derived(u, tau, R, p, dtp, dtdtp, zeta, visc, tauS, tauB, dpp = delta_pipi(tauS))
-
-(A_t, A_r, src) for phi = (T, u^r, pi^phi_phi, pi^eta_eta, Pi) in cylindrical Milne.
-Same signature and same field layout as `one_d_viscous_matrix`.
-\"\"\"
-function one_d_viscous_matrix_derived(u, tau, R, pres, dtp, dtdtp, zeta, visc, tauS, tauB, dpp = delta_pipi(tauS))
-    uT, uR, pFF, pEE, pBB = u[1], u[2], u[3], u[4], u[5]
-";
-dppHead = "\n    # delta_pipi: the coefficient of dpp of  dpp pi^{mn} theta  (checks V-G4, V-G6)\n";
-body1 = mat2jl[AtC, "At", 5, subC] <> "\n" <> mat2jl[ArC, "Ax", 5, subC] <> "\n" <> vec2jl[srcC, "source", 5, subC] <>
-        "\n    iszero(dpp) && return (At, Ax, source)\n" <> dppHead <>
-        mat2jl[AtDC, "dAt", 5, subC] <> "\n" <> mat2jl[ArDC, "dAx", 5, subC] <> "\n" <> vec2jl[srcDC, "dsource", 5, subC];
-
-hdr2 = "\n\n\"\"\"
+hdr2 = "\"\"\"
     two_d_viscous_matrix_derived(u, tau, p, dtp, dtdtp, zeta, visc, tauS, tauB, dpp = delta_pipi(tauS))
-
-(A_t, A_x, A_y, src) for phi = (T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi) in
-Cartesian Milne.  Same field layout as `two_d_viscous_matrix`, plus the trailing `dpp`
-(delta_pipi; the legacy matrix has none).
+(A_t, A_x, A_y, src) for phi = (T, u^x, u^y, pi^{yy}, pi^eta_eta, pi^{xy}, Pi), the layout of `two_d_viscous_matrix`.
+Israel-Stewart + the DNMR term dpp pi theta, source on the LHS; dpp = 0 is plain Israel-Stewart.
 \"\"\"
 function two_d_viscous_matrix_derived(u, tau, pres, dtp, dtdtp, zeta, visc, tauS, tauB, dpp = delta_pipi(tauS))
     uT, uX, uY, pYY, pEE, pXY, pBB = u[1], u[2], u[3], u[4], u[5], u[6], u[7]
 ";
+dppHead = "\n    # the coefficient of dpp of  dpp pi^{mn} theta\n";
 body2 = mat2jl[AtK, "At", 7, subK] <> "\n" <> mat2jl[AxK, "Ax", 7, subK] <> "\n" <>
         mat2jl[AyK, "Ay", 7, subK] <> "\n" <> vec2jl[srcK, "source", 7, subK] <>
         "\n    iszero(dpp) && return (At, Ax, Ay, source)\n" <> dppHead <>
         mat2jl[AtDK, "dAt", 7, subK] <> "\n" <> mat2jl[AxDK, "dAx", 7, subK] <> "\n" <>
         mat2jl[AyDK, "dAy", 7, subK] <> "\n" <> vec2jl[srcDK, "dsource", 7, subK];
-
-hdr4 = "\n\n\"\"\"
-    two_d_viscous_notebook_commutator(u, tau, tauS)
-
-The gradient-matrix contribution of the co-rotating commutator as written in the Mathematica
-notebook `viscous_hydro_2d_perturbations.nb`, the presumed origin of `two_d_viscous_matrix`,
-
-    tauS ( omega^mu_lam pi^{lam nu} - pi^{mu lam} omega_lam^nu ),
-    omega_{mu nu} = (1/2)(Nabla_mu u_nu - Nabla_nu u_mu)          (unprojected)
-
-It differs from the DNMR term `2 tauS pi_lam^{<mu} omega^{nu>lam}`, which is transverse and
-traceless.  Returns (dAt, dAx, dAy); no source.  Used to test whether the legacy
-`two_d_viscous_matrix` carries the notebook's term.
-\"\"\"
-function two_d_viscous_notebook_commutator(u, tau, tauS)
-    uT, uX, uY, pYY, pEE, pXY, pBB = u[1], u[2], u[3], u[4], u[5], u[6], u[7]
-";
-body4 = mat2jl[AtN, "dAt", 7, subK] <> "\n" <> mat2jl[AxN, "dAx", 7, subK] <> "\n" <> mat2jl[AyN, "dAy", 7, subK];
-
-hdr3 = "\n\n\"\"\"
-    two_d_viscous_vorticity(u, tau, tauS)
-
-The gradient-matrix contribution of `2 pi_lam^{<mu} omega^{nu>lam}` to the same seven rows,
-with
-
-    omega^{mu nu} = (1/2) Delta^{mu al} Delta^{nu be} (Nabla_al u_be - Nabla_be u_al).
-
-Returns (dAt, dAx, dAy); it contributes no source.  It vanishes identically on 1-D
-cylindrical flow, so the 1-D matrix carries no information about it.  Used to test
-whether a 2-D matrix carries this term.  The co-rotating (Jaumann) coupling in the shear
-equation is tauS times this; the argument `tauS` is not used.
-\"\"\"
-function two_d_viscous_vorticity(u, tau, tauS)
-    uT, uX, uY, pYY, pEE, pXY, pBB = u[1], u[2], u[3], u[4], u[5], u[6], u[7]
-";
-body3 = mat2jl[AtV, "dAt", 7, subK] <> "\n" <> mat2jl[AxV, "dAx", 7, subK] <> "\n" <> mat2jl[AyV, "dAy", 7, subK];
-out = hdr <> body1 <> "\n    return (At + dpp*dAt, Ax + dpp*dAx, source + dpp*dsource)\nend\n" <>
-      hdr2 <> body2 <> "\n    return (At + dpp*dAt, Ax + dpp*dAx, Ay + dpp*dAy, source + dpp*dsource)\nend\n" <>
-      hdr3 <> body3 <> "\n    return (dAt, dAx, dAy)\nend\n" <>
-      hdr4 <> body4 <> "\n    return (dAt, dAx, dAy)\nend\n";
-path = FileNameJoin[{PKG, "src", "Matrix", "viscous_generated.jl"}];
-Export[path, out, "Text"];
-Print["  wrote ", path];
-
-(* reference states for a Julia test: every generated routine, evaluated from the derivation *)
-SeedRandom[20261013];
-rp = {}; rq[a_, b_, d_] := RandomInteger[{a, b}]/d;
-Do[Module[{in1, in2, inV},
-    in1 = <|uT -> rq[15, 50, 100], uR -> rq[-8, 8, 10], pFF -> rq[-9, 9, 1000], pEE -> rq[-9, 9, 1000],
-      pBB -> rq[-9, 9, 2000], tau -> rq[5, 50, 10], R -> rq[5, 80, 10], pres -> rq[5, 20, 10],
-      dtp -> rq[20, 60, 10], dtdtp -> rq[5, 30, 10], zeta -> rq[0, 9, 100], visc -> rq[1, 99, 100],
-      tauS -> rq[2, 12, 10], tauB -> rq[2, 12, 10]|>;
-    rp = Join[rp, refRows["one_d_viscous_matrix_derived", p, in1,
-      Join[matRows["At", AtC //. subC], matRows["Ax", ArC //. subC], vecRows["source", srcC //. subC]]]];
-    in2 = <|uT -> rq[15, 50, 100], uX -> rq[-6, 6, 10], uY -> rq[-6, 6, 10], pYY -> rq[-9, 9, 1000],
-      pEE -> rq[-9, 9, 1000], pXY -> rq[-9, 9, 1000], pBB -> rq[-9, 9, 2000], tau -> rq[5, 50, 10],
-      pres -> rq[5, 20, 10], dtp -> rq[20, 60, 10], dtdtp -> rq[5, 30, 10], zeta -> rq[0, 9, 100],
-      visc -> rq[1, 99, 100], tauS -> rq[2, 12, 10], tauB -> rq[2, 12, 10]|>;
-    rp = Join[rp, refRows["two_d_viscous_matrix_derived", p, in2,
-      Join[matRows["At", AtK //. subK], matRows["Ax", AxK //. subK], matRows["Ay", AyK //. subK],
-           vecRows["source", srcK //. subK]]]];
-    (* the same states at the default dpp = 4/3 tauS; "in:dpp" is recorded,
-       but a test should call the routines without it, so that the default argument is tested *)
-    With[{d1 = 4 in1[tauS]/3, d2 = 4 in2[tauS]/3},
-      rp = Join[rp, refRows["one_d_viscous_matrix_derived_dpp", p, Append[in1, dpp -> d1],
-        Join[matRows["At", (AtC + dpp AtDC) //. subC], matRows["Ax", (ArC + dpp ArDC) //. subC],
-             vecRows["source", (srcC + dpp srcDC) //. subC]]]];
-      rp = Join[rp, refRows["two_d_viscous_matrix_derived_dpp", p, Append[in2, dpp -> d2],
-        Join[matRows["At", (AtK + dpp AtDK) //. subK], matRows["Ax", (AxK + dpp AxDK) //. subK],
-             matRows["Ay", (AyK + dpp AyDK) //. subK], vecRows["source", (srcK + dpp srcDK) //. subK]]]]];
-    inV = KeyTake[in2, {uT, uX, uY, pYY, pEE, pXY, pBB, tau, tauS}];
-    rp = Join[rp, refRows["two_d_viscous_vorticity", p, inV,
-      Join[matRows["dAt", AtV //. subK], matRows["dAx", AxV //. subK], matRows["dAy", AyV //. subK]]]];
-    rp = Join[rp, refRows["two_d_viscous_notebook_commutator", p, inV,
-      Join[matRows["dAt", AtN //. subK], matRows["dAx", AxN //. subK], matRows["dAy", AyN //. subK]]]]],
-  {p, 12}];
-If[fail == 0, writeRefpoints[FileNameJoin[{REFDIR, "refpoints_viscous_generated.csv"}], rp], Print["  NOT writing the reference states: a gate failed"]];
-Print["\n", pass, " passed, ", fail, " failed  (", pass + fail, " gates evaluated)"];
+out = hdr2 <> body2 <> "\n    return (At + dpp*dAt, Ax + dpp*dAx, Ay + dpp*dAy, source + dpp*dsource)\nend\n";
+If[fail == 0,
+  spliceJulia[FileNameJoin[{PKG, "src", "Matrix", "2d_viscous.jl"}], "derive_2p1d_viscous.wls",
+    juliaNames[out, {"uT" -> "T", "uX" -> "ux", "uY" -> "uy", "pYY" -> "piyy", "pEE" -> "pizz", "pXY" -> "pixy",
+      "pBB" -> "piB"}]],
+  Print["  NOT writing src/Matrix/2d_viscous.jl: a check failed"]];
+Print["\n", pass, " passed, ", fail, " failed  (", pass + fail, " checks evaluated)"];
 If[Environment["FLUIDUM_DERIV_RENDER"] === "1",   (* deriv/rendered/: PDF fragment + notebook *)
   Get[FileNameJoin[{DERIV, "render.wl"}]]; renderViscous[]];
 Exit[If[fail == 0, 0, 1]];

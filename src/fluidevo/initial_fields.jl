@@ -280,12 +280,12 @@ end
 """
 Get initial temperature and fugacity profiles from tabulated data
 """
-function get_initial_T_n_from_tabulated_data(x::TabulatedData{A,B}, y::TabulatedData{C,D}, cent1::Integer, cent2::Integer; grid_params, initial_params,dσ_QQdy, exp_tail = false) where {A,B,C,D}
+function get_initial_T_n_from_tabulated_data(x::TabulatedData{A,B}, y::TabulatedData{C,D}, cent1::Integer, cent2::Integer; grid_params, initial_params,dσ_QQdy, exp_tail = false, xmax_temp = 8, xmax_ncoll = 5) where {A,B,C,D}
     rmax = grid_params.rmax
     gridpoints = grid_params.gridpoints
     tau0 = initial_params.tau0
 
-    temperature_profile, nhard_profile = Profiles(x,y,cent1,cent2; radius = range(0, rmax, gridpoints), norm_x = initial_params.norm/tau0,xmax_temp = 8, xmax_ncoll = 5, norm_y =2/tau0*dσ_QQdy, exp_tail)
+    temperature_profile, nhard_profile = Profiles(x,y,cent1,cent2; radius = range(0, rmax, gridpoints), norm_x = initial_params.norm/tau0,xmax_temp, xmax_ncoll, norm_y =2/tau0*dσ_QQdy, exp_tail)
 
     return Dict{Symbol,Function}(
         :temperature => (x -> temperature_profile(x)),
@@ -319,11 +319,14 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
     rmax = grid_params.rmax
     gridpoints = grid_params.gridpoints
 
-    oned_visc_hydro = field_initializer
+    layout = field_initializer()
+    names = map(f -> f.name, layout.field)
     disc = Fluidum.CartesianDiscretization(OriginInterval(gridpoints, rmax))
-    disc_fields = Fluidum.DiscreteFields(oned_visc_hydro(), disc, Float64)
+    disc_fields = Fluidum.DiscreteFields(layout, disc, Float64)
 
-    phi = Fluidum.set_array((x) -> init_fun_dict[:temperature](x), :temperature, disc_fields) #temperature initialization
+    # the first field: the temperature, or the fugacity for charm on a prescribed background
+    first_field = :temperature in names ? :temperature : :α
+    phi = Fluidum.set_array((x) -> init_fun_dict[first_field](x), first_field, disc_fields)
 
     try
         Fluidum.set_array!(phi, x -> init_fun_dict[:α](x), :α, disc_fields) #fugacity initialization
@@ -336,6 +339,10 @@ function initialize_fields(init_fun_dict, field_initializer, grid_params)
     try
         Fluidum.set_array!(phi, x -> init_fun_dict[:n](x), :n, disc_fields) #density initialization
     catch
+    end
+    for name in (:nur, :piphiphi_Q, :pietaeta_Q, :piB_Q) # charm current and second moment
+        (haskey(init_fun_dict, name) && name in names) || continue
+        Fluidum.set_array!(phi, x -> init_fun_dict[name](x), name, disc_fields)
     end
     return Fluidum.DiscreteInitialFields(disc, disc_fields, phi)
 end

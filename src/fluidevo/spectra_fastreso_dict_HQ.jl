@@ -29,7 +29,7 @@ end
         @warn string("Radial velocity out of fastreso limits")       
     end 
     
-    fact = besseli(1, eos.hadron_list.ccbar/2)/besseli(0, eos.hadron_list.ccbar/2)
+    fact = canonical_factor(eos.hadron_list)
     q = 1
     if part.name == "Dc2007zer" || part.name == "Dc2010plu" #D* has degeneracy 3 since total angular momentum = 3.  
         deg = 3

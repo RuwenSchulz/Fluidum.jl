@@ -762,9 +762,13 @@ function problem(two_ideal_hydro_discrete::DiscreteFields{T, total_dimensions, s
     #ODEProblem((du,u,p,t)->chebupwinding(du,u,t,two_ideal_hydro_discrete,matrix_eq,cs),NewT.(init),tspan)
 end
 
+# Max internal time step: a `dtmax` keyword, else FLUIDUM_DTMAX, else 0.01. The variable sets it for
+# every solve of a run without touching the call sites; a smaller step resolves fast transients such
+# as a fast central freeze-out.
 function oneshoot(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan,args...;kwargs...)
     prob=problem(two_ideal_hydro_discrete,ideal_matrix_equation_2d!,cs,phi,tspan)
-    solve(prob,Tsit5(),args...;kwargs..., dtmax = 0.01)
+    dtmax = haskey(kwargs, :dtmax) ? kwargs[:dtmax] : parse(Float64, get(ENV, "FLUIDUM_DTMAX", "0.01"))
+    solve(prob,Tsit5(),args...; kwargs..., dtmax = dtmax)
 end
 
 

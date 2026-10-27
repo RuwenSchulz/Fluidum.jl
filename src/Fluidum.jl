@@ -31,6 +31,7 @@ using TensorCast
 using SimpleNonlinearSolve
 
 using QuadGK
+using NumericalIntegration   # multiplicity_analytic (fluidevo/spectra.jl)
 using Integrals
 using HCubature
 using Cuba

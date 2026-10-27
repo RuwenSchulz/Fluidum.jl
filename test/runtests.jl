@@ -265,7 +265,7 @@ end
     tspan = (0.4,10);
     field_results_Ds = Fluidum.oneshoot_debug(disc_fields, Fluidum.matrix1d_visc_HQ!, params_Ds, phi, tspan; reltol = 1e-8);
  
-    iszero(field_results_Ds)
+    @test iszero(field_results_Ds)
 
 end
 =#
@@ -286,3 +286,4 @@ include("test_hq_moments.jl")
 # the two-way medium + charm system
 include("test_two_way.jl")
 include("test_charm_delta_f.jl")
+include("test_charm_conventions.jl")

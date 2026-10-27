@@ -113,6 +113,8 @@ include("Matrix/2d_two_way.jl")
 
 include("wraps2.jl")
 
+include("attractor/attractor.jl")   # this branch only: see src/attractor/README.md
+
  
 export detector_dict
 export RunConfig, Detector, GridParameters, InitialParameters, Tspan, ExpTail, Centrality

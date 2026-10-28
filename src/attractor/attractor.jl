@@ -60,7 +60,7 @@ HQdiffusion(slope::T, offset::T, mass::T) where {T<:Real} = LinearDiffusion(slop
 
 # ── Charm relaxation times ───────────────────────────────────────────────────────────────────────
 # phd-git's drivers take τ_n, τ_M, η_M, h from `hq_taun` / `hq_transport`, which apply HQ_TAUN_SCALE
-# and FLUIDUM_HQ_MOMENTUM_DIMS. The package's charm matrices use `charm_moments` and see neither.
+# and FLUIDUM_HQ_MOMENTUM_DIMS. The package's charm matrices use `charm_eos` and see neither.
 #
 # FLUIDUM_HQ_MOMENTUM_DIMS=2 matches the charm sector in the 2-D momentum measure, for comparison with
 # a Langevin ensemble that evolves transverse momenta only. Its equilibrium is the 2-D Jüttner

@@ -129,7 +129,7 @@ function _pointwise_spectra_internal(pt,m,alpha,x::A,phi::B;deg=1,delta_f=nothin
     ϕ=phi(alpha)
     T,ur,pi_phi,pi_eta,pi_b,μ,ν=ϕ
     delta_f===nothing && return internal_thermal_spectra(pt,m,r,t,dra,dta,ur,T,μ,zero(ν);deg=deg)
-    n=charm_moments(T,μ,delta_f.list).n
+    n=charm_eos(T,μ,delta_f.list).n
     res=internal_thermal_spectra(pt,m,r,t,dra,dta,ur,T,μ,ν/n;deg=deg)
     delta_f.second_moment || return res
     piphiphi_Q,pietaeta_Q,piB_Q=ϕ[delta_f.idx[1]],ϕ[delta_f.idx[2]],ϕ[delta_f.idx[3]]
@@ -178,7 +178,7 @@ with k the momentum in the fluid rest frame:
 sixth, the `two_way_1d` layout (the conformal layouts have both one field earlier). δf₂, included
 with `second_moment`, reproduces the charm stress and leaves the density unchanged; it is read at `idx` as
 (piphiphi_Q, pietaeta_Q, piB_Q), the components of the medium's (piphiphi, pietaeta, piB), as in `two_way_1d`;
-the radial component in the fluid rest frame is −(piphiphi_Q + pietaeta_Q). n and h are `charm_moments(T, α, list)`
+the radial component in the fluid rest frame is −(piphiphi_Q + pietaeta_Q). n and h are `charm_eos(T, α, list)`
 of the list the moments were evolved with; the spectrum is that of one species of the given mass and `deg`.
 """
 struct CharmDeltaF{L}
@@ -190,7 +190,7 @@ CharmDeltaF(list; second_moment::Bool = true, idx = (8, 9, 10)) = CharmDeltaF(li
 
 # the coefficients of δf₂/f₀ = Ar k_r² + Aφ k_φ² + Aη k_η² + d, k in the fluid rest frame
 function df2_coefficients(T,α,piphiphi_Q,pietaeta_Q,piB_Q,list)
-    ch=charm_moments(T,α,list)
+    ch=charm_eos(T,α,list)
     a=1/(2*ch.n*ch.h*T^2)
     return (Ar=a*(piB_Q-piphiphi_Q-pietaeta_Q), Aφ=a*(piphiphi_Q+piB_Q), Aη=a*(pietaeta_Q+piB_Q), d=-3*piB_Q/(2*ch.n*T))
 end

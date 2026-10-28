@@ -24,7 +24,7 @@ end
 # a random node: (T, ur, α), nur of order 0.3 n, and piphiphi_Q, pietaeta_Q, piB_Q of order 0.1 n T
 function df_node(rng)
     T = 0.15 + 0.15rand(rng); ur = 1.5rand(rng); α = -3 + 3rand(rng)
-    n = Fluidum.charm_moments(T, α, DF_CH).n
+    n = Fluidum.charm_eos(T, α, DF_CH).n
     piphiphi_Q, pietaeta_Q, piB_Q = (0.2n * T) .* (2 .* rand(rng, 3) .- 1)
     return (; T, ur, α, n, νr = 0.3n * (2rand(rng) - 1), piphiphi_Q, pietaeta_Q, piB_Q,
             r = 1 + 6rand(rng), t = 1 + 9rand(rng), dra = 2rand(rng) - 1, dta = rand(rng))
@@ -57,7 +57,7 @@ df_d2(s, pt) = Fluidum.internal_df2_spectra(pt, DF_M, s.r, s.t, s.dra, s.dta, s.
 
     @testset "δf₂ matching in the rest frame: the charm stress reproduced, n unchanged" begin
         for T in (0.156, 0.25, 0.4), α in (-2.0, 0.5)
-            n = F.charm_moments(T, α, DF_CH).n
+            n = F.charm_eos(T, α, DF_CH).n
             piphiphi_Q, pietaeta_Q, piB_Q = -0.05n * T, -0.08n * T, 0.07n * T
             c = F.df2_coefficients(T, α, piphiphi_Q, pietaeta_Q, piB_Q, DF_CH)
             f0(k) = DF_DEG * exp(α - sqrt(DF_M^2 + k^2) / T) * F.fmGeV3 * k^2 / (2π^2)
@@ -96,7 +96,7 @@ df_d2(s, pt) = Fluidum.internal_df2_spectra(pt, DF_M, s.r, s.t, s.dra, s.dta, s.
     x_fn((s,)) = SVector(1 + 8s, 7 * (1 - s^2))
     fields(c) = ((s,),) -> begin
         T = 0.156; ur = 0.9 * s * (2 - s); α = -2.0
-        n = F.charm_moments(T, α, DF_CH).n
+        n = F.charm_eos(T, α, DF_CH).n
         SVector(T, ur, 0.0, 0.0, 0.0, α, c * 0.2n * (1 + s), -c * 0.04n * T, c * (0.04 - 0.12 * (1 - s)) * n * T, c * 0.06n * T * s)
     end
     fo(c) = FreezeOutResult(F.SplineInterp(F.PieceWiseFunction(x_fn, 0.0, 1.0), (200,)),

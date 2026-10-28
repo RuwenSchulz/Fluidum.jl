@@ -58,7 +58,7 @@ end
     @testset "the second moment does not enter the medium and first-moment rows" begin
         a = F.conformal_aSB(CEOS)
         ϕ = SVector(0.3, 0.2, 0.001, -0.002, -2.0, 1e-4, 1e-4, -5e-5, 2e-5)
-        c = F.charm_moments(0.3, -2.0, CH)
+        c = F.charm_eos(0.3, -2.0, CH)
         At, Ar, src = F.one_d_two_way_matrix_conformal(ϕ, 1.3, 2.7, a, 0.1, 0.5, 0.6, values(c)..., 0.4)
         @test all(iszero, At[1:6, 7:9]) && all(iszero, Ar[1:6, 7:9])
         ϕb = SVector(ϕ[1:6]..., 3e-4, 2e-4, -1e-4)
@@ -70,7 +70,7 @@ end
         for (T, α) in ((0.3, -2.0), (0.2, 1.0))
             ϕ = SVector(T, 0.0, 0.002, -0.004, α, 0.0, 0.0, 0.0, 0.0)
             _, S = tw_eval(matrix1d_two_way!(; species = CH, dmn_eps = 0.0), ϕ, (2.7,), PARC; tau = 1.3)
-            c = F.charm_moments(T, α, CH)
+            c = F.charm_eos(T, α, CH)
             @test 1.3 * (c.dndT * (-S[1]) + c.dnda * (-S[5])) + c.n ≈ 0 atol = 1e-12 * c.n
         end
     end
@@ -105,7 +105,7 @@ end
         Tr(r) = 0.12 + 0.25 / (1 + exp((r - 5) / 0.6))
         phi = set_array(Tr, :temperature, d)
         # one charm quark: n ∝ e^α
-        set_array!(phi, r -> log((0.2 * exp(-(r / 3)^2) + 1e-12) / F.charm_moments(Tr(r), 0.0, CH).n), :α, d)
+        set_array!(phi, r -> log((0.2 * exp(-(r / 3)^2) + 1e-12) / F.charm_eos(Tr(r), 0.0, CH).n), :α, d)
         p1 = two_way_problem(d, PARC, phi, (0.4, 3.0); species = CH)
         p0 = two_way_problem(d, PARC, phi, (0.4, 3.0); species = CH, edge = ColdEdge(; corona = false))
         du1 = similar(phi); du0 = similar(phi); p1.f(du1, phi, nothing, 0.4); p0.f(du0, phi, nothing, 0.4)

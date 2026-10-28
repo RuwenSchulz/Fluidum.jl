@@ -21,7 +21,7 @@ function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; species, delta_pipi:
     uτ = sqrt(1 + ϕ[2]^2 + ϕ[3]^2)
 
     if params.eos isa ConformalEOS
-        ch = charm_moments(T, clamp(ϕ[7], -α_max, α_max), species)
+        ch = charm_eos(T, clamp(ϕ[7], -α_max, α_max), species)
         Ds = DsT(params.diffusion, T) / T / fmGeV * edge_factor(T, edge)
 
         a = conformal_aSB(params.eos)
@@ -38,7 +38,7 @@ function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; species, delta_pipi:
         Ax = Base.setindex(Ax, Ax[7, 7] + dmn_eps * ϕ[2], 7, 7)
         Ay = Base.setindex(Ay, Ay[7, 7] + dmn_eps * ϕ[3], 7, 7)
     else
-        ch = charm_moments(T, clamp(ϕ[8], -α_max, α_max), species)
+        ch = charm_eos(T, clamp(ϕ[8], -α_max, α_max), species)
         Ds = DsT(params.diffusion, T) / T / fmGeV * edge_factor(T, edge)
 
         therm = thermodynamic(T, params.eos)

@@ -20,7 +20,7 @@ function matrix2d_HQ_BG_m2!(A_i, Source, ϕ, tau, X, params;
 
     T, ux, uy, dtT, dxT, dyT, dtux, dxux, dyux, dtuy, dxuy, dyuy = background_fields(tau, X[1], X[2])
 
-    ch = charm_moments(T, clamp(ϕ[1], -α_max, α_max), params.eos.hadron_list)
+    ch = charm_eos(T, clamp(ϕ[1], -α_max, α_max), params.eos.hadron_list)
     Ds = DsT(params.diffusion, T) / T / fmGeV
 
     # dn/dα + dmn_eps keeps inv(At) regular where n -> 0; it enters kappa = D_s dn/dα too

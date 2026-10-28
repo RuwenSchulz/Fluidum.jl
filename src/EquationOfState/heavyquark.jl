@@ -211,7 +211,7 @@ end
 
 # every charm-EOS input of the generated charm matrices at (T, α): n and its derivatives from the list, and
 # from its species sums weighted by q² n_i the enthalpy per particle h, ⟨m²⟩ and C (Boltzmann: C_i = m K4/K3)
-function charm_moments(T, α, list::CharmHadronList)
+function charm_eos(T, α, list::CharmHadronList)
     th = thermodynamic(T, α, list)
     n = th.pressure
     dndT, dnda = th.pressure_derivative

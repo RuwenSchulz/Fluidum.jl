@@ -47,14 +47,14 @@ end
 
 @testset "HQ on a prescribed background" begin
 
-@testset "charm_moments" begin
+@testset "charm_eos" begin
     l = charm_quark_list()
     # the canonical factor: in HadronResonaceGas_ccbar, not in the grand-canonical charm_quark_list
     lc = HadronResonaceGas_ccbar(l.particle_list, 30.0)
     @test thermodynamic(0.3, -2.0, lc).pressure ≈
           Fluidum.besseli(1, 15.0) / Fluidum.besseli(0, 15.0) * thermodynamic(0.3, -2.0, l).pressure rtol = 1e-14
     for (T, α) in ((0.3, -2.0), (0.16, 0.5), (0.5, -10.0))
-        c = Fluidum.charm_moments(T, α, l)
+        c = Fluidum.charm_eos(T, α, l)
         z = 1.5 / T
         @test c.h ≈ 1.5 * Fluidum.besselk(3, z) / Fluidum.besselk(2, z) rtol = 1e-13
         @test c.cQ ≈ 1.5 * Fluidum.besselk(4, z) / Fluidum.besselk(3, z) rtol = 1e-13
@@ -62,8 +62,8 @@ end
         @test Fluidum.τ_diffusion_hadron(T, α, HQM_EOS, HQM_PARAMS.diffusion) ≈
               Fluidum.DsT(HQM_PARAMS.diffusion, T) / T / Fluidum.fmGeV * c.h / T rtol = 1e-12
         δ = 1e-5
-        @test c.dhdT ≈ (Fluidum.charm_moments(T + δ, α, l).h - Fluidum.charm_moments(T - δ, α, l).h) / 2δ rtol = 1e-7
-        @test c.dcQdT ≈ (Fluidum.charm_moments(T + δ, α, l).cQ - Fluidum.charm_moments(T - δ, α, l).cQ) / 2δ rtol = 1e-7
+        @test c.dhdT ≈ (Fluidum.charm_eos(T + δ, α, l).h - Fluidum.charm_eos(T - δ, α, l).h) / 2δ rtol = 1e-7
+        @test c.dcQdT ≈ (Fluidum.charm_eos(T + δ, α, l).cQ - Fluidum.charm_eos(T - δ, α, l).cQ) / 2δ rtol = 1e-7
     end
     # three unit-charge species: the species sums against a momentum quadrature
     L3 = HadronResonaceGas_ccbar_grandcanonical(Fluidum.StructArray([
@@ -82,12 +82,12 @@ end
         h = S(3, 1) / S(2, 1); dh = (S(4, 1) - h * S(3, 1)) / T^2 / S(2, 1)
         C = S(5, 2) / S(4, 2); dC = (S(6, 2) - C * S(5, 2)) / T^2 / S(4, 2)
         A = S(4, 1) / S(2, 1)
-        c = Fluidum.charm_moments(T, α, L3)
+        c = Fluidum.charm_eos(T, α, L3)
         worst = max(worst, abs(c.h / h - 1), abs(c.dhdT / dh - 1), abs(c.cQ / C - 1), abs(c.dcQdT / dC - 1),
                     abs(c.aQ / A - 1), abs(T * c.dI31dT / c.I31 / (T * S(4, 1) / (T^2 * S(3, 1))) - 1))
     end
     @test worst < 1e-8
-    hqm_noalloc((Fluidum.charm_moments(0.3, -1.0, L3); @allocated Fluidum.charm_moments(0.3, -1.0, L3)))
+    hqm_noalloc((Fluidum.charm_eos(0.3, -1.0, L3); @allocated Fluidum.charm_eos(0.3, -1.0, L3)))
 end
 
 @testset "second moment: rows 1-2 are the consistent first moment, and m2 is passive" begin

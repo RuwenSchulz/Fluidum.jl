@@ -85,7 +85,7 @@ function matrix1d_visc_HQ_BG_consistent!(A_i, Source, ϕ, tau, X, params;
 
     T, ur, dtT, drT, drur, dtur = background_fields(tau, X[1])
 
-    ch = charm_moments(T, clamp(ϕ[1], -α_max, α_max), params.eos.hadron_list)
+    ch = charm_eos(T, clamp(ϕ[1], -α_max, α_max), params.eos.hadron_list)
     Ds = DsT(params.diffusion, T) / T / fmGeV
 
     # dn/dα + dmn_eps keeps inv(At) regular where n -> 0; it enters kappa = D_s dn/dα too

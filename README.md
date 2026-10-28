@@ -147,14 +147,14 @@ phi = set_array(T0, :temperature, d)
 α0(x, y) = 0.0
 # or from a charm density n0, here produced in the same hot spots; for one quark n is proportional to e^α
 # n0(x, y) = 0.05 * s(x, y) + 1e-8   # charm per fm^3
-# α0(x, y) = log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, quarks).n)
+# α0(x, y) = log(n0(x, y) / Fluidum.charm_eos(T0(x, y), 0.0, quarks).n)
 set_array!(phi, α0, :α, d)
 
 # the charm stress (second moment), in units of the charm pressure P0 = n T: charm produced with little
 # longitudinal momentum, pizz_Q = -a P0 and piyy_Q = a P0 / 2 (pixx_Q follows from tracelessness);
 # pixy_Q and piB_Q stay zero, as does the medium's stress
 a = 0.5
-P0(x, y) = Fluidum.charm_moments(T0(x, y), α0(x, y), quarks).n * T0(x, y)
+P0(x, y) = Fluidum.charm_eos(T0(x, y), α0(x, y), quarks).n * T0(x, y)
 set_array!(phi, (x, y) -> -a * P0(x, y), :pizz_Q, d)
 set_array!(phi, (x, y) -> a / 2 * P0(x, y), :piyy_Q, d)
 
@@ -166,7 +166,7 @@ sol = solve(prob, Tsit5(); saveat = [0.4, 6.0])
 xs = range(-L, L; length = N)
 T(u) = u[1, 2:end-1, 2:end-1]
 α(u) = u[8, 2:end-1, 2:end-1]
-n(u) = [Fluidum.charm_moments(u[1, i, j], u[8, i, j], quarks).n for i in 2:N+1, j in 2:N+1]
+n(u) = [Fluidum.charm_eos(u[1, i, j], u[8, i, j], quarks).n for i in 2:N+1, j in 2:N+1]
 plot(heatmap(xs, xs, T(sol.u[1])', title = "T (GeV), τ = 0.4 fm/c"),
      heatmap(xs, xs, T(sol.u[end])', title = "T (GeV), τ = 6 fm/c"),
      heatmap(xs, xs, α(sol.u[1])', title = "α, τ = 0.4 fm/c"),

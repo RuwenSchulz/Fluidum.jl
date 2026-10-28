@@ -4,24 +4,24 @@
 # Pi rows, and the charm rows of matrix2d_HQ_BG_m2!; the second moment does not enter T_Q
 
 """
-    matrix2d_two_way!(; charm, delta_pipi = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0)
+    matrix2d_two_way!(; species, delta_pipi = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0)
 The 2+1D two-way system, medium and charm evolved together: layout `two_way_2d` (`two_way_conformal_2d`
-for a `ConformalEOS`). `charm` is the charm hadron list (`charm_quark_list()` for one quark),
+for a `ConformalEOS`). `species` is the heavy-particle list (`charm_quark_list()` for one charm quark),
 `delta_pipi` as in `matrix2d_visc!`, `edge = nothing` switches the cold-edge decoupling of D_s off.
 """
-function matrix2d_two_way!(; charm, delta_pipi::Bool = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0)
+function matrix2d_two_way!(; species, delta_pipi::Bool = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0)
     (A_i, Source, ϕ, tau, X, params) -> matrix2d_two_way!(A_i, Source, ϕ, tau, X, params;
-        charm = charm, delta_pipi = delta_pipi, edge = edge, dmn_eps = dmn_eps, α_max = α_max)
+        species = species, delta_pipi = delta_pipi, edge = edge, dmn_eps = dmn_eps, α_max = α_max)
 end
 
-function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; charm, delta_pipi::Bool = true, edge = ColdEdge(),
+function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; species, delta_pipi::Bool = true, edge = ColdEdge(),
                            dmn_eps = 1e-8, α_max = 200.0)
 
     T = ϕ[1]
     uτ = sqrt(1 + ϕ[2]^2 + ϕ[3]^2)
 
     if params.eos isa ConformalEOS
-        ch = charm_moments(T, clamp(ϕ[7], -α_max, α_max), charm)
+        ch = charm_moments(T, clamp(ϕ[7], -α_max, α_max), species)
         Ds = DsT(params.diffusion, T) / T / fmGeV * edge_factor(T, edge)
 
         a = conformal_aSB(params.eos)
@@ -38,7 +38,7 @@ function matrix2d_two_way!(A_i, Source, ϕ, tau, X, params; charm, delta_pipi::B
         Ax = Base.setindex(Ax, Ax[7, 7] + dmn_eps * ϕ[2], 7, 7)
         Ay = Base.setindex(Ay, Ay[7, 7] + dmn_eps * ϕ[3], 7, 7)
     else
-        ch = charm_moments(T, clamp(ϕ[8], -α_max, α_max), charm)
+        ch = charm_moments(T, clamp(ϕ[8], -α_max, α_max), species)
         Ds = DsT(params.diffusion, T) / T / fmGeV * edge_factor(T, edge)
 
         therm = thermodynamic(T, params.eos)
@@ -67,43 +67,43 @@ end
 
 
 # N^τ, N^x, N^y of 2+1D cell (i, j)
-@inline function charm_current_2d(u, i, j, charm, iα, α_max)
+@inline function charm_current_2d(u, i, j, species, iα, α_max)
     ux = u[2, i, j]; uy = u[3, i, j]; uτ = sqrt(1 + ux^2 + uy^2); νx = u[iα+1, i, j]; νy = u[iα+2, i, j]
-    n, _, _ = charm_density(u[1, i, j], clamp(u[iα, i, j], -α_max, α_max), charm)
+    n, _, _ = charm_density(u[1, i, j], clamp(u[iα, i, j], -α_max, α_max), species)
     return n * uτ + (ux * νx + uy * νy) / uτ, n * ux + νx, n * uy + νy
 end
 
 # the corona update in 2+1D (see 1d_two_way_cilindrical.jl)
-function corona_update_2d!(du, u, τ, dx, dy, iα, charm, edge, dmn_eps, α_max)
+function corona_update_2d!(du, u, τ, dx, dy, iα, species, edge, dmn_eps, α_max)
     iν = iα + 1
     @inbounds for j in 2:size(u, 3)-1, i in 2:size(u, 2)-1
         w = corona_weight(u[1, i, j], edge)
         iszero(w) && continue
-        UC, XC, YC = charm_current_2d(u, i, j, charm, iα, α_max)
-        UL, XL, _ = charm_current_2d(u, i - 1, j, charm, iα, α_max); UR, XR, _ = charm_current_2d(u, i + 1, j, charm, iα, α_max)
-        UD, _, YD = charm_current_2d(u, i, j - 1, charm, iα, α_max); UU, _, YU = charm_current_2d(u, i, j + 1, charm, iα, α_max)
+        UC, XC, YC = charm_current_2d(u, i, j, species, iα, α_max)
+        UL, XL, _ = charm_current_2d(u, i - 1, j, species, iα, α_max); UR, XR, _ = charm_current_2d(u, i + 1, j, species, iα, α_max)
+        UD, _, YD = charm_current_2d(u, i, j - 1, species, iα, α_max); UU, _, YU = charm_current_2d(u, i, j + 1, species, iα, α_max)
         target = -τ * ((llf_flux(UC, UR, XC, XR) - llf_flux(UL, UC, XL, XC)) / dx +
                        (llf_flux(UC, UU, YC, YU) - llf_flux(UD, UC, YD, YC)) / dy)
         ux = u[2, i, j]; uy = u[3, i, j]; uτ = sqrt(1 + ux^2 + uy^2); νx = u[iν, i, j]; νy = u[iν+1, i, j]
         u̇x = du[2, i, j]; u̇y = du[3, i, j]
         u̇τ = (ux * u̇x + uy * u̇y) / uτ; ντ = (ux * νx + uy * νy) / uτ
         dντ = (u̇x * νx + ux * du[iν, i, j] + u̇y * νy + uy * du[iν+1, i, j]) / uτ - ντ * u̇τ / uτ
-        αff = corona_alpha_rate(target, one(τ), τ, u[1, i, j], u[iα, i, j], uτ, u̇τ, dντ, du[1, i, j], UC, charm, dmn_eps, α_max)
+        αff = corona_alpha_rate(target, one(τ), τ, u[1, i, j], u[iα, i, j], uτ, u̇τ, dντ, du[1, i, j], UC, species, dmn_eps, α_max)
         du[iα, i, j] = (1 - w) * du[iα, i, j] + w * αff
     end
     return nothing
 end
 
-function two_way_problem(d::DiscreteFields{T,3,2}, params, init, tspan; charm, delta_pipi::Bool = true,
+function two_way_problem(d::DiscreteFields{T,3,2}, params, init, tspan; species, delta_pipi::Bool = true,
                          edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0) where {T}
-    base = problem(d, matrix2d_two_way!(; charm, delta_pipi, edge, dmn_eps, α_max), params, init, tspan)
+    base = problem(d, matrix2d_two_way!(; species, delta_pipi, edge, dmn_eps, α_max), params, init, tspan)
     (edge isa ColdEdge && edge.corona) || return base
     iα = params.eos isa ConformalEOS ? 7 : 8
     dx, dy = float.(Δx(d.discretization))
     f = base.f
     function rhs!(du, u, p, t)
         f(du, u, p, t)
-        corona_update_2d!(du, u, t, dx, dy, iα, charm, edge, dmn_eps, α_max)
+        corona_update_2d!(du, u, t, dx, dy, iα, species, edge, dmn_eps, α_max)
         boundary_condition!(du, d)
         return nothing
     end

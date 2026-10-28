@@ -40,16 +40,16 @@ end
         ϕ = SVector(0.3, 0.2, 0.001, -0.002, -2.0, 1e-4, 1e-4, -5e-5, 2e-5)
         ϕg = SVector(ϕ[1:4]..., 0.0, ϕ[5:9]...)
         for edge in (nothing, ColdEdge())
-            (Ac,), Sc = tw_eval(matrix1d_two_way!(; charm = CH, edge), ϕ, (2.7,), PARC)
-            (Ag,), Sg = tw_eval(matrix1d_two_way!(; charm = CH, edge), ϕg, (2.7,), PARG)
+            (Ac,), Sc = tw_eval(matrix1d_two_way!(; species = CH, edge), ϕ, (2.7,), PARC)
+            (Ag,), Sg = tw_eval(matrix1d_two_way!(; species = CH, edge), ϕg, (2.7,), PARG)
             @test maximum(abs.(Ag[k1, k1] .- Ac)) <= 1e-12 * maximum(abs, Ac)
             @test maximum(abs.(Sg[k1] .- Sc)) <= 1e-12 * maximum(abs, Sc)
         end
         k2 = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
         ϕ2 = SVector(0.3, 0.2, -0.1, 0.001, -0.002, 0.0003, -2.0, 0.01, -0.005, 0.001, -0.0005, 0.0002, 0.0001)
         ϕ2g = SVector(ϕ2[1:6]..., 0.0, ϕ2[7:13]...)
-        (Acx, Acy), Sc2 = tw_eval(matrix2d_two_way!(; charm = CH), ϕ2, (3.0, 1.0), PARC)
-        (Agx, Agy), Sg2 = tw_eval(matrix2d_two_way!(; charm = CH), ϕ2g, (3.0, 1.0), PARG)
+        (Acx, Acy), Sc2 = tw_eval(matrix2d_two_way!(; species = CH), ϕ2, (3.0, 1.0), PARC)
+        (Agx, Agy), Sg2 = tw_eval(matrix2d_two_way!(; species = CH), ϕ2g, (3.0, 1.0), PARG)
         @test maximum(abs.(Agx[k2, k2] .- Acx)) <= 1e-12 * maximum(abs, Acx)
         @test maximum(abs.(Agy[k2, k2] .- Acy)) <= 1e-12 * maximum(abs, Acy)
         @test maximum(abs.(Sg2[k2] .- Sc2)) <= 1e-12 * maximum(abs, Sc2)
@@ -69,7 +69,7 @@ end
         # uniform state, u^r = 0: dφ/dτ = -A_t^-1 src, and d(τ n)/dτ = 0
         for (T, α) in ((0.3, -2.0), (0.2, 1.0))
             ϕ = SVector(T, 0.0, 0.002, -0.004, α, 0.0, 0.0, 0.0, 0.0)
-            _, S = tw_eval(matrix1d_two_way!(; charm = CH, dmn_eps = 0.0), ϕ, (2.7,), PARC; tau = 1.3)
+            _, S = tw_eval(matrix1d_two_way!(; species = CH, dmn_eps = 0.0), ϕ, (2.7,), PARC; tau = 1.3)
             c = F.charm_moments(T, α, CH)
             @test 1.3 * (c.dndT * (-S[1]) + c.dnda * (-S[5])) + c.n ≈ 0 atol = 1e-12 * c.n
         end
@@ -82,11 +82,11 @@ end
         @test F.edge_factor(0.12, nothing) == 1.0
         @test_throws ErrorException ColdEdge(; floor = 0.0)
         ϕ = SVector(0.3, 0.2, 0.001, -0.002, -2.0, 1e-4, 1e-4, -5e-5, 2e-5)        # above T_edge: untouched
-        @test tw_eval(matrix1d_two_way!(; charm = CH, edge = nothing), ϕ, (2.7,), PARC) ==
-              tw_eval(matrix1d_two_way!(; charm = CH), ϕ, (2.7,), PARC)
+        @test tw_eval(matrix1d_two_way!(; species = CH, edge = nothing), ϕ, (2.7,), PARC) ==
+              tw_eval(matrix1d_two_way!(; species = CH), ϕ, (2.7,), PARC)
         ϕc = SVector(0.13, 0.2, 0.001, -0.002, -2.0, 1e-4, 1e-4, -5e-5, 2e-5)       # below: D_s is reduced
-        @test tw_eval(matrix1d_two_way!(; charm = CH, edge = nothing), ϕc, (2.7,), PARC) !=
-              tw_eval(matrix1d_two_way!(; charm = CH), ϕc, (2.7,), PARC)
+        @test tw_eval(matrix1d_two_way!(; species = CH, edge = nothing), ϕc, (2.7,), PARC) !=
+              tw_eval(matrix1d_two_way!(; species = CH), ϕc, (2.7,), PARC)
     end
 
     @testset "closures: zero allocations" begin
@@ -94,9 +94,9 @@ end
             A = ntuple(_ -> zeros(MMatrix{N,N,Float64}), length(X)); S = zeros(MVector{N,Float64});
             m(A, S, ϕ, 1.0, X, P); @allocated m(A, S, ϕ, 1.0, X, P))
         ϕ = SVector(0.3, 0.2, 0.001, -0.002, -2.0, 0.01, 0.001, -0.0005, 0.0002)
-        tw_noalloc(allocs(matrix1d_two_way!(; charm = CH), ϕ, (3.0,), PARC))
+        tw_noalloc(allocs(matrix1d_two_way!(; species = CH), ϕ, (3.0,), PARC))
         ϕ2 = SVector(0.3, 0.2, -0.1, 0.001, -0.002, 0.0003, -2.0, 0.01, -0.005, 0.001, -0.0005, 0.0002, 0.0001)
-        tw_noalloc(allocs(matrix2d_two_way!(; charm = CH), ϕ2, (3.0, 1.0), PARC))
+        tw_noalloc(allocs(matrix2d_two_way!(; species = CH), ϕ2, (3.0, 1.0), PARC))
     end
 
     @testset "two_way_problem: the corona update, and a short 1+1D run" begin
@@ -106,8 +106,8 @@ end
         phi = set_array(Tr, :temperature, d)
         # one charm quark: n ∝ e^α
         set_array!(phi, r -> log((0.2 * exp(-(r / 3)^2) + 1e-12) / F.charm_moments(Tr(r), 0.0, CH).n), :α, d)
-        p1 = two_way_problem(d, PARC, phi, (0.4, 3.0); charm = CH)
-        p0 = two_way_problem(d, PARC, phi, (0.4, 3.0); charm = CH, edge = ColdEdge(; corona = false))
+        p1 = two_way_problem(d, PARC, phi, (0.4, 3.0); species = CH)
+        p0 = two_way_problem(d, PARC, phi, (0.4, 3.0); species = CH, edge = ColdEdge(; corona = false))
         du1 = similar(phi); du0 = similar(phi); p1.f(du1, phi, nothing, 0.4); p0.f(du0, phi, nothing, 0.4)
         hot = [phi[1, i] >= ColdEdge().T_edge for i in axes(phi, 2)]
         # above T_edge nothing changes; below it only the α rate (row 5) does

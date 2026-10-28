@@ -145,7 +145,7 @@ phi = set_array(T0, :temperature, d)
 set_array!(phi, (x, y) -> log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, quarks).n), :α, d)
 
 # medium and charm evolved together; the default ColdEdge decouples charm below T = 0.156 GeV
-prob = two_way_problem(d, params, phi, (0.4, 6.0); charm = quarks)
+prob = two_way_problem(d, params, phi, (0.4, 6.0); species = quarks)
 sol = solve(prob, Tsit5(); saveat = [0.4, 6.0])
 
 # temperature and charm density at the start and at the end

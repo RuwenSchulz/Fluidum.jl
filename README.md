@@ -119,8 +119,10 @@ or set it for every solve of a run with the environment variable `FLUIDUM_DTMAX=
 
 ## Medium and charm together in 2+1 dimension
 `two_way_problem` evolves the viscous medium and the charm quarks (density, diffusion current and stress)
-as one system. Here from a fluctuating initial state of random hot spots, with the charm produced in the same
-spots; the plot shows the temperature and the charm density at the start and at the end.
+as one system, here from a fluctuating initial state of random hot spots. The charm field is the fugacity α.
+It can be set directly or from a charm density, and the charm density follows from T and α. The charm stress
+starts with less longitudinal than transverse momentum. The plot shows the fields T and α and the charm density
+at the start and at the end.
 ```julia
 using Fluidum, OrdinaryDiffEq, Random, Plots
 
@@ -134,29 +136,45 @@ Random.seed!(2)
 spots = [(2.5 .* randn(2), 0.5 + rand()) for _ in 1:15]
 s(x, y) = sum(w * exp(-((x - c[1])^2 + (y - c[2])^2) / 1.2) for (c, w) in spots)
 T0(x, y) = 0.06 + 0.16 * cbrt(s(x, y))     # GeV
-n0(x, y) = 0.05 * s(x, y) + 1e-8           # charm per fm^3, produced in the same hot spots
 
 # 14 fields: T, ux, uy, piyy, pizz, pixy, piB, α, nux, nuy, piyy_Q, pizz_Q, pixy_Q, piB_Q
 L, N = 10.0, 60
 d = DiscreteFields(two_way_2d(), CartesianDiscretization(Fluidum.SymmetricInterval(N, L),
                                                          Fluidum.SymmetricInterval(N, L)), Float64)
 phi = set_array(T0, :temperature, d)
-# the charm fugacity α that gives n0 at T0; for one quark n is proportional to e^α
-set_array!(phi, (x, y) -> log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, quarks).n), :α, d)
+
+# the charm fugacity α, set directly: α = 0 is charm in chemical equilibrium with the medium
+α0(x, y) = 0.0
+# or from a charm density n0, here produced in the same hot spots; for one quark n is proportional to e^α
+# n0(x, y) = 0.05 * s(x, y) + 1e-8   # charm per fm^3
+# α0(x, y) = log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, quarks).n)
+set_array!(phi, α0, :α, d)
+
+# the charm stress (second moment), in units of the charm pressure P0 = n T: charm produced with little
+# longitudinal momentum, pizz_Q = -a P0 and piyy_Q = a P0 / 2 (pixx_Q follows from tracelessness);
+# pixy_Q and piB_Q stay zero, as does the medium's stress
+a = 0.5
+P0(x, y) = Fluidum.charm_moments(T0(x, y), α0(x, y), quarks).n * T0(x, y)
+set_array!(phi, (x, y) -> -a * P0(x, y), :pizz_Q, d)
+set_array!(phi, (x, y) -> a / 2 * P0(x, y), :piyy_Q, d)
 
 # medium and charm evolved together; the default ColdEdge decouples charm below T = 0.156 GeV
 prob = two_way_problem(d, params, phi, (0.4, 6.0); species = quarks)
 sol = solve(prob, Tsit5(); saveat = [0.4, 6.0])
 
-# temperature and charm density at the start and at the end
+# the fields T and α, and the charm density computed from them, at the start and at the end
 xs = range(-L, L; length = N)
 T(u) = u[1, 2:end-1, 2:end-1]
+α(u) = u[8, 2:end-1, 2:end-1]
 n(u) = [Fluidum.charm_moments(u[1, i, j], u[8, i, j], quarks).n for i in 2:N+1, j in 2:N+1]
 plot(heatmap(xs, xs, T(sol.u[1])', title = "T (GeV), τ = 0.4 fm/c"),
      heatmap(xs, xs, T(sol.u[end])', title = "T (GeV), τ = 6 fm/c"),
+     heatmap(xs, xs, α(sol.u[1])', title = "α, τ = 0.4 fm/c"),
+     heatmap(xs, xs, α(sol.u[end])', title = "α, τ = 6 fm/c"),
      heatmap(xs, xs, n(sol.u[1])', title = "charm density (fm⁻³), τ = 0.4 fm/c"),
      heatmap(xs, xs, n(sol.u[end])', title = "charm density (fm⁻³), τ = 6 fm/c"),
-     layout = (2, 2), size = (900, 780), aspect_ratio = 1, xlabel = "x (fm)", ylabel = "y (fm)")
+     layout = (3, 2), size = (900, 1150), aspect_ratio = 1, xlabel = "x (fm)", ylabel = "y (fm)",
+     left_margin = 5Plots.mm)
 ```
 
 ## Citing 

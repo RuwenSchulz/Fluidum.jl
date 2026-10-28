@@ -127,7 +127,7 @@ using Fluidum, OrdinaryDiffEq, Random, Plots
 # medium: lattice EoS, shear and bulk viscosity; charm: D_s T = 0.116 for a quark of mass 1.5 GeV
 params = FluidProperties(FluiduMEoS(), QGPViscosity(0.1, 0.2), SimpleBulkViscosity(0.083, 15.0),
                          ConstDiffusion(0.116, 1.5))
-charm = charm_quark_list()   # one charm quark
+quarks = charm_quark_list()   # one charm quark
 
 # a fluctuating initial state: 15 Gaussian hot spots at random positions (fm)
 Random.seed!(2)
@@ -142,16 +142,16 @@ d = DiscreteFields(two_way_2d(), CartesianDiscretization(Fluidum.SymmetricInterv
                                                          Fluidum.SymmetricInterval(N, L)), Float64)
 phi = set_array(T0, :temperature, d)
 # the charm fugacity α that gives n0 at T0; for one quark n is proportional to e^α
-set_array!(phi, (x, y) -> log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, charm).n), :α, d)
+set_array!(phi, (x, y) -> log(n0(x, y) / Fluidum.charm_moments(T0(x, y), 0.0, quarks).n), :α, d)
 
 # medium and charm evolved together; the default ColdEdge decouples charm below T = 0.156 GeV
-prob = two_way_problem(d, params, phi, (0.4, 6.0); charm = charm)
+prob = two_way_problem(d, params, phi, (0.4, 6.0); charm = quarks)
 sol = solve(prob, Tsit5(); saveat = [0.4, 6.0])
 
 # temperature and charm density at the start and at the end
 xs = range(-L, L; length = N)
 T(u) = u[1, 2:end-1, 2:end-1]
-n(u) = [Fluidum.charm_moments(u[1, i, j], u[8, i, j], charm).n for i in 2:N+1, j in 2:N+1]
+n(u) = [Fluidum.charm_moments(u[1, i, j], u[8, i, j], quarks).n for i in 2:N+1, j in 2:N+1]
 plot(heatmap(xs, xs, T(sol.u[1])', title = "T (GeV), τ = 0.4 fm/c"),
      heatmap(xs, xs, T(sol.u[end])', title = "T (GeV), τ = 6 fm/c"),
      heatmap(xs, xs, n(sol.u[1])', title = "charm density (fm⁻³), τ = 0.4 fm/c"),

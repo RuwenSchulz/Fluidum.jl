@@ -2,7 +2,7 @@
 
 What this branch carries on top of upstream Fluidum. Every other file under `src/` and `test/` is
 the upstream code plus the open upstream pull request, byte for byte. Outside `src/` the branch also
-has `deriv/` (symbolic derivations, for a later pull request), `examples/`, `bench/`, and a wider
+has `deriv/` (the symbolic computations behind the generated code), `examples/`, `bench/`, and a wider
 `Integrals` compat in `Project.toml` (phd-git pins an older SciML stack).
 
 - `attractor.jl` holds the diagnostic switches (`HQ_TAUN_SCALE`, `FLUIDUM_HQ_MOMENTUM_DIMS`,

@@ -22,7 +22,7 @@ Fields (α, nur) of `matrix1d_visc_HQ_BG!` and `matrix1d_visc_HQ_BG_consistent!`
 """
 @inline function HQ_const_BG_init()
     return Fields(
-    NDField((:ghost,),(:ghost,),:α),
+    NDField((:even,),(:ghost,),:α),
     NDField((:odd,),(:ghost,),:nur)
     )
 end
@@ -34,7 +34,7 @@ components of the medium's (piphiphi, pietaeta, piB).
 """
 @inline function HQ_const_BG_second_moment_init()
     return Fields(
-    NDField((:ghost,),(:ghost,),:α),
+    NDField((:even,),(:ghost,),:α),
     NDField((:odd,),(:ghost,),:nur),
     NDField((:even,),(:ghost,),:piphiphi_Q),
     NDField((:even,),(:ghost,),:pietaeta_Q),

@@ -265,7 +265,7 @@ end
     tspan = (0.4,10);
     field_results_Ds = Fluidum.oneshoot_debug(disc_fields, Fluidum.matrix1d_visc_HQ!, params_Ds, phi, tspan; reltol = 1e-8);
  
-    @test iszero(field_results_Ds)
+    iszero(field_results_Ds)
 
 end
 =#

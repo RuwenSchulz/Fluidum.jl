@@ -163,7 +163,7 @@ prob = two_way_problem(d, params, phi, (0.4, 6.0); species = quarks)
 sol = solve(prob, Tsit5(); saveat = [0.4, 6.0])
 
 # the fields T and α, and the charm density computed from them, at the start and at the end
-xs = range(-L, L; length = N)
+xs = range(-L + L / N, L - L / N; length = N)   # the cell centres
 T(u) = u[1, 2:end-1, 2:end-1]
 α(u) = u[8, 2:end-1, 2:end-1]
 n(u) = [Fluidum.charm_eos(u[1, i, j], u[8, i, j], quarks).n for i in 2:N+1, j in 2:N+1]

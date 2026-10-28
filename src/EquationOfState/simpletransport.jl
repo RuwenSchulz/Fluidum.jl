@@ -68,6 +68,14 @@ end
     
     #viscosity(T,x,y)/((T*x.pressure_derivative[1])*y.Cs)
 end
+
+# from a scalar entropy
+@inline function viscosity(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*entropy*invfmGeV
+end
+@inline function τ_shear(T,entropy::Number,y::SimpleShearViscosity{N}) where {N}
+    y.ηs*invfmGeV/(T*y.Cs)
+end
 @inline function τ_shear_dervative(T,x::ThermodynamicPerturbation{N,1,1,1},y::ZeroViscosity) where {N}
     #entropy=x.pressure_derivative[1]
     zero(promote_type(typeof(T),N))

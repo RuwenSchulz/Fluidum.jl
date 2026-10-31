@@ -131,7 +131,7 @@ If[dAx =!= {{0,0},{0,0}}, Print["      dAx  = ", dAx]];
 If[dSr =!= {0,0},         Print["      dsrc = ", dSr]];
 (* H-G4src: the same comparison against the .jl file *)
 shF = juliaMatrices[FileNameJoin[{PKG, "src", "Matrix", "1d_viscous_HQ_cilindrical_BG.jl"}],
-  "one_d_viscous_matrix_fugacity_BG_only"] /. {jl["X"][1] -> alF, jl["X"][2] -> nuF, jl["tau"] -> tau,
+  "one_d_viscous_matrix_fugacity_BG_only"] /. {jl["u"][1] -> alF, jl["u"][2] -> nuF, jl["tau"] -> tau,
   jl["r"] -> r, jl["ur"] -> ur, jl["dtT"] -> dtT, jl["drT"] -> drT, jl["drur"] -> drur, jl["dtur"] -> dtur,
   jl["n"] -> nF, jl["dnUdmu"] -> dnmu, jl["dnUdT"] -> dnT, jl["tauDiffusion"] -> taun, jl["kappaG"] -> kappa};
 gate["G4src", Simplify[{red[AtC] jac - shF["At"], red[AxC] jac - shF["Ax"], red[srcC] jac - shF["source"]}] ===
@@ -226,7 +226,7 @@ body2 = mat36jl[AtL, "AtL"] <> "\n" <> mat36jl[AxL, "AxL"] <> "\n" <> mat36jl[Ay
 out = hdr <> body <> "\n    return (At, Ax, Ay, src)\nend\n" <>
       hdr2 <> body2 <> "\n    return (AtL, AxL, AyL, srcL)\nend\n";
 If[fail == 0,
-  spliceJulia[FileNameJoin[{PKG, "src", "Matrix", "2d_viscous_HQ_BG.jl"}], "derive_hq_2p1d.wls",
+  spliceJulia[FileNameJoin[{PKG, "src", "Matrix", "2d_viscous_HQ_BG.jl"}],
     juliaNames[out, {"al" -> "\[Alpha]", "nuxF" -> "nux", "nuyF" -> "nuy"}]],
   Print["  NOT writing src/Matrix/2d_viscous_HQ_BG.jl: a check failed"]];
 Print["\n", pass, " passed, ", fail, " failed  (", pass + fail, " checks evaluated)"];

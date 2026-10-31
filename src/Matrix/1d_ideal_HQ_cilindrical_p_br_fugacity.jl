@@ -14,10 +14,14 @@ function matrix1d_ideal_HQ_br_p_fugacity!(A_i, Source, ϕ, t, X, params;free=tru
 
 
         
-        therm = thermodynamic(ϕ[1], ϕ[3], params.eos.hadron_list)
+        therm = charm_pressure(ϕ[1], ϕ[3], params.eos.hadron_list)
  
         dPhq_dT, dPhq_dalpha = therm.pressure_derivative
         ddPhq_dTdT, ddPhq_dTdalpha, ddPhq_dalphadalpha = therm.pressure_hessian
+
+        thermo = thermodynamic(ϕ[1], ϕ[3], params.eos.hadron_list)
+        n = thermo.pressure
+        dn_dT, dn_dmu = thermo.pressure_derivative
 
 
 

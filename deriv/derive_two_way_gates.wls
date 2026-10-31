@@ -214,7 +214,7 @@ If[KeyExistsQ[results, "1p1d"],
 mkF3[body_] := Function @@ {{tq, xq, yq}, body};
 Print[""]; Print["================ G-chart ================  (", stamp[], ")"];
 If[KeyExistsQ[results, "2p1d"] && KeyExistsQ[results, "1p1d"],
-  Module[{Rk = results["2p1d"]["R"], Rc = results["1p1d"]["R"], sub, rho, ax, cy, kk, pairs, z, all, Wax},
+  Module[{Rk = results["2p1d"]["R"], Rc = results["1p1d"]["R"], sub, rho, ax, cy, kk, pairs, z, all, Wax, sysTag},
     rho = Sqrt[xq^2 + yq^2];
     With[{ur1 = urc[tq, rho], pff1 = pffc[tq, rho], pee1 = peec[tq, rho], qff1 = pffQc[tq, rho], qee1 = peeQc[tq, rho]},
       With[{prr = -(1 + ur1^2) (pff1 + pee1), qrr = -(1 + ur1^2) (qff1 + qee1)},
@@ -232,8 +232,9 @@ If[KeyExistsQ[results, "2p1d"] && KeyExistsQ[results, "1p1d"],
           peeQk -> mkF3[(qee1)],
           PiQk -> mkF3[(PiQc[tq, rho])]}]];
     ax[e_] := (((e /. sub) /. yy -> 0) /. Power[xx^2, p_] :> xx^(2 p)) /. xx -> rr;
-    cy = Join[Rc["medM"] + Rc["medQ"], Rc["ch"], Rc["m2"]];
-    kk = Join[Rk["medM"] + Rk["medQ"], Rk["ch"], Rk["m2"]];
+    Do[With[{tag = sysTag},
+    cy = If[tag === "S5", Join[Rc["medM"] + Rc["medQ"], Rc["ch"], Rc["m2"]], Join[Rc["medM"] + Rc["medQ"] + Rc["medD"], Rc["ch"] + Rc["chD"], Rc["m2"]]];
+    kk = If[tag === "S5", Join[Rk["medM"] + Rk["medQ"], Rk["ch"], Rk["m2"]], Join[Rk["medM"] + Rk["medQ"] + Rk["medD"], Rk["ch"] + Rk["chD"], Rk["m2"]]];
     Print["  axisymmetric substitution ... (", stamp[], ")"];
     all = ax /@ kk;
     Print["  done (", stamp[], ")"];
@@ -247,8 +248,9 @@ If[KeyExistsQ[results, "2p1d"] && KeyExistsQ[results, "1p1d"],
       {13, 0, "piQ^{xy} row == 0"}, {14, cy[[10]], "trace row"}};
     Do[
       z = zeroTest[all[[p[[1]]]] - p[[2]], stateCYL["med"] ~Join~ stateCYL["ch"] ~Join~ stateCYL["m2"], {urc}, 30];
-      gate["X-2to1-" <> ToString[p[[1]]], z[[1]], "S5 2+1D axisymmetric on the x axis: " <> p[[3]] <> " (" <> z[[2]] <> ")"],
+      gate[If[tag === "S5", "X-2to1-", "X6-2to1-"] <> ToString[p[[1]]], z[[1]], tag <> " 2+1D axisymmetric on the x axis: " <> p[[3]] <> " (" <> z[[2]] <> ")"],
       {p, pairs}];
+    ], {sysTag, {"S6", "S5"}}];
     z = zeroTest[all[[1]] - cy[[2]], stateCYL["med"] ~Join~ stateCYL["ch"] ~Join~ stateCYL["m2"], {urc}, 5];
     gate["X-ctrl", !z[[1]], "control: the same test REJECTS a wrong pairing (2+1D tau row vs 1+1D r row)"];
     Wax = ax /@ Flatten[results["2p1d"]["B"]["W"]];
@@ -256,14 +258,15 @@ If[KeyExistsQ[results, "2p1d"] && KeyExistsQ[results, "1p1d"],
       "the corotation coupling W vanishes identically on an axisymmetric state (so G-chart is blind to wv, as documented)"];
   ]];
 If[KeyExistsQ[results, "1p1d"] && KeyExistsQ[results, "0p1d"],
-  Module[{Rc = results["1p1d"]["R"], Rb = results["0p1d"]["R"], sub, cy, bj, all, pairs, z},
+  Module[{Rc = results["1p1d"]["R"], Rb = results["0p1d"]["R"], sub, cy, bj, all, pairs, z, sysTag},
     sub = {TTc -> Function[{tq, rq}, TTb[tq]], urc -> Function[{tq, rq}, 0],
       pffc -> Function[{tq, rq}, -peeb[tq]/2], peec -> Function[{tq, rq}, peeb[tq]],
       PiBc -> Function[{tq, rq}, PiBb[tq]], alc -> Function[{tq, rq}, alb[tq]], nurc -> Function[{tq, rq}, 0],
       pffQc -> Function[{tq, rq}, -qeb[tq]/2], peeQc -> Function[{tq, rq}, qeb[tq]],
       PiQc -> Function[{tq, rq}, PiQb[tq]]};
-    cy = Join[Rc["medM"] + Rc["medQ"], Rc["ch"], Rc["m2"]];
-    bj = Join[Rb["medM"] + Rb["medQ"], Rb["ch"], Rb["m2"]];
+    Do[With[{tag = sysTag},
+    cy = If[tag === "S5", Join[Rc["medM"] + Rc["medQ"], Rc["ch"], Rc["m2"]], Join[Rc["medM"] + Rc["medQ"] + Rc["medD"], Rc["ch"] + Rc["chD"], Rc["m2"]]];
+    bj = If[tag === "S5", Join[Rb["medM"] + Rb["medQ"], Rb["ch"], Rb["m2"]], Join[Rb["medM"] + Rb["medQ"] + Rb["medD"], Rb["ch"] + Rb["chD"], Rb["m2"]]];
     all = cy /. sub;
     pairs = {{1, bj[[1]], "energy"}, {2, 0, "r-momentum == 0"}, {3, -(tau^2/(2 rr^2)) bj[[2]], "E^{phiphi} == -(tau^2/2r^2) E^{etaeta}"},
       {4, bj[[2]], "E^{etaeta}"}, {5, bj[[3]], "bulk"}, {6, bj[[4]], "charm number"}, {7, 0, "nu^r row == 0"},
@@ -271,8 +274,9 @@ If[KeyExistsQ[results, "1p1d"] && KeyExistsQ[results, "0p1d"],
       {10, bj[[6]], "trace row"}};
     Do[
       z = zeroTest[all[[p[[1]]]] - p[[2]], stateBJ["med"] ~Join~ stateBJ["ch"] ~Join~ stateBJ["m2"], {}, 30];
-      gate["X-1to0-" <> ToString[p[[1]]], z[[1]], "S5 1+1D at u^r = 0, no r-dependence: " <> p[[3]] <> " (" <> z[[2]] <> ")"],
-      {p, pairs}];
+      gate[If[tag === "S5", "X-1to0-", "X6-1to0-"] <> ToString[p[[1]]], z[[1]], tag <> " 1+1D at u^r = 0, no r-dependence: " <> p[[3]] <> " (" <> z[[2]] <> ")"],
+      {p, pairs}]
+    ], {sysTag, {"S5", "S6"}}];
   ]];
 
 (* =============================================================== G-bjorken == *)
@@ -299,6 +303,11 @@ If[KeyExistsQ[results, "0p1d"],
     gate["B-twoway-energy", Simplify[s5 - (D[Tf pp'[Tf] - pp[Tf] + nQ[Tf, alb[tau]] hQ[Tf] - nQ[Tf, alb[tau]] Tf, tau] +
          (Tf pp'[Tf] + Pb + pe + nQ[Tf, alb[tau]] hQ[Tf])/tau)] === 0,
       "S5 Bjorken energy row: d_tau(e + e_Q) + (e+P+Pi+pi + n h)/tau"];
+    (* the same with dM in T_Q: the charm's longitudinal stress reduces the work *)
+    s5 = s5 + results["0p1d"]["R"]["medD"][[1]];
+    gate["B-S6-energy", Simplify[s5 - (D[Tf pp'[Tf] - pp[Tf] + nQ[Tf, alb[tau]] hQ[Tf] - nQ[Tf, alb[tau]] Tf, tau] +
+         (Tf pp'[Tf] + Pb + pe + nQ[Tf, alb[tau]] hQ[Tf] + qeb[tau] + PiQb[tau])/tau)] === 0,
+      "S6 Bjorken energy row: d_tau(e + e_Q) + (e+P+Pi+pi + n h + piQ^eta_eta + Pi_Q)/tau"];
     (* charm number in Bjorken: d_tau(n tau) = 0 *)
     gate["B-charm-number", Simplify[results["0p1d"]["R"]["ch"][[1]] - D[tau nQ[Tf, alb[tau]], tau]/tau] === 0,
       "Bjorken charm number: (1/tau) d_tau (n tau) = 0"];
@@ -345,6 +354,15 @@ twowayLimits[st_, res_] := Module[{nm = st["name"], B = res["B"], R = res["R"], 
   (* and the fluid row splits exactly into medium + charm *)
   ok = Simplify[((R["medM"][[mom]] + R["medQ"][[mom]]) - B["consM"][[mom]] - B["consQ"][[mom]])] === ConstantArray[0, Length[mom]];
   gate["T-split-" <> nm, ok, "fluid momentum rows == Nabla.T_m + Nabla.T_Q identically"];
+  (* S6: the same on the shell of the current row with dM in T_Q, and the static divergence of dM *)
+  solv = Solve[Thread[((R["ch"] + R["chD"])[[ch]] /. drag) == 0], dnu][[1]];
+  ok = Simplify[(((B["consQ"] + B["consD"])[[mom]] /. drag) /. solv) + (Tf/Ds) nuh] === ConstantArray[0, Length[mom]];
+  gate["T6-drag-" <> nm, ok, "S6 drag: on shell, Nabla.(T_Q + dM)^i = -(T/Ds) nu^i, so the medium gains (T/Ds) nu^i (Newton III), exact"];
+  If[nm === "1p1d",
+    Module[{stat = {urc -> Function[{tq, rq}, 0], pffQc -> Function[{tq, rq}, pf0[rq]], peeQc -> Function[{tq, rq}, pe0[rq]], PiQc -> Function[{tq, rq}, Pq0[rq]]}, prs},
+      prs = -(pf0[rr] + pe0[rr]);
+      gate["T6-static", Simplify[(B["consD"][[2]] /. stat) - (D[prs + Pq0[rr], rr] + (prs - pf0[rr])/rr)] === 0,
+        "static dM at rest: Nabla_m dM^{mr} = d_r (pi_rr + Pi_Q) + (pi_rr - pi^phi_phi)/r"]]];
 ];
 If[KeyExistsQ[results, "1p1d"], twowayLimits[stateCYL, results["1p1d"]]];
 If[KeyExistsQ[results, "2p1d"], twowayLimits[stateCAR, results["2p1d"]]];
@@ -370,8 +388,8 @@ charAnalyse[M_] := Module[{x, cp, fac, rts, imax, rmax, defect = 0},
       Do[defect += f[[2]] - (Length[M] - MatrixRank[M - r0 IdentityMatrix[Length[M]]]),
         {r0, x /. Solve[f[[1]] == 0, x]}]], {f, fac}];
   {rmax, imax, defect, Sort[Re[rts]]}];
-speedScan[nm_] := Module[{st = If[nm === "1p1d", stateCYL, stateCAR], m, aSBv, states, Mt, Mx, My, dirs, uset, an},
-  m = matsJ[results[nm]["sys"]["S5"], st];
+speedScan[nm_, sysKey_ : "S5"] := Module[{st = If[nm === "1p1d", stateCYL, stateCAR], m, aSBv, states, Mt, Mx, My, dirs, uset, an},
+  m = matsJ[results[nm]["sys"][sysKey], st];
   aSBv = (16 + 21 3/2) Pi^2/90;
   m = m /. {pres -> aSB T^4, dtp -> 4 aSB T^3, dtdtp -> 12 aSB T^2, zeta -> 0, tauB -> 1, PiB -> 0, dPP -> 0};
   dirs = If[nm === "1p1d", {{1, 0}}, {{1, 0}, {0, 1}, {3/5, 4/5}}];
@@ -395,13 +413,19 @@ speedScan[nm_] := Module[{st = If[nm === "1p1d", stateCYL, stateCAR], m, aSBv, s
         Mt = m[[1, 1]] /. rep; Mx = m[[1, 2]] /. rep; My = If[nm === "2p1d", m[[1, 3]] /. rep, 0 Mx];
         Do[
           an = charAnalyse[Inverse[Mt] . (d[[1]] Mx + d[[2]] My)];
-          AppendTo[speedRows, {nm, Tv, N[Norm[uv]], dsT, load, d, an[[1]], an[[2]], an[[3]], an[[4]], dpf}], {d, dirs}],
+          AppendTo[speedRows, {nm, Tv, N[Norm[uv]], dsT, load, d, an[[1]], an[[2]], an[[3]], an[[4]], dpf, sysKey}], {d, dirs}],
         {dpf, {0, 4/3}}]],
     {sv, states}];
 ];
-If[KeyExistsQ[results, "1p1d"], speedScan["1p1d"]];
+If[KeyExistsQ[results, "1p1d"], speedScan["1p1d"]; speedScan["1p1d", "S6"]];
 Print["  1p1d scanned (", stamp[], ")"];
-If[KeyExistsQ[results, "2p1d"], speedScan["2p1d"]];
+If[KeyExistsQ[results, "2p1d"], speedScan["2p1d"]; speedScan["2p1d", "S6"]];
+Do[Module[{sel = Select[speedRows, #[[1]] === nm && #[[12]] === "S6" &]},
+    If[sel =!= {},
+      gate["S6-speeds-" <> nm, AllTrue[sel, #[[8]] < 10^-20 && #[[9]] == 0 && #[[7]] < 1 &],
+        "S6 is hyperbolic and subluminal at all " <> ToString[Length[sel]] <> " (state, direction) pairs, exactly, with max speed " <>
+          ToString[NumberForm[N[Max[sel[[All, 7]]]], 4]]]]], {nm, {"1p1d", "2p1d"}}];
+speedRows = Select[speedRows, #[[12]] === "S5" &];
 If[speedRows =!= {},
   Export[FileNameJoin[{outDir, "two_way_char_speeds.tsv"}],
     Prepend[Map[{#[[1]], #[[2]], #[[3]], #[[4]], #[[5]], ToString[#[[6]], InputForm],

@@ -120,6 +120,34 @@ end
         @test string(sol.retcode) == "Success" && all(isfinite, sol.u[end])
     end
 
+    @testset "the fully coupled system, c_M = D_s/T" begin
+        ϕ = SVector(0.3, 0.2, 1e-3, -2e-3, -1.0, 1e-3, 2e-3, -1e-3, 3e-3)
+        ϕ0 = SVector(0.3, 0.2, 1e-3, -2e-3, -1.0, 1e-3, 0.0, 0.0, 0.0)
+        (Am,), Sm = tw_eval(matrix1d_two_way_cM!(; species = CH), ϕ0, (2.7,), PARC)
+        (A0,), S0 = tw_eval(matrix1d_two_way!(; species = CH), ϕ0, (2.7,), PARC)
+        # the δM columns are live; at δM = 0 the source is the two-way one
+        @test Am != A0
+        c = F.charm_eos(0.3, -1.0, CH)
+        kw = (0.1, 0.5, 0.6, values(c)..., 0.4)
+        a = F.conformal_aSB(CEOS)
+        @test F.one_d_two_way_cM_matrix_conformal(ϕ0, 1.3, 2.7, a, kw...)[3] ≈ F.one_d_two_way_matrix_conformal(ϕ0, 1.3, 2.7, a, kw...)[3] rtol = 1e-12
+        ϕ2 = SVector(0.3, 0.2, -0.1, 1e-3, -2e-3, 5e-4, -1.0, 1e-3, -1e-3, 2e-3, -1e-3, 5e-4, 3e-3)
+        (Ax, Ay), S2 = tw_eval(matrix2d_two_way_cM!(; species = CH), ϕ2, (3.0, 1.0), PARC)
+        @test all(isfinite, Ax) && all(isfinite, Ay) && all(isfinite, S2)
+        # real and subluminal at a physical state
+        @test all(x -> abs(imag(x)) < 1e-10 && abs(x) < 1, eigvals(Matrix(Ax)))
+        allocs_cm(m, ϕ, X, P) = (tw_eval(m, ϕ, X, P); N = length(ϕ);
+            A = ntuple(_ -> zeros(MMatrix{N,N,Float64}), length(X)); S = zeros(MVector{N,Float64}); @allocated m(A, S, ϕ, 1.3, X, P))
+        tw_noalloc(allocs_cm(matrix1d_two_way_cM!(; species = CH), ϕ, (3.0,), PARC))
+        disc = CartesianDiscretization(F.OriginInterval(60, 12.0))
+        d = DiscreteFields(two_way_conformal_1d(), disc, Float64)
+        Tr(r) = 0.12 + 0.25 / (1 + exp((r - 5) / 0.6))
+        phi = set_array(Tr, :temperature, d)
+        set_array!(phi, r -> log((0.2 * exp(-(r / 3)^2) + 1e-12) / F.charm_eos(Tr(r), 0.0, CH).n), :α, d)
+        sol = solve(two_way_problem(d, PARC, phi, (0.4, 3.0); species = CH, cM = true), Tsit5(); reltol = 1e-8, abstol = 1e-10, dtmax = 0.01)
+        @test string(sol.retcode) == "Success" && all(isfinite, sol.u[end])
+    end
+
     @testset "field layouts" begin
         @test length(F.names(two_way_1d())) == 10 && length(F.names(two_way_conformal_1d())) == 9
         @test length(F.names(two_way_2d())) == 14 && length(F.names(two_way_conformal_2d())) == 13

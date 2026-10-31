@@ -30,6 +30,52 @@ Rows: $\nabla_{\mu}N^{\mu}$ and the $x$, $y$ components of the current equation,
 \[
 A_t\,\partial_{\tau}\phi + A_x\,\partial_{x}\phi + A_y\,\partial_{y}\phi + S = 0
 \]
+\subsection{Steps}
+
+\[
+\Gamma^{{\tau}}{}_{{\eta}{\eta}} = {\tau},\quad \Gamma^{{\eta}}{}_{{\tau}{\eta}} = \frac{1}{{\tau}}
+\]
+\begin{align*}
+a^{{\tau}} &= \frac{{(\partial_{\tau} u^{x})} {u^{\tau}} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{\tau}} {u^{y}}+{(\partial_{x} u^{x})} \left(u^{x}\right)^2+{(\partial_{x} u^{y})} {u^{x}} {u^{y}}+{(\partial_{y} u^{x})} {u^{x}} {u^{y}}+{(\partial_{y} u^{y})} \left(u^{y}\right)^2}{{u^{\tau}}} \\
+a^{{x}} &= {(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{x} u^{x})} {u^{x}}+{(\partial_{y} u^{x})} {u^{y}} \\
+a^{{y}} &= {(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}} \\
+\nu_{\lambda}a^{\lambda} &= {\nu^{x}} ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{x} u^{x})} {u^{x}}+{(\partial_{y} u^{x})} {u^{y}}) + {\nu^{y}} ({(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\\
+  &\quad - \frac{1}{\left(u^{\tau}\right)^2}{\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}}\Bigl({u^{\tau}} ({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}}) + {u^{x}} ({(\partial_{x} u^{x})} {u^{x}}+{(\partial_{x} u^{y})} {u^{y}})\\
+  &\quad + {u^{y}} ({(\partial_{y} u^{x})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\Bigr) \\
+D\nu^{{\tau}} &= \frac{1}{\left(u^{\tau}\right)^3}\Bigl(\left(u^{\tau}\right)^3 ({(\partial_{{\tau}} \nu^{x})} {u^{x}}+{(\partial_{{\tau}} \nu^{y})} {u^{y}}+{(\partial_{\tau} u^{x})} {\nu^{x}}+{(\partial_{\tau} u^{y})} {\nu^{y}})\\
+  &\quad + \left(u^{\tau}\right)^2 {u^{x}} ({(\partial_{{x}} \nu^{x})} {u^{x}}+{(\partial_{{x}} \nu^{y})} {u^{y}}+{(\partial_{x} u^{x})} {\nu^{x}}+{(\partial_{x} u^{y})} {\nu^{y}})\\
+  &\quad + \left(u^{\tau}\right)^2 {u^{y}} ({(\partial_{{y}} \nu^{x})} {u^{x}}+{(\partial_{{y}} \nu^{y})} {u^{y}}+{(\partial_{y} u^{x})} {\nu^{x}}+{(\partial_{y} u^{y})} {\nu^{y}})\\
+  &\quad - {u^{\tau}} ({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}}) ({\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}})\\
+  &\quad - {u^{x}} ({(\partial_{x} u^{x})} {u^{x}}+{(\partial_{x} u^{y})} {u^{y}}) ({\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}})\\
+  &\quad - {u^{y}} ({(\partial_{y} u^{x})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}}) ({\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}})\Bigr) \\
+D\nu^{{x}} &= {(\partial_{{\tau}} \nu^{x})} {u^{\tau}}+{(\partial_{{x}} \nu^{x})} {u^{x}}+{(\partial_{{y}} \nu^{x})} {u^{y}} \\
+D\nu^{{y}} &= {(\partial_{{\tau}} \nu^{y})} {u^{\tau}}+{(\partial_{{x}} \nu^{y})} {u^{x}}+{(\partial_{{y}} \nu^{y})} {u^{y}}
+\end{align*}
+$\Delta^{\mu}{}_{\beta}D\nu^{\beta} = D\nu^{\mu} - u^{\mu}\nu_{\lambda}a^{\lambda}$, because $u_{\beta}\nu^{\beta} = 0$. Rows:
+
+\begin{align*}
+E_{1} = \nabla_{\mu}N^{\mu} &= {(\partial_{{x}} \nu^{x})} + {(\partial_{{y}} \nu^{y})} + {(\partial_{x} u^{x})} {n} + {(\partial_{y} u^{y})} {n} + {u^{\tau}} ({(\partial_{{\tau}} \alpha)} {(\partial_{\alpha} n)}+{(\partial_{\tau} T)} {(\partial_{T} n)})\\
+  &\quad + {u^{x}} ({(\partial_{{x}} \alpha)} {(\partial_{\alpha} n)}+{(\partial_{x} T)} {(\partial_{T} n)}) + {u^{y}} ({(\partial_{{y}} \alpha)} {(\partial_{\alpha} n)}+{(\partial_{y} T)} {(\partial_{T} n)})\\
+  &\quad + \frac{{(\partial_{{\tau}} \nu^{x})} {u^{x}}+{(\partial_{{\tau}} \nu^{y})} {u^{y}}+{(\partial_{\tau} u^{x})} {\nu^{x}}+{(\partial_{\tau} u^{y})} {\nu^{y}}}{{u^{\tau}}} + \frac{{n} ({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}})}{{u^{\tau}}}\\
+  &\quad - \frac{({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}}) ({\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}})}{\left(u^{\tau}\right)^3} + \frac{{n} \left(u^{\tau}\right)^2+{\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}}}{{\tau} {u^{\tau}}} \\
+E_{2} &= {\nu^{x}} + {\kappa} \left({(\partial_{{\tau}} \alpha)} {u^{\tau}} {u^{x}}+{(\partial_{{x}} \alpha)} \left(u^{x}\right)^2+{(\partial_{{x}} \alpha)}+{(\partial_{{y}} \alpha)} {u^{x}} {u^{y}}\right)\\
+  &\quad + {\tau_{n}}\Bigl({(\partial_{{\tau}} \nu^{x})} {u^{\tau}} + {(\partial_{{x}} \nu^{x})} {u^{x}} + {(\partial_{{y}} \nu^{x})} {u^{y}}\\
+  &\quad - {u^{x}}\Bigl({\nu^{x}} ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{x} u^{x})} {u^{x}}+{(\partial_{y} u^{x})} {u^{y}})\\
+  &\quad + {\nu^{y}} ({(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\\
+  &\quad - \frac{1}{\left(u^{\tau}\right)^2}{\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}}\Bigl({u^{\tau}} ({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}})\\
+  &\quad + {u^{x}} ({(\partial_{x} u^{x})} {u^{x}}+{(\partial_{x} u^{y})} {u^{y}})\\
+  &\quad + {u^{y}} ({(\partial_{y} u^{x})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\Bigr)\Bigr)\Bigr) \\
+E_{3} &= {\nu^{y}} + {\kappa} \left({(\partial_{{\tau}} \alpha)} {u^{\tau}} {u^{y}}+{(\partial_{{x}} \alpha)} {u^{x}} {u^{y}}+{(\partial_{{y}} \alpha)} \left(u^{y}\right)^2+{(\partial_{{y}} \alpha)}\right)\\
+  &\quad + {\tau_{n}}\Bigl({(\partial_{{\tau}} \nu^{y})} {u^{\tau}} + {(\partial_{{x}} \nu^{y})} {u^{x}} + {(\partial_{{y}} \nu^{y})} {u^{y}}\\
+  &\quad - {u^{y}}\Bigl({\nu^{x}} ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{x} u^{x})} {u^{x}}+{(\partial_{y} u^{x})} {u^{y}})\\
+  &\quad + {\nu^{y}} ({(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\\
+  &\quad - \frac{1}{\left(u^{\tau}\right)^2}{\nu^{x}} {u^{x}}+{\nu^{y}} {u^{y}}\Bigl({u^{\tau}} ({(\partial_{\tau} u^{x})} {u^{x}}+{(\partial_{\tau} u^{y})} {u^{y}})\\
+  &\quad + {u^{x}} ({(\partial_{x} u^{x})} {u^{x}}+{(\partial_{x} u^{y})} {u^{y}})\\
+  &\quad + {u^{y}} ({(\partial_{y} u^{x})} {u^{x}}+{(\partial_{y} u^{y})} {u^{y}})\Bigr)\Bigr)\Bigr)
+\end{align*}
+\[
+A^{(k)}_{ij} = \frac{\partial E_{i}}{\partial(\partial_{k}\phi_{j})},\qquad S_{i} = E_{i}\bigl|_{\partial\phi = 0},\qquad k = \tau, x, y
+\]
 \subsection{Result}
 
 \begin{align*}
@@ -58,15 +104,20 @@ A_t\,\partial_{\tau}\phi + A_x\,\partial_{x}\phi + A_y\,\partial_{y}\phi + S = 0
 (A_y)_{33} &= {\tau_{n}} {u^{y}}
 \end{align*}
 \begin{align*}
-S_{1} &= \frac{1}{{\tau} \left(u^{\tau}\right)^3}\Bigl({(\partial_{\tau} u^{x})} {\nu^{x}} {\tau} \left(u^{\tau}\right)^2 + {(\partial_{\tau} u^{y})} {\nu^{y}} {\tau} \left(u^{\tau}\right)^2 + {(\partial_{x} u^{x})} {n} {\tau} \left(u^{\tau}\right)^3 + {(\partial_{y} u^{y})} {n} {\tau} \left(u^{\tau}\right)^3 + {n} \left(u^{\tau}\right)^4\\
-  &\quad + {(\partial_{\tau} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^4 + {\nu^{x}} \left(u^{\tau}\right)^2 {u^{x}} + {(\partial_{\tau} u^{x})} {n} {\tau} \left(u^{\tau}\right)^2 {u^{x}} + {(\partial_{x} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^3 {u^{x}}\\
-  &\quad - {(\partial_{\tau} u^{x})} {\nu^{x}} {\tau} \left(u^{x}\right)^2 + {\nu^{y}} \left(u^{\tau}\right)^2 {u^{y}} + {(\partial_{\tau} u^{y})} {n} {\tau} \left(u^{\tau}\right)^2 {u^{y}} + {(\partial_{y} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^3 {u^{y}}\\
-  &\quad - {(\partial_{\tau} u^{y})} {\nu^{x}} {\tau} {u^{x}} {u^{y}} - {(\partial_{\tau} u^{x})} {\nu^{y}} {\tau} {u^{x}} {u^{y}} - {(\partial_{\tau} u^{y})} {\nu^{y}} {\tau} \left(u^{y}\right)^2\Bigr) \\
-S_{2} &= \frac{1}{\left(u^{\tau}\right)^2}\Bigl(- {\nu^{y}} {\tau_{n}} {u^{x}}\Bigl({(\partial_{\tau} u^{y})} {u^{\tau}} + {(\partial_{x} u^{y})} \left(u^{x}\right)^3 + {(\partial_{y} u^{y})} {u^{y}} + \left(u^{x}\right)^2 ({(\partial_{\tau} u^{y})} {u^{\tau}}-{(\partial_{x} u^{x})} {u^{y}}+{(\partial_{y} u^{y})} {u^{y}})\\
+S_{1} &= \frac{1}{{\tau} \left(u^{\tau}\right)^3}\Bigl({(\partial_{\tau} u^{x})} {\nu^{x}} {\tau} \left(u^{\tau}\right)^2 + {(\partial_{\tau} u^{y})} {\nu^{y}} {\tau} \left(u^{\tau}\right)^2 + {(\partial_{x} u^{x})} {n} {\tau} \left(u^{\tau}\right)^3 + {(\partial_{y} u^{y})} {n} {\tau} \left(u^{\tau}\right)^3\\
+  &\quad + {n} \left(u^{\tau}\right)^4 + {(\partial_{\tau} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^4 + {\nu^{x}} \left(u^{\tau}\right)^2 {u^{x}} + {(\partial_{\tau} u^{x})} {n} {\tau} \left(u^{\tau}\right)^2 {u^{x}}\\
+  &\quad + {(\partial_{x} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^3 {u^{x}} - {(\partial_{\tau} u^{x})} {\nu^{x}} {\tau} \left(u^{x}\right)^2 + {\nu^{y}} \left(u^{\tau}\right)^2 {u^{y}} + {(\partial_{\tau} u^{y})} {n} {\tau} \left(u^{\tau}\right)^2 {u^{y}}\\
+  &\quad + {(\partial_{y} T)} {(\partial_{T} n)} {\tau} \left(u^{\tau}\right)^3 {u^{y}} - {(\partial_{\tau} u^{y})} {\nu^{x}} {\tau} {u^{x}} {u^{y}} - {(\partial_{\tau} u^{x})} {\nu^{y}} {\tau} {u^{x}} {u^{y}}\\
+  &\quad - {(\partial_{\tau} u^{y})} {\nu^{y}} {\tau} \left(u^{y}\right)^2\Bigr) \\
+S_{2} &= \frac{1}{\left(u^{\tau}\right)^2}\Bigl(- {\nu^{y}} {\tau_{n}} {u^{x}}\Bigl({(\partial_{\tau} u^{y})} {u^{\tau}} + {(\partial_{x} u^{y})} \left(u^{x}\right)^3 + {(\partial_{y} u^{y})} {u^{y}}\\
+  &\quad + \left(u^{x}\right)^2 ({(\partial_{\tau} u^{y})} {u^{\tau}}-{(\partial_{x} u^{x})} {u^{y}}+{(\partial_{y} u^{y})} {u^{y}})\\
   &\quad + {u^{x}} ({(\partial_{x} u^{y})}-{u^{y}} ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{y} u^{x})} {u^{y}}))\Bigr)\\
-  &\quad + {\nu^{x}}\Bigl(1 + {(\partial_{x} u^{y})} {\tau_{n}} \left(u^{x}\right)^3 {u^{y}} + \left(u^{y}\right)^2 - {\tau_{n}} {u^{x}} \left(\left(u^{y}\right)^2+1\right) ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{y} u^{x})} {u^{y}})\\
-  &\quad + \left(u^{x}\right)^2 \left({(\partial_{\tau} u^{y})} {\tau_{n}} {u^{\tau}} {u^{y}}-{(\partial_{x} u^{x})} {\tau_{n}} \left(\left(u^{y}\right)^2+1\right)+{(\partial_{y} u^{y})} {\tau_{n}} \left(u^{y}\right)^2+1\right)\Bigr)\Bigr) \\
-S_{3} &= \frac{1}{\left(u^{\tau}\right)^2}\Bigl(- {\nu^{x}} {\tau_{n}} {u^{y}}\Bigl({(\partial_{\tau} u^{x})} {u^{\tau}} + {(\partial_{x} u^{x})} {u^{x}} + {u^{y}} ({(\partial_{y} u^{x})}-{u^{x}} ({(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}))\\
+  &\quad + {\nu^{x}}\Bigl(1 + {(\partial_{x} u^{y})} {\tau_{n}} \left(u^{x}\right)^3 {u^{y}} + \left(u^{y}\right)^2\\
+  &\quad - {\tau_{n}} {u^{x}} \left(\left(u^{y}\right)^2+1\right) ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{y} u^{x})} {u^{y}})\\
+  &\quad + \left(u^{x}\right)^2\Bigl(1 + {(\partial_{\tau} u^{y})} {\tau_{n}} {u^{\tau}} {u^{y}} + {(\partial_{y} u^{y})} {\tau_{n}} \left(u^{y}\right)^2\\
+  &\quad - {(\partial_{x} u^{x})} {\tau_{n}} \left(\left(u^{y}\right)^2+1\right)\Bigr)\Bigr)\Bigr) \\
+S_{3} &= \frac{1}{\left(u^{\tau}\right)^2}\Bigl(- {\nu^{x}} {\tau_{n}} {u^{y}}\Bigl({(\partial_{\tau} u^{x})} {u^{\tau}} + {(\partial_{x} u^{x})} {u^{x}}\\
+  &\quad + {u^{y}} ({(\partial_{y} u^{x})}-{u^{x}} ({(\partial_{\tau} u^{y})} {u^{\tau}}+{(\partial_{x} u^{y})} {u^{x}}))\\
   &\quad + \left(u^{y}\right)^2 ({(\partial_{\tau} u^{x})} {u^{\tau}}+{(\partial_{x} u^{x})} {u^{x}}-{(\partial_{y} u^{y})} {u^{x}}) + {(\partial_{y} u^{x})} \left(u^{y}\right)^3\Bigr)\\
   &\quad + {\nu^{y}}\Bigl(1 - {(\partial_{\tau} u^{y})} {\tau_{n}} {u^{\tau}} {u^{y}} - {(\partial_{x} u^{y})} {\tau_{n}} \left(u^{x}\right)^3 {u^{y}} + \left(u^{y}\right)^2 (1-{(\partial_{y} u^{y})} {\tau_{n}})\\
   &\quad + \left(u^{x}\right)^2 \left(-{(\partial_{\tau} u^{y})} {\tau_{n}} {u^{\tau}} {u^{y}}+{\tau_{n}} \left(u^{y}\right)^2 ({(\partial_{x} u^{x})}-{(\partial_{y} u^{y})})+1\right)\\
@@ -114,23 +165,23 @@ S^{L}_{3} &= {\nu^{y}}
 id & what it tests & \\
 \midrule
 \endhead
-\texttt{H-\allowbreak{}G0cyl} & cylindrical Milne: Nabla g =\allowbreak{}=\allowbreak{} 0 & PASS \\
-\texttt{H-\allowbreak{}G0car} & Cartesian   Milne: Nabla g =\allowbreak{}=\allowbreak{} 0 & PASS \\
-\texttt{H-\allowbreak{}G1cyl} & cylindrical: Nabla.V =\allowbreak{} X' + X/\allowbreak{}tau for V=\allowbreak{}(X(tau),\allowbreak{}0,\allowbreak{}0,\allowbreak{}0) & PASS \\
-\texttt{H-\allowbreak{}G1car} & Cartesian:   Nabla.V =\allowbreak{} X' + X/\allowbreak{}tau & PASS \\
-\texttt{H-\allowbreak{}G2cyl-\allowbreak{}uu} & u.u =\allowbreak{}=\allowbreak{} -1 & PASS \\
-\texttt{H-\allowbreak{}G2cyl-\allowbreak{}un} & u.nu =\allowbreak{}=\allowbreak{} 0 & PASS \\
+\texttt{H-\allowbreak{}G0cyl} & cylindrical Milne: $\nabla_{\lambda}g_{\mu\nu}$ =\allowbreak{} 0 & PASS \\
+\texttt{H-\allowbreak{}G0car} & Cartesian   Milne: $\nabla_{\lambda}g_{\mu\nu}$ =\allowbreak{} 0 & PASS \\
+\texttt{H-\allowbreak{}G1cyl} & cylindrical: $\nabla_{\mu}V^{\mu} = \partial_{\tau}X + X/\tau$ for $V^{\mu} = (X(\tau), 0, 0, 0)$ & PASS \\
+\texttt{H-\allowbreak{}G1car} & Cartesian:   $\nabla_{\mu}V^{\mu} = \partial_{\tau}X + X/\tau$ & PASS \\
+\texttt{H-\allowbreak{}G2cyl-\allowbreak{}uu} & $u\cdot u$ =\allowbreak{} -1 & PASS \\
+\texttt{H-\allowbreak{}G2cyl-\allowbreak{}un} & $u\cdot\nu$ =\allowbreak{} 0 & PASS \\
 \texttt{H-\allowbreak{}G3cyl} & cylindrical system is quasi-linear & PASS \\
-\texttt{H-\allowbreak{}G4-\allowbreak{}At} & cylindrical A\_\allowbreak{}t * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped A\_\allowbreak{}t & PASS \\
-\texttt{H-\allowbreak{}G4-\allowbreak{}Ax} & cylindrical A\_\allowbreak{}x * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped A\_\allowbreak{}x & PASS \\
-\texttt{H-\allowbreak{}G4-\allowbreak{}src} & cylindrical src  * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} Fluidum's shipped source & PASS \\
-\texttt{H-\allowbreak{}G4src} & cylindrical A\_\allowbreak{}t,\allowbreak{} A\_\allowbreak{}x,\allowbreak{} src * u\textasciicircum{}tau\textasciicircum{}3 r tau =\allowbreak{}=\allowbreak{} 1d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}cilindrical\_\allowbreak{}BG.jl READ FROM THE FILE & PASS \\
-\texttt{H-\allowbreak{}G2car-\allowbreak{}uu} & u.u =\allowbreak{}=\allowbreak{} -1 & PASS \\
-\texttt{H-\allowbreak{}G2car-\allowbreak{}un} & u.nu =\allowbreak{}=\allowbreak{} 0 & PASS \\
+\texttt{H-\allowbreak{}G4-\allowbreak{}At} & cylindrical $A_{t}\times (u^{\tau})^{3} r\tau$ =\allowbreak{} Fluidum's shipped $A_{t}$ & PASS \\
+\texttt{H-\allowbreak{}G4-\allowbreak{}Ax} & cylindrical $A_{x}\times (u^{\tau})^{3} r\tau$ =\allowbreak{} Fluidum's shipped $A_{x}$ & PASS \\
+\texttt{H-\allowbreak{}G4-\allowbreak{}src} & cylindrical S $\times (u^{\tau})^{3} r\tau$ =\allowbreak{} Fluidum's shipped source & PASS \\
+\texttt{H-\allowbreak{}G4src} & cylindrical $A_{t}, A_{x}, S\times (u^{\tau})^{3} r\tau$ =\allowbreak{} 1d\_\allowbreak{}viscous\_\allowbreak{}HQ\_\allowbreak{}cilindrical\_\allowbreak{}BG.jl read from the file & PASS \\
+\texttt{H-\allowbreak{}G2car-\allowbreak{}uu} & $u\cdot u$ =\allowbreak{} -1 & PASS \\
+\texttt{H-\allowbreak{}G2car-\allowbreak{}un} & $u\cdot\nu$ =\allowbreak{} 0 & PASS \\
 \texttt{H-\allowbreak{}G3car} & Cartesian system is quasi-linear & PASS \\
-\texttt{H-\allowbreak{}G5} & slab limit (u\textasciicircum{}y -\textgreater{} 0,\allowbreak{} d\_\allowbreak{}y -\textgreater{} 0) decouples nu\textasciicircum{}y from (alpha,\allowbreak{} nu\textasciicircum{}x) & PASS \\
-\texttt{H-\allowbreak{}G6a} & the (alpha,\allowbreak{} nu\textasciicircum{}x,\allowbreak{} nu\textasciicircum{}y) columns of the 10-field rows =\allowbreak{}=\allowbreak{} the background-mode matrices & PASS \\
-\texttt{H-\allowbreak{}G6b} & src\_\allowbreak{}live + (medium columns).(background derivatives) =\allowbreak{}=\allowbreak{} src\_\allowbreak{}background: same system,\allowbreak{} re-sorted & PASS \\
+\texttt{H-\allowbreak{}G5} & slab limit ($u^{y}\to 0$,\allowbreak{} $\partial_{y}\to 0$) decouples $\nu^{y}$ from $(\alpha, \nu^{x}$) & PASS \\
+\texttt{H-\allowbreak{}G6a} & the $(\alpha, \nu^{x}, \nu^{y})$ columns of the 10-field rows =\allowbreak{} the background-mode matrices & PASS \\
+\texttt{H-\allowbreak{}G6b} & $S^{L}$ + (medium columns).(background derivatives) =\allowbreak{} S: same system,\allowbreak{} re-sorted & PASS \\
 \bottomrule
 \end{longtable}
 }

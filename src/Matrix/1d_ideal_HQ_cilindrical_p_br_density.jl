@@ -12,9 +12,9 @@ function matrix1d_ideal_HQ_br_p_density!(A_i, Source, ϕ, t, X, params;free=true
 
 
 
-        α = invert_n_for_alpha(ϕ[1], ϕ[3]; m=params.diffusion.mass)
+        α = charm_alpha(ϕ[1], ϕ[3], params.eos.hadron_list)
 
-        therm = thermodynamic(ϕ[1], α, params.eos.hadron_list)
+        therm = charm_pressure(ϕ[1], α, params.eos.hadron_list)
 
      
         dPhq_dT, dPhq_dalpha = therm.pressure_derivative
@@ -49,9 +49,9 @@ function one_d_ideal_matrix_ruwen6(X, tau, r, dP_dT, dP_dTdT,dPhq_dT,dPhq_dalpha
 
 (X[2] .*X[3]) ./sqrt.(1  .+ X[2] .^2),
 
-(X[1] .^2 .*X[2] .*sqrt.(1  .+ X[2] .^2) .*ddPhq_dTdalpha) ./ddPhq_dalphadalpha,
+(X[1] .*( .-dPhq_dalpha  .+ X[1] .*(1  .+ X[2] .^2) .*ddPhq_dTdalpha)) ./ddPhq_dalphadalpha,
 
-(X[1] .*(dPhq_dalpha  .+ X[1] .*X[2] .^2 .*ddPhq_dTdalpha)) ./ddPhq_dalphadalpha,
+(X[1] .^2 .*X[2] .*sqrt.(1  .+ X[2] .^2) .*ddPhq_dTdalpha) ./ddPhq_dalphadalpha,
 
 sqrt.(1  .+ X[2] .^2)))
     #########################################################################################################################################################################
@@ -68,9 +68,9 @@ sqrt.(1  .+ X[2] .^2)))
 
 X[3],
 
-(X[1] .*( .-dPhq_dalpha  .+ X[1] .*(1  .+ X[2] .^2) .*ddPhq_dTdalpha)) ./ddPhq_dalphadalpha,
-
 (X[1] .^2 .*X[2] .*sqrt.(1  .+ X[2] .^2) .*ddPhq_dTdalpha) ./ddPhq_dalphadalpha,
+
+(X[1] .*(dPhq_dalpha  .+ X[1] .*X[2] .^2 .*ddPhq_dTdalpha)) ./ddPhq_dalphadalpha,
 
 X[2]))
     #########################################################################################################################################################################

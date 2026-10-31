@@ -95,8 +95,9 @@ function corona_update_2d!(du, u, τ, dx, dy, iα, species, edge, dmn_eps, α_ma
 end
 
 function two_way_problem(d::DiscreteFields{T,3,2}, params, init, tspan; species, delta_pipi::Bool = true,
-                         edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0) where {T}
-    base = problem(d, matrix2d_two_way!(; species, delta_pipi, edge, dmn_eps, α_max), params, init, tspan)
+                         edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0, cM::Bool = false) where {T}
+    m = cM ? matrix2d_two_way_cM!(; species, delta_pipi, edge, dmn_eps, α_max) : matrix2d_two_way!(; species, delta_pipi, edge, dmn_eps, α_max)
+    base = problem(d, m, params, init, tspan)
     (edge isa ColdEdge && edge.corona) || return base
     iα = params.eos isa ConformalEOS ? 7 : 8
     dx, dy = float.(Δx(d.discretization))

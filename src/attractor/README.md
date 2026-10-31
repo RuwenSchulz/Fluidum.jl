@@ -1,7 +1,7 @@
 # src/attractor
 
 What this branch carries on top of upstream Fluidum. Every other file under `src/` and `test/` is
-the upstream code plus the open upstream pull request, byte for byte. Outside `src/` the branch also
+the upstream code plus the upstream pull request, apart from the repairs and the system listed below. Outside `src/` the branch also
 has `deriv/` (the symbolic computations behind the generated code), `examples/`, `bench/`, and a wider
 `Integrals` compat in `Project.toml` (phd-git pins an older SciML stack).
 
@@ -15,16 +15,24 @@ has `deriv/` (the symbolic computations behind the generated code), `examples/`,
 `HQdiffusion(slope, offset, mass)` freezes the linear law below T_fo = 0.156 GeV, the LP1 transport
 contract. A bare `LinearDiffusion(slope, offset, mass)` freezes it at upstream's 0.180.
 
-## Upstream functions found not to work
+## Upstream functions repaired on this branch (2026-10-30), not in the upstream pull request
 
-- `matrix1d_visc` (Matrix/1d_viscous_cilindrical.jl): `pressure(ϕ[1], Val(1), params.eos)` has no
-  method, so it throws a MethodError on every EoS. `matrix1d_visc!` works.
-- `matrix1d_ideal_HQ_br_p_fugacity!`: throws `UndefVarError: n`; `n`, `dn_dmu`, `dn_dT` are never bound.
-- `matrix1d_ideal_HQ_br_p_density!`: builds a non-finite matrix at every state. The charm EoS returns
-  an incomplete Hessian, so A_t is singular, and `invert_n_for_alpha` is off by the fm⁻³ ↔ GeV³ factor.
-- `matrix2d_visc_HQ!` / `two_d_viscous_HQ_matrix` (Matrix/2d_viscous_fugacity.jl): complex and
-  superluminal characteristic speeds on physical states; the wrapper reads `ϕ[6]` as the fugacity and
-  passes the entropy into the pressure slot. Use `matrix2d_visc_HQ_BG!`.
-- `Profiles(x::TabulatedData; exp_tail = true)` calls `exponential_tail_pointlike` without its
-  required `offset` keyword.
-- `hq_pressure` (EquationOfState/charm_HRG.jl) uses `x` and `ccbar`, which are not defined there.
+- `matrix1d_visc`: `pressure(ϕ[1], Val(1), params.eos)` had no method.
+- `one_d_ideal_matrix_ruwen6`: column 3 of rows 1-2 was exchanged between A_t and A_r.
+- `matrix1d_ideal_HQ_br_p_fugacity!`: `n`, `dn_dmu`, `dn_dT` were never bound, and the derivatives of n went into the P_h slots.
+- `matrix1d_ideal_HQ_br_p_density!`: the same P_h slots, and α inverted with the fm⁻³ ↔ GeV³ factor off. Both now use
+  `charm_pressure` and `charm_alpha`.
+- `thermodynamic(T, α, list)` of a charm list: the Hessian was incomplete (∂²_T n and ∂²_α n were 0).
+- `matrix2d_visc_HQ!` / `two_d_viscous_HQ_matrix`: the ten wrong medium entries, `ϕ[6]` read as the fugacity, the entropy
+  in the pressure slot, and κ passed where D_s is expected.
+- `Profiles(x::TabulatedData; exp_tail = true)`: `exponential_tail_pointlike` needs `offset`; it is now a keyword, default 0.
+- `hq_pressure`: used `x` and `ccbar`, which were not defined there. It is now the thermodynamics of `charm_quark_list`.
+
+`two_d_viscous_matrix` keeps its ten wrong entries: `legacy = true` exists to reproduce it, and `deriv/derive_upstream.wls`
+lists them.
+
+## The fully coupled system
+
+`matrix1d_two_way_cM!`, `matrix2d_two_way_cM!` (Matrix/1d_two_way_cM_cilindrical.jl, 2d_two_way_cM.jl), and
+`two_way_problem(...; cM = true)`: the second moment in T^{μν}, with c_M = D_s/T, on the two-way layouts. Also not in the upstream
+pull request.

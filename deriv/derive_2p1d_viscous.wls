@@ -312,7 +312,7 @@ body2 = mat2jl[AtK, "At", 7, subK] <> "\n" <> mat2jl[AxK, "Ax", 7, subK] <> "\n"
         mat2jl[AyDK, "dAy", 7, subK] <> "\n" <> vec2jl[srcDK, "dsource", 7, subK];
 out = hdr2 <> body2 <> "\n    return (At + dpp*dAt, Ax + dpp*dAx, Ay + dpp*dAy, source + dpp*dsource)\nend\n";
 If[fail == 0,
-  spliceJulia[FileNameJoin[{PKG, "src", "Matrix", "2d_viscous.jl"}], "derive_2p1d_viscous.wls",
+  spliceJulia[FileNameJoin[{PKG, "src", "Matrix", "2d_viscous.jl"}],
     juliaNames[out, {"uT" -> "T", "uX" -> "ux", "uY" -> "uy", "pYY" -> "piyy", "pEE" -> "pizz", "pXY" -> "pixy",
       "pBB" -> "piB"}]],
   Print["  NOT writing src/Matrix/2d_viscous.jl: a check failed"]];

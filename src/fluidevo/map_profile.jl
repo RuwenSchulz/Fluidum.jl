@@ -148,14 +148,14 @@ end
 """
 Initialize a profile when only the temperature profile is given"""
 function Profiles(x::TabulatedData{A,B};
-    radius = range(0,30,100), norm, xmax = 8., exp_tail) where {A,B}
+    radius = range(0,30,100), norm, xmax = 8., offset = 0.0, exp_tail) where {A,B}
     
     #temperature profile
     r, temperature_profile = get_profile(x; norm = norm)
     temperature_funct = linear_interpolation(r, temperature_profile; extrapolation_bc=Flat())
         
     if exp_tail == true
-        temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax)
+        temp_exp = exponential_tail_pointlike.(Ref(temperature_funct), radius; xmax, offset)
         temp_exp_funct = linear_interpolation(radius, temp_exp; extrapolation_bc=Flat()) 
         return temp_exp_funct
     else

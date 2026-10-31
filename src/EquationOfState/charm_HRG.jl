@@ -325,6 +325,9 @@ function thermodynamic(T,μ,x::Union{HadronResonaceGas_ccbar{L,M},HadronResonace
                 n10 += fact*QC*degeneracy*((ex*m^2*(m*b1 +2*T*b2 + m*b3))/(4*π^2*T)); #(*fm^-3/GeV*)
                 n01+= fact*QC*QC*degeneracy*(m^2* T /(2 *π^2)* ex* b2); #(*fm^-3/GeV*)
                 n11 +=fact*QC*QC*degeneracy*(ex*m^2*(m*b1 + 2*T*b2 + m*b3)/(4*π^2*T));
+                n02 += fact*QC*QC*QC*degeneracy*(ex*m^2*T*b2)/(2*pi^2);
+                b4 = b2+6/(reducemass)*b3
+                n20 += fact*QC*degeneracy*ex*m^2*reducemass^2*(besselkx(0,reducemass) + 2*b2 + b4)/(8*π^2*T);
                 
         else 
                     density+= zero(T)
@@ -389,59 +392,28 @@ end
     return Thermodynamic(density*fmGeV3,(n10*fmGeV3,n01*fmGeV3),(n20*fmGeV3,n11*fmGeV3,n02*fmGeV3))
 end
 
-function hq_pressure(T,α;m=1.5)
-    n = 1
-    QC = 1
-    density=zero(T)
-    n10=zero(T)
-    n01=zero(T)
-    n20=zero(T)
-    n02=zero(T)
-    n11=zero(T)
+"""
+    hq_pressure(T, α; m = 1.5, g = 6)
+`thermodynamic(T, α, charm_quark_list(; m, g))`: the density of one charm quark in `pressure`, as for any charm list.
+"""
+hq_pressure(T, α; m = 1.5, g = 6) = thermodynamic(T, α, charm_quark_list(; m = m, g = g))
 
-    for i in eachindex(x) 
-        ## loop over all particles 
-        QC = round((x[i].Nc+x[i].Nac))
-        m=x[i].Mass
-        
-        reducemass=m/T
-        Spin=x[i].Spin
-        degeneracy=x[i].Degeneracy
-        
-        if reducemass<500*one(T)
-           
-                b2 = besselkx(2,reducemass)
-                b1 = besselkx(1,reducemass)
-                
-                b3 = b1+4/(reducemass)*b2
-                ex=exp(QC* α - reducemass)
-                #correction factor due to canonical ensemble 
-                if QC == 1 
-                    fact = besseli(1, ccbar/2)./besseli(0, ccbar/2)
-
-                else 
-                    fact = 1
-                end   
-
-                density += fact*QC*degeneracy*(m^2* T /(2 *π^2)* ex* b2); #fm-3
-                n10 += fact*QC*degeneracy*((ex*m^2*(m*b1 +2*T*b2 + m*b3))/(4*π^2*T)); #(*fm^-3/GeV*)
-                n01+= fact*QC*QC*degeneracy*(m^2* T /(2 *π^2)* ex* b2); #(*fm^-3/GeV*)
-                n11 +=fact*QC*QC*degeneracy*(ex*m^2*(m*b1 + 2*T*b2 + m*b3)/(4*π^2*T));
-            
-        else 
-                    density+= zero(T)
-                    n01+= zero(T)
-                    n10+= zero(T)
-                    n11+= zero(T)
-
-        end
-    end
-
-    return Thermodynamic(density*fmGeV3,(n10*fmGeV3,n01*fmGeV3),(n20*fmGeV3,n11*fmGeV3,n02*fmGeV3))
+"""
+    charm_pressure(T, α, list)
+The pressure P_h of a charm list and its derivatives at fixed (T, α), in GeV/fm³, as a `Thermodynamic`. A Boltzmann gas of
+unit-charge species has P_h = n T, so that ∂_α P_h / T = n. A list's `thermodynamic` holds n, not P_h, in its `pressure`.
+"""
+function charm_pressure(T, α, list::CharmHadronList)
+    th = thermodynamic(T, α, list)
+    n = th.pressure; nT, na = th.pressure_derivative; nTT, nTa, naa = th.pressure_hessian
+    return Thermodynamic(n * T, (n + T * nT, T * na), (2nT + T * nTT, na + T * nTa, T * naa))
 end
 
-
-
+"""
+    charm_alpha(T, n, list)
+The fugacity α of a list of unit-charge species at density n (1/fm³) and temperature T.
+"""
+charm_alpha(T, n, list::CharmHadronList) = n > 0 ? log(n / thermodynamic(T, zero(T), list).pressure) : oftype(float(T), -Inf)
 
 function invert_n_for_alpha(T, n; m=1.5, g=6)
     x = m/T

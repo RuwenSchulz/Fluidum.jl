@@ -110,6 +110,8 @@ include("Matrix/2d_viscous_HQ_BG.jl")
 include("Matrix/2d_viscous_HQ_BG_m2.jl")
 include("Matrix/1d_two_way_cilindrical.jl")
 include("Matrix/2d_two_way.jl")
+include("Matrix/1d_two_way_cM_cilindrical.jl")
+include("Matrix/2d_two_way_cM.jl")
 
 include("wraps2.jl")
 
@@ -301,7 +303,7 @@ export viscous_2d
 export HadronResonaceGas_ccbar_grandcanonical, ConformalEOS, charm_quark_list, ColdEdge, CharmDeltaF
 export matrix1d_visc_HQ_BG!, matrix1d_visc_HQ_BG_consistent!, matrix1d_visc_HQ_BG_consistent_m2!
 export matrix2d_HQ_BG!, matrix2d_HQ_BG_consistent!, matrix2d_HQ_BG_m2!, matrix2d_visc_HQ_BG!
-export matrix1d_two_way!, matrix2d_two_way!, two_way_problem
+export matrix1d_two_way!, matrix2d_two_way!, two_way_problem, matrix1d_two_way_cM!, matrix2d_two_way_cM!
 export HQ_const_BG_init, HQ_const_BG_second_moment_init, HQ_2p1d_BG_init, HQ_2p1d_BG_m2_init, HQ_viscous_2d
 export two_way_1d, two_way_conformal_1d, two_way_2d, two_way_conformal_2d
 export InverseFuction 

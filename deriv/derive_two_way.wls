@@ -26,6 +26,9 @@
          as S4, medium pi/Pi rows as S2, all fields evolved together.
            T_Q = (n h - P0) uu + P0 Delta + h (u nu + nu u),  P0 = n T
          The second moment dM does not enter T_Q (c_M = 0): it is evolved, but passive.
+     S6  the fully coupled system: S5 with T_Q -> T_Q + dM in the fluid rows and in the current row,
+           (Ds/T) Delta^mu_l Nabla_m (T_Q + dM)^{ml} + nu^mu = 0,
+         so the second moment feeds back on the medium and on the current, with c_M = Ds/T.
 
    EOS, symbolic.  Medium pp[T] (e = T pp' - pp); charm nQ[T,alpha], hQ[T];
    second-moment coefficients i31Q[T,alpha], aQf[T], bQf[T], cQf[T] (Boltzmann:
@@ -43,7 +46,8 @@
      G-reduce   generic-EOS rows == the hand-written and the other generated matrices
      G-chart    2+1D (axisymmetric, on the x axis) == 1+1D; 1+1D (u^r=0) == 0+1D
      G-conserve S5 fluid rows == Nabla.(T_m+T_Q) (independent sqrt(-g) route),
-                charm row == Nabla.N, the dM columns of the other rows vanish, n->0 gives S2
+                charm row == Nabla.N, the dM columns of the other rows vanish, n->0 gives S2;
+                S6 fluid rows == Nabla.(T_m+T_Q+dM), its dM columns are live, dM->0 gives S5
      G-bjorken  closed forms (ideal, IS, generic EOS)
      G-twoway   rest/homogeneous: no momentum exchange; drag: Newton's third law
      G-export   every free symbol of the generated Julia is a function argument
@@ -52,7 +56,7 @@
 
    Writes the generated blocks of src/Matrix/1d_viscous_HQ_cilindrical_BG.jl,
    1d_viscous_HQ_cilindrical_BG_m2.jl, 2d_viscous_HQ_BG.jl, 2d_viscous_HQ_BG_m2.jl,
-   1d_two_way_cilindrical.jl and 2d_two_way.jl, only when every check passed and all three
+   1d_two_way_cilindrical.jl, 2d_two_way.jl, 1d_two_way_cM_cilindrical.jl and 2d_two_way_cM.jl, only when every check passed and all three
    charts ran.
 
    Run:   wolframscript -file deriv/derive_two_way.wls [--charts=bj,cyl,car] [--no-export]
@@ -217,7 +221,7 @@ allHeads[st_] := Join[st["med"], st["ch"], st["m2"]];
 (* One builder, every chart.  wv is the 2-D corotation switch. *)
 build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dttr, sig, Pm, em,
     Tm, Dpi, Esh, Ebu, piM, PiB, n, h, P0, eQ, nu, piQ, PiQ, dM, TQ, consM, consQ, cont, fm,
-    i31, aa, bb, cq, Sten, LHS, tr, TL, pre, W = 0, NPu, aV, omg, pgw},
+    i31, aa, bb, cq, Sten, LHS, tr, TL, pre, W = 0, NPu, aV, omg, pgw, consD},
   g = geo["g"]; gi = geo["ginv"]; u = st["u"]; Tf = st["T"];
   Dup = gi + Outer[Times, u, u]; Dmix = Dup . g; Dlo = g . Dup . g;
   th = divV[geo, u];
@@ -240,6 +244,7 @@ build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dtt
   dM = piQ + PiQ Dup;
   TQ = Table[eQ u[[a]] u[[b]] + P0 Dup[[a, b]] + h (u[[a]] nu[[b]] + nu[[a]] u[[b]]), {a, 4}, {b, 4}];
   consQ = divT2[geo, TQ];
+  consD = divT2[geo, dM];
   cont = divV[geo, n u + nu];
   fm = Table[(Ds/Tf) Sum[Dmix[[m, l]] consQ[[l]], {l, 4}] + nu[[m]], {m, 4}];
   (* second moment *)
@@ -263,7 +268,8 @@ build[st_] := Module[{geo = st["geo"], g, gi, u, Tf, Dup, Dmix, Dlo, th, gu, Dtt
     W = pgw + Transpose[pgw]];
   <|"Tm" -> Tm, "TQ" -> TQ, "consM" -> consM, "consQ" -> consQ, "Esh" -> Esh . g, "Ebu" -> Ebu,
     "cont" -> cont, "fm" -> fm, "LHS" -> LHS, "tr" -> tr, "TL" -> TL, "pre" -> pre, "tauM" -> pre cq,
-    "W" -> W, "Nvec" -> n u + nu, "sig" -> sig, "theta" -> th|>];
+    "W" -> W, "Nvec" -> n u + nu, "sig" -> sig, "theta" -> th, "S" -> Sten, "dM" -> dM, "consD" -> consD,
+    "cmRow" -> Table[(Ds/Tf) Sum[Dmix[[m, l]] consD[[l]], {l, 4}], {m, 4}]|>];
 
 (* row selection: the row definitions of the other generators, chart by chart *)
 rows[st_, B_] := Module[{nm = st["name"], E = B["Esh"], cons, ch, m2, f = st["f"], tri, lo},
@@ -273,6 +279,7 @@ rows[st_, B_] := Module[{nm = st["name"], E = B["Esh"], cons, ch, m2, f = st["f"
      <|"medM" -> {B["consM"][[1]], E[[4, 4]]/tau^2, B["Ebu"]},
        "medQ" -> {B["consQ"][[1]], 0, 0},
        "ch" -> {B["cont"]},
+       "medD" -> {B["consD"][[1]], 0, 0}, "chD" -> {0},
        "m2" -> Module[{et = {0, 0, 0, 1/tau}, etl}, etl = st["geo"]["g"] . et;
           {B["pre"] (etl . B["LHS"] . etl - B["tr"]/3) + f[qeb], B["pre"] B["tr"]/3 + f[PiQb]}]|>,
    "1p1d",
@@ -280,6 +287,7 @@ rows[st_, B_] := Module[{nm = st["name"], E = B["Esh"], cons, ch, m2, f = st["f"
      <|"medM" -> {B["consM"][[1]], B["consM"][[2]], E[[3, 3]]/rr^2, E[[4, 4]]/tau^2, B["Ebu"]},
        "medQ" -> {B["consQ"][[1]], B["consQ"][[2]], 0, 0, 0},
        "ch" -> {B["cont"], B["fm"][[2]]},
+       "medD" -> {B["consD"][[1]], B["consD"][[2]], 0, 0, 0}, "chD" -> {0, B["cmRow"][[2]]},
        "m2" -> {B["pre"] (lo[[2]] . B["LHS"] . lo[[2]] - B["tr"]/3) + f[pffQc],
                 B["pre"] (lo[[3]] . B["LHS"] . lo[[3]] - B["tr"]/3) + f[peeQc],
                 B["pre"] B["tr"]/3 + f[PiQc]}|>,
@@ -288,6 +296,7 @@ rows[st_, B_] := Module[{nm = st["name"], E = B["Esh"], cons, ch, m2, f = st["f"
                   E[[2, 3]], B["Ebu"]},
        "medQ" -> {B["consQ"][[1]], B["consQ"][[2]], B["consQ"][[3]], 0, 0, 0, 0},
        "ch" -> {B["cont"], B["fm"][[2]], B["fm"][[3]]},
+       "medD" -> {B["consD"][[1]], B["consD"][[2]], B["consD"][[3]], 0, 0, 0, 0}, "chD" -> {0, B["cmRow"][[2]], B["cmRow"][[3]]},
        "m2" -> {B["pre"] B["TL"][[3, 3]] + f[pyyQk] - (1 - wv) B["tauM"] B["W"][[3, 3]],
                 tau^2 (B["pre"] B["TL"][[4, 4]] - (1 - wv) B["tauM"] B["W"][[4, 4]]) + f[peeQk],
                 B["pre"] B["TL"][[2, 3]] + f[pxyQk] - (1 - wv) B["tauM"] B["W"][[2, 3]],
@@ -350,8 +359,8 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
       "aQ' has identically vanishing coefficient in the second-moment rows (" <> z[[2]] <> "); dropped"]];
   R = R /. Derivative[1][aQf][_] -> 0;
   (* --- G3 quasi-linearity --- *)
-  ok = Length[secondDerivs[Join[R["medM"], R["medQ"], R["ch"], R["m2"]], hds]] == 0;
-  gate["G3-" <> nm, ok, "every row (medium, charm-in-T, first moment, second moment) is quasi-linear"];
+  ok = Length[secondDerivs[Join[R["medM"], R["medQ"], R["medD"], R["ch"], R["chD"], R["m2"]], hds]] == 0;
+  gate["G3-" <> nm, ok, "every row (medium, charm-in-T, first moment, second moment, dM in T_Q) is quasi-linear"];
 
   med = st["med"]; ch = st["ch"]; m2 = st["m2"];
   piOff = offRules[Rest[med] /. {urc -> Nothing, uxk -> Nothing, uyk -> Nothing}, nar];
@@ -367,6 +376,7 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
   sys["S3"] = <|"eqs" -> (R["ch"] /. m2Off), "vars" -> ch|>;
   sys["S4"] = <|"eqs" -> Join[R["ch"], R["m2"]], "vars" -> Join[ch, m2]|>;
   sys["S5"] = <|"eqs" -> Join[R["medM"] + R["medQ"], R["ch"], R["m2"]], "vars" -> Join[med, ch, m2]|>;
+  sys["S6"] = <|"eqs" -> Join[R["medM"] + R["medQ"] + R["medD"], R["ch"] + R["chD"], R["m2"]], "vars" -> Join[med, ch, m2]|>;
   (* in 0+1D there is no transverse current: S3 is the continuity row alone *)
   gate["S3-free-" <> nm, FreeQ[sys["S3"]["eqs"], Alternatives @@ m2],
     "S3 rows carry no second-moment field"];
@@ -377,7 +387,7 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
     Print["  extracting ", k, " (", Length[sys[k]["vars"]], " fields) ... (", stamp[], ")"];
     {A, s} = coefs[sys[k]["eqs"], sys[k]["vars"], cs];
     sys[k] = Join[sys[k], <|"A" -> A, "src" -> s|>];
-    , {k, {"S1", "S2", "S3", "S4", "S5"}}];
+    , {k, {"S1", "S2", "S3", "S4", "S5", "S6"}}];
   Print["  extracted (", stamp[], ")"];
 
   (* --- G-conserve --- *)
@@ -414,6 +424,23 @@ runChart[st_] := Module[{nm = st["name"], geo = st["geo"], cs = st["cs"], f = st
       Simplify[(S5["src"][[1 ;; nmed]] /. offQ) - S2m["src"]] === ConstantArray[0, nmed],
       "charm off (n, nu, dM -> 0): S5's medium block and medium sources == S2 exactly; the charm rows' " <>
       "medium columns and sources vanish, so charm = 0 is an invariant subspace on which S5 IS S2"];
+  ];
+  (* --- G-conserve for S6 --- *)
+  Module[{S6 = sys["S6"], S5 = sys["S5"], nmed = Length[med], nch = Length[ch], nm2 = Length[m2], dphi, rebuilt, alt, flu, cur, z, Acol},
+    dphi = Table[D[v @@ cs, c], {c, cs}, {v, S6["vars"]}];
+    rebuilt = Sum[S6["A"][[k]] . dphi[[k]], {k, Length[cs]}] + S6["src"];
+    z = zeroTest[rebuilt - S6["eqs"], hds, st["uheads"], 5];
+    gate["G6-extract-" <> nm, z[[1]], "S6: A_t dphi + A_x dphi (+A_y dphi) + src == the raw rows (" <> z[[2]] <> ")"];
+    flu = Switch[nm, "0p1d", {1}, "1p1d", {1, 2}, "2p1d", {1, 2, 3}];
+    alt = divT2alt[geo, B["Tm"] + B["TQ"] + B["dM"]];
+    z = zeroTest[S6["eqs"][[flu]] - alt[[flu]], hds, st["uheads"], 20];
+    gate["G6-total-" <> nm, z[[1]], "S6 fluid rows == Nabla_mu (T_m + T_Q + dM)^{mu nu}, sqrt(-g) route (" <> z[[2]] <> ")"];
+    z = zeroTest[(S6["eqs"] - S5["eqs"]) /. m2Off, hds, st["uheads"], 20];
+    gate["G6-off-" <> nm, z[[1]], "S6 at dM = 0 == S5, row by row (" <> z[[2]] <> ")"];
+    z = zeroTest[S6["eqs"][[nmed + nch + 1 ;;]] - S5["eqs"][[nmed + nch + 1 ;;]], hds, st["uheads"], 5];
+    gate["G6-m2-" <> nm, z[[1]], "the second-moment rows of S6 are those of S5 (" <> z[[2]] <> ")"];
+    Acol = Flatten[Table[S6["A"][[k]][[1 ;; nmed + nch, nmed + nch + 1 ;;]], {k, Length[cs]}]];
+    gate["G6-live-" <> nm, !AllTrue[Acol, # === 0 &] || nm === "0p1d", "the dM columns of the fluid and current rows are live (in 0+1D only through the source)"];
   ];
   results[nm] = <|"st" -> st, "B" -> B, "R" -> R, "sys" -> sys|>;
   Print["  chart ", nm, " done (", stamp[], ")"];

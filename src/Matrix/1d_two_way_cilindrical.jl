@@ -117,14 +117,16 @@ function corona_update_1d!(du, u, τ, rr, dr, iα, species, edge, dmn_eps, α_ma
 end
 
 """
-    two_way_problem(d, params, init, tspan; species, delta_pipi = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0)
+    two_way_problem(d, params, init, tspan; species, delta_pipi = true, edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0, cM = false)
 The `ODEProblem` of the two-way system on `d` (1+1D or 2+1D; layout `two_way_1d`/`two_way_2d`, or the
 conformal ones for a `ConformalEOS`): `problem` with `matrix1d_two_way!`/`matrix2d_two_way!`, plus the
-corona update when `edge.corona` (the default). Keywords as in `matrix1d_two_way!`.
+corona update when `edge.corona` (the default). Keywords as in `matrix1d_two_way!`. `cM = true` evolves the fully
+coupled system, `matrix1d_two_way_cM!`/`matrix2d_two_way_cM!`, on the same layouts.
 """
 function two_way_problem(d::DiscreteFields{T,2,1}, params, init, tspan; species, delta_pipi::Bool = true,
-                         edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0) where {T}
-    base = problem(d, matrix1d_two_way!(; species, delta_pipi, edge, dmn_eps, α_max), params, init, tspan)
+                         edge = ColdEdge(), dmn_eps = 1e-8, α_max = 200.0, cM::Bool = false) where {T}
+    m = cM ? matrix1d_two_way_cM!(; species, delta_pipi, edge, dmn_eps, α_max) : matrix1d_two_way!(; species, delta_pipi, edge, dmn_eps, α_max)
+    base = problem(d, m, params, init, tspan)
     (edge isa ColdEdge && edge.corona) || return base
     iα = params.eos isa ConformalEOS ? 5 : 6
     X = d.discretization

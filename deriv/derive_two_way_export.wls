@@ -10,6 +10,8 @@
          two_d_HQ_BG_m2_matrix              2d_viscous_HQ_BG_m2.jl
      S5  one_d_two_way_matrix(_conformal)   1d_two_way_cilindrical.jl
          two_d_two_way_matrix(_conformal)   2d_two_way.jl
+     S6  one_d_two_way_cM_matrix(_conformal)   1d_two_way_cM_cilindrical.jl
+         two_d_two_way_cM_matrix(_conformal)   2d_two_way_cM.jl
    with dPP = 0 (no medium has delta_PiPi) and the 2+1D corotation coupling on (wv = 1).
    and checks
      E-same-<fn>   the simplified exported entries equal the derived ones
@@ -42,17 +44,22 @@ exportSet = {
   {"S3", "2p1d", False} -> {"two_d_HQ_BG_consistent_matrix", "2d_viscous_HQ_BG.jl"},
   {"S4", "2p1d", False} -> {"two_d_HQ_BG_m2_matrix", "2d_viscous_HQ_BG_m2.jl"},
   {"S5", "2p1d", False} -> {"two_d_two_way_matrix", "2d_two_way.jl"},
-  {"S5", "2p1d", True} -> {"two_d_two_way_matrix_conformal", "2d_two_way.jl"}};
+  {"S5", "2p1d", True} -> {"two_d_two_way_matrix_conformal", "2d_two_way.jl"},
+  {"S6", "1p1d", False} -> {"one_d_two_way_cM_matrix", "1d_two_way_cM_cilindrical.jl"},
+  {"S6", "1p1d", True} -> {"one_d_two_way_cM_matrix_conformal", "1d_two_way_cM_cilindrical.jl"},
+  {"S6", "2p1d", False} -> {"two_d_two_way_cM_matrix", "2d_two_way_cM.jl"},
+  {"S6", "2p1d", True} -> {"two_d_two_way_cM_matrix_conformal", "2d_two_way_cM.jl"}};
 sysDoc = <|
   "S3" -> "Charm first moment on a prescribed background, consistent closure",
   "S4" -> "Charm first and second moment on a prescribed background",
-  "S5" -> "The two-way system, Nabla_mu (T_m + T_Q)^{mu nu} = 0 with the medium and charm rows"|>;
+  "S5" -> "The two-way system, Nabla_mu (T_m + T_Q)^{mu nu} = 0 with the medium and charm rows",
+  "S6" -> "The fully coupled system, Nabla_mu (T_m + T_Q + dM)^{mu nu} = 0 with the medium and charm rows and c_M = D_s/T"|>;
 
 argsFor[k_, nm_, conf_] := Module[{a},
   a = Switch[k,
     "S3", Join[bgArgs[nm], chFM, {"Ds"}],
     "S4", Join[bgArgs[nm], chFM, chM2, {"Ds"}],
-    "S5", Join[If[conf, Join[medConf, trConf], Join[medGen, trGen]], chFM, chM2, {"Ds"}]];
+    "S5" | "S6", Join[If[conf, Join[medConf, trConf], Join[medGen, trGen]], chFM, chM2, {"Ds"}]];
   Join[geoArgs[nm], a]];
 
 utauRule[nm_] := Switch[nm, "0p1d", {}, "1p1d", {Power[1 + ur^2, p_] :> utau^(2 p)},
@@ -188,6 +195,6 @@ println(\"EJL \", worst)
 ];
 (* into the package: each function into the generated block of its system's file *)
 If[toPkg && fail == 0,
-  KeyValueMap[spliceJulia[FileNameJoin[{matDir, #1}], "derive_two_way.wls", StringRiffle[#2, "\n"]] &, jlByFile],
+  KeyValueMap[spliceJulia[FileNameJoin[{matDir, #1}], StringRiffle[#2, "\n"]] &, jlByFile],
   Print["  NOT writing src/Matrix: a check failed or not all charts ran"]];
 ];
